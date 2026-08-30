@@ -1,7 +1,7 @@
 
 ## Step 0: Mandatory Master AI Context Alignment (開局對齊集團主中樞)
 Before reading local files, inspect the Group Master SSoT:
-1. Read `C:\Users\kalvi\OneDrive\Projects\GROUP_GLOBAL_STATUS.md`
+1. Read `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\GROUP_GLOBAL_STATUS.md`
 2. Read `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\DECISIONS.md`
 3. Read `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\COMPANY_PROFILE.md`
 

@@ -12,7 +12,7 @@
 > [!IMPORTANT]
 > ### 👑 核心啟動指令：開局必讀集團 Master AI Context（Master SSoT Sync）
 > **每次執行 `start` 或開啟新 Session 時，AI 必須首先讀取 Master AI Context，以對齊最新的集團架構與全域政策：**
-> 1. 📖 `C:\Users\kalvi\OneDrive\Projects\GROUP_GLOBAL_STATUS.md`（集團中央總指揮儀表板）
+> 1. 📖 `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\GROUP_GLOBAL_STATUS.md`（集團中央總指揮儀表板）
 > 2. 📖 `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\DECISIONS.md`（集團最高決策記錄）
 > 3. 📖 `C:\Users\kalvi\OneDrive\Projects\00 Master AI Context Template\AI_CONTEXT\COMPANY_PROFILE.md`（集團統一企業畫像）
 > **對齊集團最新指示後，方可繼續執行本地專案之 `AI_CONTEXT/START_SESSION.md`！**
