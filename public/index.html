@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日本代購利潤售價計算機</title>
+    <style>
+        :root {
+            --primary-color: #e84393;
+            --bg-color: #f1f2f6;
+            --card-bg: #ffffff;
+            --text-color: #2d3436;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            text-align: center;
+            color: #2d3436;
+            margin: 15px 0 20px 0;
+            font-size: 20px;
+        }
+
+        .input-form {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 12px 12px 32px;
+            border: 2px solid #edf2f7;
+            border-radius: 10px;
+            font-size: 16px;
+            background-color: #f8f9fa;
+            color: #2d3436;
+            font-weight: bold;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            background-color: #fff;
+            outline: none;
+        }
+
+        .input-group .rate-input {
+            padding-left: 12px;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .btn-calc {
+            flex: 2;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(232, 67, 147, 0.2);
+        }
+
+        .btn-calc:active {
+            background-color: #d63031;
+        }
+
+        .btn-reset {
+            flex: 1;
+            padding: 14px;
+            background-color: #b2bec3;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-reset:active {
+            background-color: #636e72;
+        }
+
+        .list-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin: 15px 0 10px 5px;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .profit-card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-left: 6px solid #ccc;
+        }
+
+        .card-low  { border-left-color: #a4b0be; background-color: #ffffff; }
+        .card-mid  { border-left-color: #70a1ff; background-color: #f7faff; }
+        .card-high { border-left-color: #2ed573; background-color: #f4fdf7; }
+
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .card-profit-detail {
+            font-size: 13px;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .card-jpy-price {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .card-myr-price {
+            font-size: 20px;
+            font-weight: 900;
+            color: #d63031;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🇯🇵 日本代購手機專用計算機 🇲🇾</h2>
+    
+    <div class="input-form">
+        <div class="input-group">
+            <label>商品進貨價</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="itemPrice" value="" placeholder="輸入日幣金額">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>日本國內運費</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="jpShipping" value="" placeholder="無運費填 0">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>國際空海運費</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="intShipping" value="" placeholder="無運費填 0">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>馬幣匯率乘數</label>
+            <div class="input-wrapper">
+                <input type="number" id="exchangeRate" class="rate-input" value="0.0250" step="0.0001" placeholder="例如 0.0250">
+            </div>
+        </div>
+        <div class="btn-container">
+            <button class="btn-reset" onclick="resetForm()">重置</button>
+            <button class="btn-calc" onclick="calculateMobileList()">立即計算對照表</button>
+        </div>
+    </div>
+
+    <div class="list-title">利潤售價對照結果 (已自動進位)：</div>
+    
+    <div id="cardContainer" class="card-list">
+        </div>
+</div>
+
+<script>
+    function calculateMobileList() {
+        const itemPrice = parseFloat(document.getElementById('itemPrice').value) || 0;
+        const jpShipping = parseFloat(document.getElementById('jpShipping').value) || 0;
+        const intShipping = parseFloat(document.getElementById('intShipping').value) || 0;
+        const exchangeRate = parseFloat(document.getElementById('exchangeRate').value) || 0.0250;
+
+        const container = document.getElementById('cardContainer');
+        container.innerHTML = ''; 
+
+        if (itemPrice === 0) {
+            return;
+        }
+
+        for (let profitPercent = 10; profitPercent <= 100; profitPercent += 10) {
+            const profitJPY = itemPrice * (profitPercent / 100);
+            const sellingPriceJPY = itemPrice + profitJPY + jpShipping + intShipping;
+            const rawMYR = sellingPriceJPY * exchangeRate;
+            
+            let finalMYR = Math.ceil(rawMYR / 10) * 10;
+            if (finalMYR < 10) {
+                finalMYR = 10;
+            }
+
+            let colorClass = 'card-low';
+            if (profitPercent > 30 && profitPercent <= 60) {
+                colorClass = 'card-mid';
+            } else if (profitPercent > 60) {
+                colorClass = 'card-high';
+            }
+
+            const card = document.createElement('div');
+            card.className = `profit-card ${colorClass}`;
+            card.innerHTML = `
+                <div class="card-row">
+                    <span class="card-label">想賺 ${profitPercent}%</span>
+                    <span class="card-myr-price">RM ${finalMYR}</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-profit-detail">淨賺 +¥${Math.round(profitJPY).toLocaleString()}</span>
+                    <span class="card-jpy-price">日幣售價: ¥${Math.round(sellingPriceJPY).toLocaleString()}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('jpShipping').value = '';
+        document.getElementById('intShipping').value = '';
+        document.getElementById('exchangeRate').value = '0.0250';
+        document.getElementById('cardContainer').innerHTML = '';
+    }
+
+    window.onload = resetForm;
+</script>
+
+</body>
+</html>

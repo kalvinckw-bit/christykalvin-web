@@ -1,0 +1,2266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PetaRumah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=M+PLUS+1p:wght@400;500;700&display=swap">
+
+<style>
+/* ============================================================
+   PetaRumah — Malaysian property portal (desktop prototype)
+   Palette: Peranakan glaze petrol + saffron. Neutrals biased
+   toward the brand hue so nothing reads as default grey.
+   ============================================================ */
+:root{
+  --bg:#F2F5F4;
+  --surface:#FFFFFF;
+  --surface-2:#EAF0EE;
+  --surface-3:#DFE8E6;
+  --line:#D2DEDB;
+  --line-soft:#E3EAE8;
+  --text:#12292B;
+  --text-2:#566A69;
+  --text-3:#7B8C8B;
+  --brand:#0E4B4F;
+  --brand-2:#136267;
+  --brand-ink:#082F33;
+  --brand-wash:#E4EFEE;
+  --accent:#C8801C;
+  --accent-2:#E4A03A;
+  --accent-wash:#FBF0DC;
+  --good:#1F7A55;
+  --good-wash:#DFF0E7;
+  --warn:#A8541B;
+  --alert:#A63417;
+  --alert-wash:#F8E3DC;
+  /* Nav chrome stays dark in both themes — a deliberate constant, so its
+     foreground never has to flip. Everything else is theme-reactive. */
+  --nav-bg:#082F33;
+  --nav-bg-2:#0E4B4F;
+  --nav-fg:#DCEDEB;
+  --nav-fg-dim:#A9C6C4;
+  --nav-fg-label:#9FC3C0;
+  --nav-hairline:rgba(255,255,255,.09);
+  --nav-field:rgba(255,255,255,.07);
+  --nav-field-line:rgba(255,255,255,.16);
+  --shadow-sm:0 1px 2px rgba(8,47,51,.07), 0 2px 6px rgba(8,47,51,.05);
+  --shadow-md:0 4px 12px rgba(8,47,51,.10), 0 12px 28px rgba(8,47,51,.09);
+  --shadow-lg:0 18px 50px rgba(8,47,51,.22);
+  --radius:6px;
+  --rail:296px;
+  --font-ui:"Meiryo","メイリオ","M PLUS 1p","Hiragino Kaku Gothic ProN","Segoe UI",system-ui,-apple-system,"Noto Sans",sans-serif;
+  --font-display:"Archivo","Meiryo","M PLUS 1p",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono","Meiryo",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --nav-bg:#061214;
+    --nav-bg-2:#0B2426;
+    --nav-hairline:rgba(255,255,255,.07);
+    --bg:#081516;
+    --surface:#0F2224;
+    --surface-2:#152C2E;
+    --surface-3:#1D3739;
+    --line:#26403F;
+    --line-soft:#1C3234;
+    --text:#E4EDEB;
+    --text-2:#9DB2B0;
+    --text-3:#7C918F;
+    --brand:#4FA9A4;
+    --brand-2:#69BEB8;
+    --brand-ink:#BEE3DF;
+    --brand-wash:#14312F;
+    --accent:#E4A03A;
+    --accent-2:#F0B75E;
+    --accent-wash:#33260F;
+    --good:#4FBF8B;
+    --good-wash:#123023;
+    --warn:#D98B4A;
+    --alert:#E0714C;
+    --alert-wash:#3A1A11;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --shadow-md:0 4px 14px rgba(0,0,0,.45);
+    --shadow-lg:0 20px 55px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --nav-bg:#061214;
+  --nav-bg-2:#0B2426;
+  --nav-hairline:rgba(255,255,255,.07);
+  --bg:#081516;
+  --surface:#0F2224;
+  --surface-2:#152C2E;
+  --surface-3:#1D3739;
+  --line:#26403F;
+  --line-soft:#1C3234;
+  --text:#E4EDEB;
+  --text-2:#9DB2B0;
+  --text-3:#7C918F;
+  --brand:#4FA9A4;
+  --brand-2:#69BEB8;
+  --brand-ink:#BEE3DF;
+  --brand-wash:#14312F;
+  --accent:#E4A03A;
+  --accent-2:#F0B75E;
+  --accent-wash:#33260F;
+  --good:#4FBF8B;
+  --good-wash:#123023;
+  --warn:#D98B4A;
+  --alert:#E0714C;
+  --alert-wash:#3A1A11;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow-md:0 4px 14px rgba(0,0,0,.45);
+  --shadow-lg:0 20px 55px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-ui);
+  font-size:15.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none;padding:0}
+a{color:var(--brand-2)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  background:var(--nav-bg);
+  color:var(--nav-fg);
+  border-bottom:1px solid var(--nav-hairline);
+}
+.topbar__in{
+  max-width:1680px;margin:0 auto;padding:0 22px;
+  height:60px;display:flex;align-items:center;gap:26px;
+}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.brand__mark{width:26px;height:26px;flex-shrink:0}
+.brand__name{
+  font-family:var(--font-display);font-weight:800;font-size:20px;
+  letter-spacing:-.015em;color:#FFF;
+}
+.brand__name em{font-style:normal;color:var(--accent-2)}
+.deals{display:flex;gap:2px;align-items:center;margin-left:6px}
+.deal{
+  padding:7px 16px;border-radius:4px;font-size:14.5px;font-weight:700;
+  color:var(--nav-fg-dim);transition:background .12s,color .12s;
+}
+.deal:hover{color:#FFF;background:rgba(255,255,255,.07)}
+.deal[aria-selected="true"]{background:var(--accent);color:#221202}
+.topbar__spacer{flex:1}
+.tnav{display:flex;align-items:center;gap:4px}
+.tnav__btn{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 12px;border-radius:4px;font-size:13.5px;font-weight:500;
+  color:var(--nav-fg-dim);transition:background .12s,color .12s;
+}
+.tnav__btn:hover{background:rgba(255,255,255,.09);color:#FFF}
+.tnav__btn--cta{background:var(--accent);color:#221202;font-weight:700}
+.tnav__btn--cta:hover{background:var(--accent-2);color:#221202}
+.pill-count{
+  min-width:19px;height:19px;padding:0 5px;border-radius:10px;
+  background:var(--accent);color:#221202;font-size:11.5px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);
+}
+.lang{display:flex;background:rgba(255,255,255,.09);border-radius:4px;padding:2px}
+.lang button{
+  padding:4px 9px;border-radius:3px;font-size:12.5px;font-weight:700;color:var(--nav-fg-dim);
+}
+.lang button[aria-pressed="true"]{background:#FFF;color:#082F33}
+
+/* ---------- Search strip ---------- */
+.searchbar{
+  background:var(--nav-bg-2);
+  border-bottom:1px solid var(--nav-hairline);
+  padding:14px 0 16px;
+}
+.searchbar__in{max-width:1680px;margin:0 auto;padding:0 22px;display:flex;gap:10px;align-items:flex-end}
+.sfield{display:flex;flex-direction:column;gap:5px}
+.sfield__lab{
+  font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--nav-fg-label);
+}
+.sfield input,.sfield select{
+  height:42px;border:1px solid var(--nav-field-line);background:var(--nav-field);
+  color:#FFF;border-radius:5px;padding:0 12px;font-size:15px;min-width:150px;
+}
+.sfield select option{background:#082F33;color:#FFF}
+.sfield input::placeholder{color:#8FB4B1}
+.sfield--grow{flex:1}
+.sfield--grow input{width:100%}
+.searchbtn{
+  height:42px;padding:0 28px;border-radius:5px;background:var(--accent);color:#221202;
+  font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:8px;
+}
+.searchbtn:hover{background:var(--accent-2)}
+
+/* ---------- Layout ---------- */
+.shell{max-width:1680px;margin:0 auto;padding:20px 22px 60px;display:flex;gap:20px;align-items:flex-start}
+.rail{
+  width:var(--rail);flex-shrink:0;position:sticky;top:76px;
+  max-height:calc(100vh - 96px);overflow-y:auto;overscroll-behavior:contain;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  scrollbar-width:thin;
+}
+.rail__head{
+  position:sticky;top:0;z-index:2;background:var(--surface);
+  padding:13px 15px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.rail__title{font-family:var(--font-display);font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+.linkbtn{font-size:13px;color:var(--brand-2);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.linkbtn:hover{color:var(--accent)}
+.fgroup{border-bottom:1px solid var(--line-soft);padding:13px 15px 15px}
+.fgroup:last-child{border-bottom:none}
+.fgroup__h{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  font-size:13px;font-weight:700;letter-spacing:.045em;text-transform:uppercase;
+  color:var(--text-2);margin-bottom:9px;
+}
+.fgroup__h .tag-my{
+  font-size:9.5px;letter-spacing:.06em;padding:2px 5px;border-radius:3px;
+  background:var(--accent-wash);color:var(--warn);border:1px solid rgba(200,128,28,.28);
+  text-transform:none;font-weight:700;
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  padding:6px 11px;border:1px solid var(--line);border-radius:4px;background:var(--surface);
+  font-size:14px;font-weight:500;color:var(--text-2);transition:.12s;
+}
+.chip:hover{border-color:var(--brand);color:var(--brand-2)}
+.chip[aria-pressed="true"]{
+  background:var(--brand);border-color:var(--brand);color:#FFF;font-weight:700;
+}
+.checks{display:flex;flex-direction:column;gap:2px}
+.check{
+  display:flex;align-items:center;gap:9px;padding:5px 4px;border-radius:4px;
+  font-size:14.5px;cursor:pointer;color:var(--text);
+}
+.check:hover{background:var(--surface-2)}
+.check input{width:16px;height:16px;accent-color:var(--brand);flex-shrink:0;margin:0}
+.check span.n{margin-left:auto;font-size:12.5px;color:var(--text-3);font-family:var(--font-mono)}
+.range{display:flex;align-items:center;gap:7px}
+.range select,.range input{
+  flex:1;min-width:0;height:36px;border:1px solid var(--line);border-radius:4px;
+  background:var(--surface);padding:0 8px;font-size:14px;
+}
+.range span{color:var(--text-3);font-size:13px}
+.subnote{font-size:12.5px;color:var(--text-3);margin-top:7px;line-height:1.5}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;padding:6px 4px;font-size:13.5px;font-weight:600;color:var(--text-2);background:var(--surface)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:#FFF}
+.switch{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:14.5px}
+.switch input{width:0;height:0;position:absolute;opacity:0}
+.switch__track{
+  width:38px;height:21px;border-radius:11px;background:var(--surface-3);flex-shrink:0;
+  position:relative;transition:background .15s;
+}
+.switch__track::after{
+  content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;
+  background:#FFF;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s;
+}
+.switch input:checked + .switch__track{background:var(--brand)}
+.switch input:checked + .switch__track::after{transform:translateX(17px)}
+.switch input:focus-visible + .switch__track{outline:2px solid var(--accent);outline-offset:2px}
+
+/* transit line rows */
+.lines{display:flex;flex-direction:column;gap:1px}
+.lineitem{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:4px;cursor:pointer;font-size:14px}
+.lineitem:hover{background:var(--surface-2)}
+.lineitem input{width:16px;height:16px;accent-color:var(--brand);margin:0}
+.linebar{width:4px;height:16px;border-radius:2px;flex-shrink:0}
+.linecode{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;color:#FFF;
+  padding:1px 5px;border-radius:3px;flex-shrink:0;
+}
+
+/* ---------- Results column ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.resbar{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  box-shadow:var(--shadow-sm);
+}
+.rescount{font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.rescount b{color:var(--brand-2);font-family:var(--font-mono);font-size:21px}
+.resbar__spacer{flex:1}
+.selectlite{
+  height:34px;border:1px solid var(--line);border-radius:4px;background:var(--surface);
+  padding:0 8px;font-size:14px;
+}
+.viewtoggle{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.viewtoggle button{padding:6px 12px;font-size:13.5px;font-weight:600;color:var(--text-2)}
+.viewtoggle button+button{border-left:1px solid var(--line)}
+.viewtoggle button[aria-pressed="true"]{background:var(--brand);color:#FFF}
+
+.activefilters{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.afchip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 10px;
+  background:var(--brand-wash);border:1px solid rgba(14,75,79,.22);border-radius:4px;
+  font-size:13px;font-weight:600;color:var(--brand-2);
+}
+.afchip button{color:var(--brand-2);font-size:15px;line-height:1;opacity:.65}
+.afchip button:hover{opacity:1;color:var(--alert)}
+
+/* ---------- Listing card ---------- */
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  display:grid;grid-template-columns:288px 1fr 216px;
+  overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .14s,border-color .14s;
+}
+.card:hover{box-shadow:var(--shadow-md);border-color:var(--brand)}
+.card__media{position:relative;background:var(--surface-2);aspect-ratio:4/3}
+.card__media svg{width:100%;height:100%;display:block}
+.card__badges{position:absolute;top:9px;left:9px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.badge{
+  font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 7px;border-radius:3px;backdrop-filter:blur(3px);
+}
+.badge--new{background:var(--accent);color:#221202}
+.badge--verified{background:rgba(255,255,255,.94);color:var(--good)}
+.badge--bumi{background:rgba(166,52,23,.94);color:#FFF}
+.card__photocount{
+  position:absolute;bottom:9px;right:9px;background:rgba(6,25,27,.86);color:#FFF;
+  font-size:11.5px;font-family:var(--font-mono);padding:2px 7px;border-radius:3px;
+}
+.card__body{padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:9px}
+.card__eyebrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.typetag{
+  font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--brand-2);background:var(--brand-wash);padding:2px 7px;border-radius:3px;
+}
+.card__where{font-size:13.5px;color:var(--text-2)}
+.card__title{
+  font-family:var(--font-display);font-size:19.5px;font-weight:700;letter-spacing:-.015em;
+  line-height:1.3;margin:0;text-wrap:balance;
+}
+.card__title button{font:inherit;color:var(--text);text-align:left}
+.card__title button:hover{color:var(--brand-2);text-decoration:underline;text-underline-offset:3px}
+.specs{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line-soft);border-radius:5px;overflow:hidden}
+.spec{
+  flex:1;min-width:82px;padding:7px 10px;background:var(--surface-2);
+  border-right:1px solid var(--line-soft);
+}
+.spec:last-child{border-right:none}
+.spec__k{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.spec__v{font-size:15px;font-weight:700;font-family:var(--font-mono);color:var(--text);line-height:1.35}
+.spec__v small{font-family:var(--font-ui);font-size:12px;font-weight:500;color:var(--text-2)}
+.transit{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--text-2);flex-wrap:wrap}
+.transit--none{color:var(--warn)}
+.featrow{display:flex;flex-wrap:wrap;gap:5px}
+.feat{
+  font-size:12.5px;padding:2px 8px;border:1px solid var(--line);border-radius:3px;
+  color:var(--text-2);background:var(--surface);
+}
+.feat--hi{border-color:rgba(200,128,28,.4);background:var(--accent-wash);color:var(--warn);font-weight:600}
+.card__side{
+  border-left:1px solid var(--line-soft);padding:14px 15px;
+  display:flex;flex-direction:column;gap:9px;background:var(--surface);
+}
+.price{font-family:var(--font-mono);font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--text)}
+.price small{font-size:13px;font-weight:400;color:var(--text-2);font-family:var(--font-ui)}
+.psf{font-size:13px;color:var(--text-2);font-family:var(--font-mono)}
+.agentline{font-size:12.5px;color:var(--text-3);line-height:1.45;margin-top:auto}
+.agentline b{color:var(--text-2);font-weight:600}
+.ren{font-family:var(--font-mono);font-size:11.5px;color:var(--good);font-weight:600}
+.card__actions{display:flex;gap:6px}
+.btn{
+  padding:8px 12px;border-radius:4px;font-size:14px;font-weight:700;
+  border:1px solid var(--line);color:var(--text);background:var(--surface);transition:.12s;
+}
+.btn:hover{border-color:var(--brand);color:var(--brand-2)}
+.btn--primary{background:var(--brand);border-color:var(--brand);color:#FFF;flex:1;text-align:center}
+.btn--primary:hover{background:var(--brand-2);border-color:var(--brand-2);color:#FFF}
+.btn--accent{background:var(--accent);border-color:var(--accent);color:#221202}
+.btn--accent:hover{background:var(--accent-2);border-color:var(--accent-2);color:#221202}
+.btn--icon{width:38px;padding:0;display:grid;place-items:center;height:36px}
+.btn--icon[aria-pressed="true"]{background:var(--alert-wash);border-color:var(--alert);color:var(--alert)}
+.cmp{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-2);cursor:pointer}
+.cmp input{width:15px;height:15px;accent-color:var(--brand);margin:0}
+
+/* ---------- Share ---------- */
+.sharewrap{position:relative;display:inline-block}
+.sharepop{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:40;
+  background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  box-shadow:var(--shadow-md);padding:6px;width:210px;display:none;
+}
+.sharepop[data-visible="true"]{display:block}
+.sharepop__item{
+  display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:4px;
+  font-size:14px;font-weight:600;color:var(--text);text-align:left;text-decoration:none;
+}
+.sharepop__item:hover{background:var(--surface-2)}
+.sharepop__icon{
+  width:26px;height:26px;border-radius:6px;display:grid;place-items:center;flex-shrink:0;color:#FFF;
+}
+.sharepop__divider{height:1px;background:var(--line-soft);margin:5px 2px}
+.sharepop__link{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface-2);
+  border:1px solid var(--line-soft);border-radius:4px;margin:2px 2px 4px;
+}
+.sharepop__link input{
+  flex:1;min-width:0;border:none;background:transparent;font-size:12px;font-family:var(--font-mono);
+  color:var(--text-2);padding:0;
+}
+.sharepop__link button{font-size:12px;font-weight:700;color:var(--brand-2);flex-shrink:0}
+.sharepop__link button:hover{color:var(--accent)}
+
+.empty{
+  background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);
+  padding:48px 30px;text-align:center;
+}
+.empty h3{font-family:var(--font-display);font-size:20px;margin:0 0 8px}
+.empty p{color:var(--text-2);margin:0 0 16px;font-size:15px}
+
+/* ---------- Map placeholder ---------- */
+.mapview{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:0;overflow:hidden;box-shadow:var(--shadow-sm);
+}
+.mapview__canvas{
+  height:520px;position:relative;
+  background:
+    linear-gradient(0deg, rgba(14,75,79,.05) 1px, transparent 1px) 0 0/100% 42px,
+    linear-gradient(90deg, rgba(14,75,79,.05) 1px, transparent 1px) 0 0/42px 100%,
+    var(--surface-2);
+}
+.mapview__note{
+  position:absolute;inset:auto 0 0 0;padding:12px 16px;
+  background:var(--surface);border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--text-2);
+}
+.pin{
+  position:absolute;transform:translate(-50%,-100%);
+  background:var(--surface);border:1.5px solid var(--brand);border-radius:5px;
+  padding:5px 9px;font-family:var(--font-mono);font-size:13px;font-weight:600;
+  color:var(--brand-2);box-shadow:var(--shadow-sm);white-space:nowrap;cursor:pointer;
+}
+.pin:hover,.pin[aria-pressed="true"]{background:var(--brand);color:#FFF;border-color:var(--brand);z-index:5}
+.pin::after{
+  content:"";position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--brand);border-bottom:none;
+}
+
+/* ---------- Overlay panels ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:100;background:rgba(6,26,28,.62);
+  display:none;justify-content:center;align-items:flex-start;padding:34px 20px;
+  overflow-y:auto;backdrop-filter:blur(2px);
+}
+.overlay[data-visible="true"]{display:flex}
+.sheet{
+  background:var(--bg);width:min(1120px,100%);border-radius:8px;
+  box-shadow:var(--shadow-lg);overflow:hidden;
+}
+.sheet__head{
+  position:sticky;top:0;z-index:3;background:var(--surface);
+  border-bottom:1px solid var(--line);padding:14px 22px;
+  display:flex;align-items:center;gap:14px;
+}
+.sheet__head h2{font-family:var(--font-display);font-size:21px;margin:0;letter-spacing:-.02em;flex:1;text-wrap:balance}
+.closebtn{width:34px;height:34px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;font-size:19px;color:var(--text-2)}
+.closebtn:hover{background:var(--alert-wash);border-color:var(--alert);color:var(--alert)}
+.sheet__body{padding:22px}
+
+/* detail */
+.dt{display:grid;grid-template-columns:1fr 336px;gap:20px;align-items:start}
+.dt__gallery{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.dt__gallery svg{width:100%;display:block;aspect-ratio:16/9}
+.dt__thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:4px;background:var(--surface)}
+.dt__thumbs svg{aspect-ratio:4/3;border-radius:3px;cursor:pointer;border:1.5px solid transparent}
+.dt__thumbs svg:hover{border-color:var(--brand)}
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 18px;box-shadow:var(--shadow-sm);
+}
+.panel + .panel{margin-top:14px}
+.panel h3{
+  font-family:var(--font-display);font-size:16px;margin:0 0 12px;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:8px;
+}
+.factgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:5px;overflow:hidden}
+.fact{background:var(--surface);padding:9px 12px}
+.fact:last-child:nth-child(odd){grid-column:1/-1}
+.fact__k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.fact__v{font-size:15px;font-weight:600;line-height:1.4}
+.fact__v .mono{font-weight:600}
+.costrow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line-soft);font-size:14.5px}
+.costrow:last-child{border-bottom:none}
+.costrow span:first-child{color:var(--text-2)}
+.costrow span:last-child{font-family:var(--font-mono);font-weight:600;white-space:nowrap}
+.plan{
+  display:grid;grid-template-rows:repeat(8,30px);grid-auto-flow:column;gap:4px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:8px;
+}
+.room{
+  border:1.5px solid var(--brand);border-radius:3px;background:var(--surface);
+  padding:5px 7px;display:flex;flex-direction:column;justify-content:center;gap:1px;
+  min-width:0;overflow:hidden;
+}
+.room b{font-size:12.5px;font-weight:700;line-height:1.25;text-wrap:balance}
+.room span{font-family:var(--font-mono);font-size:10.5px;color:var(--text-3)}
+.room--wet{border-color:var(--brand-2);border-style:dashed;background:var(--brand-wash)}
+.room--out{border-color:var(--line);border-style:dashed;background:var(--surface-2);color:var(--text-2)}
+.room--my{border-color:var(--accent);background:var(--accent-wash)}
+.planlegend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12.5px;color:var(--text-2)}
+.planlegend i{display:inline-block;width:11px;height:11px;border-radius:2px;border:1.5px solid;margin-right:5px;vertical-align:-1px}
+.costtotal{
+  margin-top:9px;padding-top:10px;border-top:2px solid var(--brand);
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+.costtotal b{font-family:var(--font-mono);font-size:20px;color:var(--brand-2)}
+.disclaim{font-size:12px;color:var(--text-3);margin-top:9px;line-height:1.5}
+.agentcard{display:flex;gap:12px;align-items:flex-start}
+.avatar{
+  width:52px;height:52px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  background:var(--brand-wash);color:var(--brand-2);font-family:var(--font-display);
+  font-weight:700;font-size:19px;border:1px solid rgba(14,75,79,.2);
+}
+.verif{
+  display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;
+  color:var(--good);background:var(--good-wash);padding:2px 7px;border-radius:3px;margin-top:3px;
+}
+.tlist{display:flex;flex-direction:column;gap:8px}
+.trow{display:flex;align-items:center;gap:9px;font-size:14.5px}
+.trow__d{margin-left:auto;font-family:var(--font-mono);font-size:13.5px;color:var(--text-2)}
+.faclist{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px}
+.facitem{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--text-2)}
+.facitem svg{flex-shrink:0;color:var(--brand-2)}
+
+/* agent form */
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form .full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:13px;font-weight:700;color:var(--text-2);display:flex;align-items:center;gap:6px}
+.req{color:var(--alert)}
+.field input,.field select,.field textarea{
+  border:1px solid var(--line);border-radius:4px;background:var(--surface);
+  padding:9px 11px;font-size:15px;width:100%;
+}
+.field textarea{resize:vertical;min-height:84px;line-height:1.6}
+.field small{font-size:12px;color:var(--text-3)}
+.formsec{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;margin-bottom:14px;
+}
+.formsec > h3{
+  font-family:var(--font-display);font-size:16.5px;margin:0 0 4px;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:9px;
+}
+.formsec > p{font-size:13.5px;color:var(--text-2);margin:0 0 14px}
+.stepno{
+  width:24px;height:24px;border-radius:50%;background:var(--brand);color:#FFF;
+  display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;font-weight:600;flex-shrink:0;
+}
+.uploadzone{
+  border:2px dashed var(--line);border-radius:6px;padding:26px;text-align:center;
+  background:var(--surface-2);color:var(--text-2);font-size:14px;
+}
+.uploadzone b{display:block;font-size:15px;color:var(--text);margin-bottom:4px}
+
+/* notes drawer */
+.notes{
+  position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);z-index:110;
+  background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);
+  transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;
+}
+.notes[data-visible="true"]{transform:translateX(0)}
+.notes__head{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.notes__head h2{font-family:var(--font-display);font-size:18px;margin:0;flex:1;letter-spacing:-.01em}
+.notes__body{padding:20px;overflow-y:auto;flex:1}
+.notes__body h3{font-family:var(--font-display);font-size:15px;margin:22px 0 8px;color:var(--brand-2)}
+.notes__body h3:first-child{margin-top:0}
+.notes__body p{font-size:14.5px;line-height:1.75;color:var(--text-2);margin:0 0 10px}
+.cmpTable{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
+.cmpTable th,.cmpTable td{border:1px solid var(--line-soft);padding:7px 9px;text-align:left;vertical-align:top}
+.cmpTable th{background:var(--surface-2);font-weight:700;font-size:12.5px}
+.cmpTable td:first-child{color:var(--text-3)}
+.cmpTable td:last-child{color:var(--text);font-weight:600}
+
+/* compare bar */
+.cmpbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--nav-bg);color:var(--nav-fg);
+  padding:12px 22px;display:none;align-items:center;gap:16px;box-shadow:0 -6px 20px rgba(0,0,0,.25);
+}
+.cmpbar[data-visible="true"]{display:flex}
+.cmpbar__items{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.cmpbar__chip{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:4px;
+  padding:5px 9px;font-size:13px;display:flex;align-items:center;gap:7px;
+}
+.cmpbar__chip button{color:var(--nav-fg-dim)}
+.cmpbar__chip button:hover{color:var(--accent-2)}
+
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--nav-bg);color:var(--nav-fg);padding:11px 20px;border-radius:6px;
+  font-size:14.5px;font-weight:600;box-shadow:var(--shadow-lg);z-index:200;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.toast[data-show="true"]{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.sronly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){
+  *{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ TOP BAR ============================ -->
+<header class="topbar">
+  <div class="topbar__in">
+    <div class="brand">
+      <svg class="brand__mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M4 15L16 5l12 10v12a2 2 0 0 1-2 2h-8v-9h-4v9H6a2 2 0 0 1-2-2V15Z" fill="#E4A03A"/>
+        <circle cx="16" cy="13" r="3.1" fill="#082F33"/>
+      </svg>
+      <span class="brand__name">Peta<em>Rumah</em></span>
+    </div>
+
+    <div class="deals" role="tablist" aria-label="Listing type">
+      <button class="deal" role="tab" aria-selected="true" data-deal="rent" data-i18n="tab.rent">For Rent</button>
+      <button class="deal" role="tab" aria-selected="false" data-deal="sale" data-i18n="tab.sale">For Sale</button>
+      <button class="deal" role="tab" aria-selected="false" data-deal="new" data-i18n="tab.new">New Launch</button>
+    </div>
+
+    <div class="topbar__spacer"></div>
+
+    <div class="tnav">
+      <button class="tnav__btn" id="notesBtn" title="Design notes">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V7.5M8 5h.01M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13Z"/></svg>
+        <span data-i18n="nav.notes">設計筆記</span>
+      </button>
+      <button class="tnav__btn" id="shortlistBtn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.6 3.2 9a2.9 2.9 0 0 1 4.1-4.1L8 5.6l.7-.7A2.9 2.9 0 0 1 12.8 9L8 13.6Z"/></svg>
+        <span data-i18n="nav.shortlist">Shortlist</span>
+        <span class="pill-count mono" id="slCount">0</span>
+      </button>
+      <button class="tnav__btn" id="authBtn">登入</button>
+      <button class="tnav__btn" id="themeBtn" aria-label="Toggle theme">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8 5.6 5.6 0 1 0 13.2 9.6Z"/></svg>
+      </button>
+      <div class="lang" role="group" aria-label="Language">
+        <button data-lang="en" aria-pressed="true">EN</button>
+        <button data-lang="ms" aria-pressed="false">BM</button>
+        <button data-lang="zh" aria-pressed="false">中文</button>
+      </div>
+      <button class="tnav__btn tnav__btn--cta" id="postBtn">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3.5v9M3.5 8h9"/></svg>
+        <span data-i18n="nav.post">Post a Listing</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ SEARCH STRIP ============================ -->
+<div class="searchbar">
+  <div class="searchbar__in">
+    <div class="sfield">
+      <span class="sfield__lab" data-i18n="s.state">State</span>
+      <select id="qState">
+        <option value="all">All Malaysia</option>
+        <option value="Kuala Lumpur">Kuala Lumpur</option>
+        <option value="Selangor">Selangor</option>
+        <option value="Penang">Penang</option>
+        <option value="Johor">Johor</option>
+        <option value="Putrajaya">Putrajaya</option>
+        <option value="Negeri Sembilan">Negeri Sembilan</option>
+        <option value="Perak">Perak</option>
+        <option value="Malacca">Malacca</option>
+        <option value="Sabah">Sabah</option>
+        <option value="Sarawak">Sarawak</option>
+      </select>
+    </div>
+    <div class="sfield sfield--grow">
+      <span class="sfield__lab" data-i18n="s.where">Area, project or MRT/LRT station</span>
+      <input id="qText" type="search" placeholder="e.g. Mont Kiara, Ara Damansara, Taman Mutiara MRT…" autocomplete="off">
+    </div>
+    <div class="sfield">
+      <span class="sfield__lab" data-i18n="s.type">Property type</span>
+      <select id="qType">
+        <option value="all">Any type</option>
+        <option value="Condominium">Condominium</option>
+        <option value="Serviced Residence">Serviced Residence</option>
+        <option value="Apartment">Apartment / Flat</option>
+        <option value="2-Storey Terrace">Terrace / Link</option>
+        <option value="Semi-Detached">Semi-Detached</option>
+        <option value="Bungalow">Bungalow</option>
+      </select>
+    </div>
+    <div class="sfield">
+      <span class="sfield__lab" data-i18n="s.budget">Max budget</span>
+      <select id="qBudget"><option value="">Any</option></select>
+    </div>
+    <button class="searchbtn" id="qGo">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.6"/><path d="m10.5 10.5 3.2 3.2"/></svg>
+      <span data-i18n="s.go">Search</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============================ MAIN ============================ -->
+<div class="shell">
+
+  <!-- ---------- FILTER RAIL ---------- -->
+  <aside class="rail" aria-label="Filters">
+    <div class="rail__head">
+      <span class="rail__title" data-i18n="f.title">Refine search</span>
+      <button class="linkbtn" id="resetAll" data-i18n="f.reset">Reset all</button>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.price">Price</span></div>
+      <div class="range">
+        <select id="pMin" class="mono"></select>
+        <span>—</span>
+        <select id="pMax" class="mono"></select>
+      </div>
+      <p class="subnote" id="priceNote">Monthly rent, excluding utilities &amp; maintenance.</p>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.area">Area</span></div>
+      <div class="checks" id="areaChecks"></div>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.ptype">Property type</span></div>
+      <div class="checks" id="typeChecks"></div>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.beds">Bedrooms</span></div>
+      <div class="chips" id="bedChips"></div>
+      <div class="fgroup__h" style="margin-top:13px"><span data-i18n="f.baths">Bathrooms</span></div>
+      <div class="chips" id="bathChips"></div>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h">
+        <span data-i18n="f.size">Built-up size</span>
+        <div class="seg" style="width:104px" id="unitSeg">
+          <button data-unit="sqft" aria-pressed="true">sq ft</button>
+          <button data-unit="sqm" aria-pressed="false">sq m</button>
+        </div>
+      </div>
+      <div class="range">
+        <select id="sMin" class="mono"></select>
+        <span>—</span>
+        <select id="sMax" class="mono"></select>
+      </div>
+      <p class="subnote" data-i18n="f.sizenote">Malaysian listings quote built-up area in square feet. Land area is shown separately for landed homes.</p>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h">
+        <span data-i18n="f.park">Car park bays</span>
+        <span class="tag-my">MY</span>
+      </div>
+      <div class="chips" id="bayChips"></div>
+      <label class="switch"><input type="checkbox" id="fCovered"><span class="switch__track"></span><span data-i18n="f.covered">Covered / basement parking only</span></label>
+    </div>
+
+    <div class="fgroup" data-only="rent">
+      <div class="fgroup__h">
+        <span data-i18n="f.furnish">Furnishing</span>
+        <span class="tag-my">MY</span>
+      </div>
+      <div class="checks" id="furnishChecks"></div>
+      <p class="subnote" data-i18n="f.furnishnote">Unlike Japan, most Malaysian rentals come furnished — this is usually the first thing a tenant filters on.</p>
+    </div>
+
+    <div class="fgroup" data-only="sale new">
+      <div class="fgroup__h">
+        <span data-i18n="f.tenure">Tenure &amp; title</span>
+        <span class="tag-my">MY</span>
+      </div>
+      <div class="checks" id="tenureChecks"></div>
+      <div style="height:9px"></div>
+      <div class="checks" id="titleChecks"></div>
+    </div>
+
+    <div class="fgroup" data-only="sale new">
+      <div class="fgroup__h">
+        <span data-i18n="f.owner">Ownership eligibility</span>
+        <span class="tag-my">MY</span>
+      </div>
+      <div class="seg" id="bumiSeg" style="margin-bottom:9px">
+        <button data-bumi="exclude" aria-pressed="true">Exclude Bumi lot</button>
+        <button data-bumi="include" aria-pressed="false">Include</button>
+        <button data-bumi="only" aria-pressed="false">Bumi only</button>
+      </div>
+      <label class="switch"><input type="checkbox" id="fForeign"><span class="switch__track"></span><span data-i18n="f.foreign">Foreign buyer eligible</span></label>
+      <p class="subnote" data-i18n="f.foreignnote">Foreigners must meet each state's minimum purchase price (RM1m in KL &amp; Penang island, RM2m for landed in parts of Selangor).</p>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.transit">Rail access</span></div>
+      <div class="lines" id="lineChecks"></div>
+      <div style="height:10px"></div>
+      <label class="field" style="gap:5px">
+        <span style="font-size:13px;font-weight:700;color:var(--text-2)" data-i18n="f.walk">Max walk to station</span>
+        <select id="fWalk" class="selectlite" style="width:100%">
+          <option value="">Any distance</option>
+          <option value="400">Under 400 m (5 min)</option>
+          <option value="800">Under 800 m (10 min)</option>
+          <option value="1500">Under 1.5 km (feeder bus)</option>
+        </select>
+      </label>
+      <p class="subnote" data-i18n="f.transitnote">Rail coverage is thin outside the Klang Valley, so driving time matters more than in Japan. Listings with no station nearby are labelled, not hidden.</p>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.facil">Facilities</span></div>
+      <div class="checks" id="facChecks"></div>
+    </div>
+
+    <div class="fgroup">
+      <div class="fgroup__h"><span data-i18n="f.other">Other</span></div>
+      <label class="switch"><input type="checkbox" id="fRen"><span class="switch__track"></span><span data-i18n="f.ren">Registered REN / REA agents only</span></label>
+      <label class="switch"><input type="checkbox" id="fWest"><span class="switch__track"></span><span data-i18n="f.west">Avoid west-facing (afternoon sun)</span></label>
+      <label class="switch"><input type="checkbox" id="fPet"><span class="switch__track"></span><span data-i18n="f.pet">Pet friendly</span></label>
+    </div>
+  </aside>
+
+  <!-- ---------- RESULTS ---------- -->
+  <main class="main">
+    <div class="resbar">
+      <span class="rescount"><b id="resN">0</b> <span data-i18n="r.results">listings</span></span>
+      <div class="resbar__spacer"></div>
+      <label style="font-size:13.5px;color:var(--text-2)" for="sortSel" data-i18n="r.sort">Sort</label>
+      <select class="selectlite" id="sortSel">
+        <option value="new">Newest listed</option>
+        <option value="plow">Price: low to high</option>
+        <option value="phigh">Price: high to low</option>
+        <option value="size">Largest built-up</option>
+        <option value="psf">Lowest price per sq ft</option>
+      </select>
+      <div class="viewtoggle" id="viewToggle">
+        <button data-view="list" aria-pressed="true" data-i18n="r.list">List</button>
+        <button data-view="map" aria-pressed="false" data-i18n="r.map">Map</button>
+      </div>
+      <button class="btn btn--accent" id="saveSearch" data-i18n="r.save">Save search</button>
+    </div>
+
+    <div class="activefilters" id="activeFilters"></div>
+
+    <div id="listView" class="cards"></div>
+
+    <div id="mapView" class="mapview" hidden>
+      <div class="mapview__canvas" id="mapCanvas"></div>
+    </div>
+  </main>
+</div>
+
+<footer style="text-align:center;padding:22px 16px 30px;font-size:12px;color:var(--text-3,#6B7876)">
+  © 2026 PetaRumah · Powered by CK Holdings
+</footer>
+
+<!-- ============================ COMPARE BAR ============================ -->
+<div class="cmpbar" id="cmpBar">
+  <strong style="font-family:var(--font-display);font-size:15px">Compare</strong>
+  <div class="cmpbar__items" id="cmpItems"></div>
+  <button class="btn btn--accent" id="cmpGo">Compare side by side</button>
+  <button class="btn" id="cmpClear" style="background:transparent;border-color:var(--nav-field-line);color:var(--nav-fg-dim)">Clear</button>
+</div>
+
+<!-- ============================ DETAIL OVERLAY ============================ -->
+<div class="overlay" id="detailOverlay" role="dialog" aria-modal="true" aria-label="Property detail">
+  <div class="sheet">
+    <div class="sheet__head">
+      <h2 id="dtTitle">—</h2>
+      <span id="dtShareSlot"></span>
+      <button class="closebtn" data-close="detailOverlay" aria-label="Close">×</button>
+    </div>
+    <div class="sheet__body" id="dtBody"></div>
+  </div>
+</div>
+
+<!-- ============================ AGENT FORM OVERLAY ============================ -->
+<div class="overlay" id="postOverlay" role="dialog" aria-modal="true" aria-label="Post a listing">
+  <div class="sheet">
+    <div class="sheet__head">
+      <h2>Post a listing</h2>
+      <span style="font-size:13px;color:var(--text-3)">Agent &amp; owner portal</span>
+      <button class="closebtn" data-close="postOverlay" aria-label="Close">×</button>
+    </div>
+    <div class="sheet__body">
+
+      <div class="formsec">
+        <h3><span class="stepno">1</span> Who is listing this?</h3>
+        <p>Every listing must carry a valid registration number issued by the Board of Valuers, Appraisers, Estate Agents and Property Managers (LPPEH/BOVAEA). This is the trust layer Malaysia's market is missing — REINS enforces the same thing in Japan through mandatory registration.</p>
+        <div class="form">
+          <div class="field">
+            <label>Listing as <span class="req">*</span></label>
+            <select id="pfRole">
+              <option>Registered Estate Agent (REA)</option>
+              <option selected>Real Estate Negotiator (REN)</option>
+              <option>Property owner (self-listing)</option>
+              <option>Developer / project sales</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>REN / REA number <span class="req">*</span></label>
+            <input id="pfRen" placeholder="REN 12345" value="REN 41220">
+            <small id="renMsg">Format: REN + 5 digits, or E(3)1234 for agencies.</small>
+          </div>
+          <div class="field">
+            <label>Agency name</label>
+            <input placeholder="e.g. Vantage Realty Sdn Bhd" value="Vantage Realty Sdn Bhd">
+          </div>
+          <div class="field">
+            <label>Agency licence (E number)</label>
+            <input placeholder="E(1)1873" value="E(1)1873">
+          </div>
+        </div>
+      </div>
+
+      <div class="formsec">
+        <h3><span class="stepno">2</span> Property basics</h3>
+        <p>Fields marked <span class="tag-my" style="font-size:9.5px">MY</span> do not exist on Japanese portals and are the ones Malaysian buyers ask about first.</p>
+        <div class="form">
+          <div class="field">
+            <label>Listing type <span class="req">*</span></label>
+            <select id="pfDeal"><option value="rent">For rent</option><option value="sale">For sale</option><option value="new">New launch</option></select>
+          </div>
+          <div class="field">
+            <label>Property type <span class="req">*</span></label>
+            <select><optgroup label="High-rise"><option>Condominium</option><option>Serviced Residence</option><option>Apartment / Flat</option><option>SOHO / SOVO</option><option>Penthouse</option></optgroup><optgroup label="Landed"><option>1-Storey Terrace</option><option selected>2-Storey Terrace</option><option>3-Storey Terrace</option><option>Semi-Detached</option><option>Bungalow / Villa</option><option>Townhouse</option><option>Cluster</option></optgroup><optgroup label="Commercial"><option>Shop-office</option><option>Retail lot</option><option>Office suite</option><option>Factory / Warehouse</option></optgroup></select>
+          </div>
+          <div class="field full">
+            <label>Project or street name <span class="req">*</span></label>
+            <input placeholder="e.g. Amber Kiara Residences, or Jalan SS2/24">
+          </div>
+          <div class="field">
+            <label>State <span class="req">*</span></label>
+            <select><option>Kuala Lumpur</option><option>Selangor</option><option>Penang</option><option>Johor</option><option>Putrajaya</option><option>Negeri Sembilan</option><option>Perak</option><option>Sabah</option><option>Sarawak</option></select>
+          </div>
+          <div class="field">
+            <label>Area / mukim <span class="req">*</span></label>
+            <input placeholder="e.g. Mont Kiara">
+          </div>
+          <div class="field">
+            <label>Bedrooms <span class="req">*</span></label>
+            <select><option>Studio</option><option>1</option><option>2</option><option selected>3</option><option>3+1</option><option>4</option><option>4+1</option><option>5</option><option>6+</option></select>
+            <small>Malaysia counts rooms directly — no 1K / 2LDK codes.</small>
+          </div>
+          <div class="field">
+            <label>Bathrooms <span class="req">*</span></label>
+            <select><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5+</option></select>
+          </div>
+          <div class="field">
+            <label>Built-up area (sq ft) <span class="req">*</span></label>
+            <input class="mono" id="pfBuilt" type="number" value="1105" min="1">
+            <small id="sqmEcho">= 102.7 sq m</small>
+          </div>
+          <div class="field">
+            <label>Land area (sq ft) <span class="tag-my" style="font-size:9.5px">MY</span></label>
+            <input class="mono" type="number" placeholder="Landed property only">
+            <small>Leave blank for high-rise strata units.</small>
+          </div>
+          <div class="field">
+            <label>Car park bays <span class="tag-my" style="font-size:9.5px">MY</span></label>
+            <select><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4+</option></select>
+          </div>
+          <div class="field">
+            <label>Parking type</label>
+            <select><option>Covered / basement</option><option>Open bay</option><option>Porch (landed)</option><option>Street parking</option></select>
+          </div>
+          <div class="field">
+            <label>Furnishing <span class="tag-my" style="font-size:9.5px">MY</span></label>
+            <select><option>Fully furnished</option><option selected>Partly furnished</option><option>Unfurnished</option></select>
+          </div>
+          <div class="field">
+            <label>Unit facing <span class="tag-my" style="font-size:9.5px">MY</span></label>
+            <select><option>North</option><option>North-east</option><option selected>East</option><option>South-east</option><option>South</option><option>South-west</option><option>West — afternoon sun</option><option>North-west</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="formsec">
+        <h3><span class="stepno">3</span> Title &amp; legal <span class="tag-my" style="font-size:9.5px">MY</span></h3>
+        <p>Malaysia's title system has no Japanese equivalent. Leaving these blank is the single biggest cause of wasted viewings.</p>
+        <div class="form">
+          <div class="field">
+            <label>Tenure <span class="req">*</span></label>
+            <select><option>Freehold</option><option selected>Leasehold — 99 years</option><option>Leasehold — 60 years</option><option>Malay Reserve Land</option></select>
+          </div>
+          <div class="field">
+            <label>Lease expiry year</label>
+            <input class="mono" type="number" placeholder="e.g. 2110">
+          </div>
+          <div class="field">
+            <label>Title type <span class="req">*</span></label>
+            <select><option>Individual title</option><option selected>Strata title</option><option>Master title (not yet issued)</option></select>
+          </div>
+          <div class="field">
+            <label>Bumi lot?</label>
+            <select><option selected>No</option><option>Yes — Bumi lot restriction applies</option></select>
+          </div>
+          <div class="field">
+            <label>Foreign buyer eligible?</label>
+            <select><option selected>Yes — above state minimum</option><option>No — below state threshold</option><option>Restricted zone</option></select>
+          </div>
+          <div class="field">
+            <label>Maintenance fee (RM per sq ft / month)</label>
+            <input class="mono" type="number" step="0.01" placeholder="0.33">
+          </div>
+        </div>
+      </div>
+
+      <div class="formsec">
+        <h3><span class="stepno">4</span> Price</h3>
+        <div class="form">
+          <div class="field">
+            <label>Asking price / monthly rent (RM) <span class="req">*</span></label>
+            <input class="mono" type="number" value="2800">
+          </div>
+          <div class="field">
+            <label>Security deposit terms</label>
+            <select><option selected>2 + 1 (standard)</option><option>2 months only</option><option>3 + 1</option><option>Negotiable</option></select>
+            <small>Malaysian standard: 2 months security + 1 month utility + access card.</small>
+          </div>
+          <div class="field full">
+            <label>Description</label>
+            <textarea placeholder="Renovated corner unit, walking distance to Awan Besar LRT, unblocked view of the KL skyline…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="formsec">
+        <h3><span class="stepno">5</span> Photos &amp; floor plan</h3>
+        <div class="uploadzone">
+          <b>Drag photos here, or click to browse</b>
+          Minimum 6 photos. Include the car park bay and the actual view from the balcony — the two things Malaysian viewers complain are always missing.
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-bottom:6px">
+        <button class="btn" data-close="postOverlay">Save as draft</button>
+        <button class="btn btn--primary" style="flex:0 0 auto;padding-inline:26px" id="pfSubmit">Publish listing</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ BUYER LOGIN OVERLAY ============================ -->
+<div class="overlay" id="authOverlay" role="dialog" aria-modal="true" aria-label="登入">
+  <div class="sheet" style="max-width:380px">
+    <div class="sheet__head">
+      <h2 id="authTitle">登入以儲存收藏</h2>
+      <button class="closebtn" data-close="authOverlay" aria-label="Close">×</button>
+    </div>
+    <div class="sheet__body">
+      <p style="font-size:13px;color:var(--text-3);margin-top:0">登入後，你的收藏會存在雲端，換裝置也看得到。</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+        <input id="authEmail" type="email" placeholder="Email" style="padding:10px;border:1px solid var(--line,#DDD6C7);border-radius:6px;font-size:14px">
+        <input id="authPassword" type="password" placeholder="密碼（至少 6 個字）" style="padding:10px;border:1px solid var(--line,#DDD6C7);border-radius:6px;font-size:14px">
+      </div>
+      <div id="authErr" style="font-size:13px;color:#B4530A;min-height:18px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-bottom:6px">
+        <button class="btn" id="authSignUpBtn">註冊新帳號</button>
+        <button class="btn btn--primary" style="flex:0 0 auto;padding-inline:26px" id="authSignInBtn">登入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ DESIGN NOTES DRAWER ============================ -->
+<aside class="notes" id="notesPanel" aria-label="Design notes">
+  <div class="notes__head">
+    <h2>設計筆記：日本 → 馬來西亞</h2>
+    <button class="closebtn" id="notesClose" aria-label="Close">×</button>
+  </div>
+  <div class="notes__body">
+    <p>這個原型抄的是 SUUMO 的<strong>功能邏輯</strong>（左欄篩選、結果即時更新、規格一目了然），不是它的外觀。視覺上換成孔雀藍＋藏紅花金，字體照你要求用 Meiryo。</p>
+
+    <h3>1. 房型：丟掉 1K / 1R / 2LDK</h3>
+    <p>日本用「房間數＋K/D/L」編碼，因為和室、玄關、獨立浴廁的組合方式固定。馬來西亞不是這樣算的——直接講幾房幾廁。而且大馬有 <strong>3+1</strong>（三房加一個女傭房）這種日本完全沒有的格局，篩選器必須支援。</p>
+
+    <h3>2. 面積：sq ft 是唯一的通用語</h3>
+    <p>「畳」在這裡毫無意義。大馬全部講 <strong>square feet</strong>，連買家心算 psf（每平方尺單價）都是本能反應。所以：預設 sq ft、附 sq m 切換、列表卡直接顯示 psf。另外 landed 房必須分開列「built-up」和「land area」兩個數字，高樓 strata 單位只有 built-up。</p>
+
+    <h3>3. 車位＝大馬第一順位</h3>
+    <p>日本portal幾乎不把車位當篩選條件，因為大家搭電車。吉隆坡相反：<strong>沒車位等於不能住</strong>。所以車位數量拉到主篩選區，還要分「covered / basement」還是露天——曬到爆的露天車位在這裡是實質減分。</p>
+
+    <h3>4. 家具狀態（Furnishing）</h3>
+    <p>日本租屋幾乎一律空屋，所以 SUUMO 沒這欄。大馬租客第一個問的就是 fully / partly / unfurnished。這欄放在租屋模式的顯眼位置。</p>
+
+    <h3>5. 地契與產權——最大的結構性差異</h3>
+    <p>日本沒有對應概念，但大馬買家一定會問：</p>
+    <table class="cmpTable">
+      <tr><th>欄位</th><th>為什麼一定要有</th></tr>
+      <tr><td>Freehold / Leasehold</td><td>99 年地契剩幾年直接影響貸款成數與轉手</td></tr>
+      <tr><td>Individual / Strata / Master title</td><td>Master title 未分割會卡住過戶</td></tr>
+      <tr><td>Bumi Lot</td><td>非土著不能買，先篩掉省下白跑一趟</td></tr>
+      <tr><td>外資門檻</td><td>吉隆坡／檳島 RM100 萬起跳，各州不同</td></tr>
+    </table>
+
+    <h3>6. 交通：不隱藏「沒有捷運」</h3>
+    <p>SUUMO 以「最寄駅徒歩○分」為核心。大馬只有巴生谷有像樣的軌道網，所以我做兩件事：一、提供 MRT／LRT／KTM／Monorail 路線篩選＋步行距離；二、<strong>沒有車站的物件不隱藏，而是明白標示「No rail within 2 km — car recommended」</strong>。假裝每間屋都靠近車站才是騙人。</p>
+
+    <h3>7. REN 編號＝馬來西亞版的 REINS 信任層</h3>
+    <p>REINS 厲害的地方不是介面，是<strong>強制登錄</strong>帶來的資料紀律。大馬做不到強制，但可以做「驗證」：每則刊登綁定 LPPEH 發的 REN／REA 編號和公司 E 牌照，並提供「只看已驗證仲介」的開關。這是對付亂七八糟假盤最實際的一招。</p>
+
+    <h3>8. 費用試算做在物件頁裡</h3>
+    <p>租屋顯示 <strong>2＋1</strong> 押金結構（2 個月租金押金＋1 個月水電＋門卡）；買賣直接算印花稅級距（首 10 萬 1%、次 40 萬 2%、次 50 萬 3%、超過 100 萬 4%）、律師費、90% 貸款月供。日本 portal 有禮金／敷金試算，大馬要的是這一套。</p>
+
+    <h3>9. 語言</h3>
+    <p>EN / BM / 中文三語切換是大馬 portal 的基本盤，日本不需要。介面標籤已接上詞典，物件內文維持英文（符合實際市場習慣）。</p>
+
+    <h3>10. 刻意沒抄的部分</h3>
+    <p>SUUMO 的吉祥物、綠色配色、卡片密度、字型層級——都沒有照搬。抄功能不抄長相，法律上和品牌上都比較乾淨。</p>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const LINES = {
+  MRT1:{name:"MRT Kajang Line",   code:"MRT",  color:"#2E7D32"},
+  MRT2:{name:"MRT Putrajaya Line",code:"MRT",  color:"#C8A415"},
+  LRT3:{name:"LRT Kelana Jaya Line",code:"LRT",color:"#D6006E"},
+  LRT4:{name:"LRT Ampang Line",   code:"LRT",  color:"#E8730C"},
+  LRT5:{name:"LRT Sri Petaling Line",code:"LRT",color:"#B2405B"},
+  MR:  {name:"KL Monorail",       code:"MRL",  color:"#7CB342"},
+  KTM: {name:"KTM Komuter",       code:"KTM",  color:"#0F6FB5"},
+  ERL: {name:"KLIA Ekspres / Transit",code:"ERL",color:"#5B3B8C"}
+};
+
+const FACILITIES = ["Swimming pool","Gym","24-hour security","Playground","Surau","Multipurpose hall","EV charging","Tennis court","Covered parking","Lift lobby card access"];
+
+/* 房源資料一律來自 Firestore（後台 admin.html 審核通過的才會出現）。
+   示範資料已於 2026-08-29 全部清空，網站從 0 筆重新開始。 */
+const L = [];
+
+/* ============================================================
+   TELEGRAM-SYNCED LISTINGS
+   ------------------------------------------------------------
+   Listings scraped from the team's Telegram group are far less
+   structured than the curated sample data above (agents write
+   free text, half the fields are missing). This mapper fills
+   every field cardHTML()/matches()/sortList() touch with a safe
+   default so a sparse Telegram listing never crashes the render —
+   it just shows "⚠️ Info incomplete" and fewer filter matches.
+   ============================================================ */
+function tgDocToListing(doc){
+  const bedsN = doc.bedrooms ? (doc.bedrooms === "Studio" ? 0 : parseInt(doc.bedrooms,10)||0) : 0;
+  return {
+    id: "tg_"+doc.id,
+    deal: doc.deal === "rent" ? "rent" : "sale",
+    project: doc.project || "(Untitled listing — see description)",
+    area: doc.state || "Unknown area",       // Telegram posts rarely name the exact neighbourhood
+    state: doc.state || "Unknown",
+    type: doc.type || "Condominium",
+    cat: "tg",
+    beds: doc.bedrooms || "-",
+    bedsN,
+    baths: doc.bathrooms || 0,
+    built: doc.sqft || 0,
+    land: 0,
+    bays: 0,
+    covered: false,
+    furnish: doc.furnish || "Unfurnished",
+    price: doc.price || 0,
+    year: null,
+    tenure: doc.tenure || "Leasehold",
+    title: null,
+    bumi: false,
+    foreign: false,
+    line: null, station: null, walk: null,
+    facing: "-",
+    pet: false,
+    listed: 0,
+    verified: false,
+    fac: [],
+    agent: {
+      name: doc.agent_name || doc.source_sender_name || "Agent (via Telegram)",
+      ren: doc.agent_contact ? doc.agent_contact : "Not provided",
+      agency: "UNiTED KCG Subsales Listing Group",
+      firm: ""
+    },
+    blurb: doc.raw_text || "",
+    photos: doc.photo_urls || [],
+    incomplete: !doc.is_complete,
+    missingFields: doc.missing_fields || [],
+    telegramSource: true
+  };
+}
+
+/* Merge freshly-synced Telegram listings into L, then refresh the
+   left-rail filters (new areas/types may have appeared) and re-render. */
+function mergeTelegramListings(rawDocs){
+  const mapped = rawDocs.map(tgDocToListing);
+  const existingIds = new Set(L.map(x=>x.id));
+  mapped.forEach(m => { if(!existingIds.has(m.id)) L.push(m); });
+  buildControls();
+  render();
+}
+window.mergeTelegramListings = mergeTelegramListings;
+
+/* ============================================================
+   I18N (interface chrome only; listing copy stays in English,
+   matching how Malaysian portals actually operate)
+   ============================================================ */
+const I18N = {
+  en:{}, // defaults live in the markup
+  ms:{
+    "tab.rent":"Untuk Disewa","tab.sale":"Untuk Dijual","tab.new":"Projek Baharu",
+    "nav.shortlist":"Senarai Pendek","nav.post":"Iklankan Hartanah","nav.notes":"Nota Reka Bentuk",
+    "s.state":"Negeri","s.where":"Kawasan, projek atau stesen MRT/LRT","s.type":"Jenis hartanah","s.budget":"Bajet maksimum","s.go":"Cari",
+    "f.title":"Tapis carian","f.reset":"Set semula","f.price":"Harga","f.area":"Kawasan","f.ptype":"Jenis hartanah",
+    "f.beds":"Bilik tidur","f.baths":"Bilik air","f.size":"Keluasan binaan","f.park":"Petak parkir",
+    "f.covered":"Parkir berbumbung sahaja","f.furnish":"Perabot","f.tenure":"Pegangan & hak milik",
+    "f.owner":"Kelayakan pemilikan","f.foreign":"Layak untuk pembeli asing","f.transit":"Akses rel",
+    "f.walk":"Jarak berjalan ke stesen","f.facil":"Kemudahan","f.other":"Lain-lain",
+    "f.ren":"Ejen berdaftar REN / REA sahaja","f.west":"Elak menghadap barat (matahari petang)","f.pet":"Mesra haiwan peliharaan",
+    "r.results":"hartanah","r.sort":"Susun","r.list":"Senarai","r.map":"Peta","r.save":"Simpan carian",
+    "f.sizenote":"Iklan di Malaysia menggunakan kaki persegi. Keluasan tanah dipaparkan berasingan untuk rumah bertanah.",
+    "f.furnishnote":"Berbeza dengan Jepun, kebanyakan sewaan di Malaysia disertakan perabot — ini tapisan pertama penyewa.",
+    "f.foreignnote":"Pembeli asing perlu memenuhi harga minimum setiap negeri (RM1j di KL & pulau Pulau Pinang).",
+    "f.transitnote":"Liputan rel terhad di luar Lembah Klang. Hartanah tanpa stesen berdekatan dilabel, bukan disembunyikan."
+  },
+  zh:{
+    "tab.rent":"出租","tab.sale":"出售","tab.new":"新盤",
+    "nav.shortlist":"收藏","nav.post":"刊登物件","nav.notes":"設計筆記",
+    "s.state":"州屬","s.where":"地區、項目或捷運站","s.type":"物件類型","s.budget":"預算上限","s.go":"搜尋",
+    "f.title":"篩選條件","f.reset":"全部重設","f.price":"價格","f.area":"地區","f.ptype":"物件類型",
+    "f.beds":"房間數","f.baths":"浴室數","f.size":"建築面積","f.park":"車位",
+    "f.covered":"只看有蓋／地下車位","f.furnish":"家具狀態","f.tenure":"地契與產權",
+    "f.owner":"購買資格","f.foreign":"外國人可購買","f.transit":"軌道交通",
+    "f.walk":"步行至車站距離","f.facil":"設施","f.other":"其他",
+    "f.ren":"只看已註冊 REN／REA 仲介","f.west":"避開西曬","f.pet":"可養寵物",
+    "r.results":"筆物件","r.sort":"排序","r.list":"列表","r.map":"地圖","r.save":"儲存搜尋",
+    "f.sizenote":"馬來西亞以平方尺（sq ft）計算建築面積；有地房產另外顯示土地面積。",
+    "f.furnishnote":"與日本不同，馬來西亞租屋多半附家具，這是租客的第一個篩選條件。",
+    "f.foreignnote":"外國人須符合各州最低購買價（吉隆坡與檳島為 RM100 萬）。",
+    "f.transitnote":"巴生谷以外軌道覆蓋有限。附近沒有車站的物件會明白標示，而不是隱藏。"
+  }
+};
+const EN_CACHE = {};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S = {
+  deal:"rent", qState:"all", qText:"", qType:"all",
+  pMin:null, pMax:null,
+  areas:new Set(), types:new Set(), beds:new Set(), baths:new Set(),
+  sMin:null, sMax:null, unit:"sqft",
+  bays:null, covered:false,
+  furnish:new Set(), tenure:new Set(), title:new Set(),
+  bumi:"exclude", foreign:false,
+  lines:new Set(), walk:null,
+  fac:new Set(), ren:false, west:false, pet:false,
+  sort:"new", view:"list",
+  shortlist:new Set(), compare:new Set(), lang:"en"
+};
+
+const PRICE_STEPS = {
+  rent:[0,800,1200,1500,2000,2500,3000,4000,5000,7000,10000,15000],
+  sale:[0,200000,300000,400000,500000,700000,1000000,1500000,2000000,3000000,5000000],
+  new: [0,300000,400000,500000,600000,800000,1000000,1500000,2000000]
+};
+const SIZE_STEPS = [0,400,600,800,1000,1200,1500,2000,2500,3000,4000];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const fmt = n => n.toLocaleString("en-MY");
+const money = n => "RM " + fmt(n);
+const sqm = ft => Math.round(ft * 0.092903 * 10) / 10;
+const sizeLabel = ft => S.unit === "sqft" ? fmt(ft) : fmt(sqm(ft));
+const sizeUnit  = () => S.unit === "sqft" ? "sq ft" : "sq m";
+/* Malaysian buyers read psf instinctively; rentals need two decimals to mean anything */
+const psfLabel = l => l.deal === "rent"
+  ? `RM ${(l.price / l.built).toFixed(2)} psf /mo`
+  : `RM ${fmt(Math.round(l.price / l.built))} psf`;
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.dataset.show = "true";
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.dataset.show = "false"; }, 2400);
+}
+
+function activeSet(){ return L.filter(x => x.deal === S.deal); }
+
+/* photo placeholder — deterministic per listing, varied by type */
+function media(l, seed = 0){
+  const hues = { high:[196,188,204], landed:[168,150,182], commercial:[210,200,220] };
+  const base = (hues[l.cat] || hues.high)[(l.id.charCodeAt(1) + seed) % 3];
+  const stamp = document.documentElement.dataset.theme;
+  const dark = stamp === "dark" || (!stamp && matchMedia("(prefers-color-scheme: dark)").matches);
+  const c1 = `hsl(${base} 24% ${dark?23:88}%)`;
+  const c2 = `hsl(${base+14} 28% ${dark?14:76}%)`;
+  const ink = `hsl(${base} 32% ${dark?50:52}%)`;
+  const sky = `hsl(${base-8} 34% ${dark?36:93}%)`;
+  const gid = "g" + l.id + seed;
+  const landed = l.cat === "landed";
+  const variant = (l.id.charCodeAt(0) + l.id.charCodeAt(1) * 7) % 3;
+  const win = (x,y,cols,rows,op) => [...Array(rows)].map((_,r)=>[...Array(cols)].map((_,c)=>
+    `<rect x="${x+c*9}" y="${y+r*9}" width="5" height="5" fill="${sky}" opacity="${op}"/>`).join("")).join("");
+
+  const highRise = [
+    /* twin slab */
+    `<rect x="22" y="28" width="30" height="56" fill="${ink}" opacity=".55"/>
+     <rect x="58" y="14" width="32" height="70" fill="${ink}" opacity=".42"/>
+     ${win(26,33,3,5,.75)}${win(62,19,3,7,.6)}`,
+    /* stepped tower */
+    `<rect x="30" y="42" width="24" height="42" fill="${ink}" opacity=".5"/>
+     <rect x="52" y="20" width="26" height="64" fill="${ink}" opacity=".46"/>
+     <rect x="76" y="52" width="18" height="32" fill="${ink}" opacity=".56"/>
+     ${win(34,47,2,4,.7)}${win(56,25,2,6,.62)}${win(80,57,1,3,.72)}`,
+    /* wide block with podium */
+    `<rect x="16" y="52" width="82" height="32" fill="${ink}" opacity=".38"/>
+     <rect x="34" y="18" width="46" height="38" fill="${ink}" opacity=".52"/>
+     ${win(38,23,5,3,.66)}${win(20,58,9,2,.5)}`
+  ][variant];
+
+  const landedHouse = [
+    /* terrace row */
+    `<path d="M10 58 24 46l14 12v26H10z" fill="${ink}" opacity=".52"/>
+     <path d="M38 58 52 46l14 12v26H38z" fill="${ink}" opacity=".45"/>
+     <path d="M66 58 80 46l14 12v26H66z" fill="${ink}" opacity=".52"/>
+     <rect x="18" y="66" width="8" height="18" fill="${sky}" opacity=".75"/>
+     <rect x="46" y="66" width="8" height="18" fill="${sky}" opacity=".75"/>
+     <rect x="74" y="66" width="8" height="18" fill="${sky}" opacity=".75"/>
+     <rect x="0" y="82" width="114" height="2" fill="${ink}" opacity=".3"/>`,
+    /* semi-D with porch */
+    `<path d="M20 56 40 42l20 14v28H20z" fill="${ink}" opacity=".5"/>
+     <path d="M60 62 76 52l16 10v22H60z" fill="${ink}" opacity=".42"/>
+     <rect x="30" y="64" width="10" height="20" fill="${sky}" opacity=".78"/>
+     <rect x="46" y="62" width="8" height="8" fill="${sky}" opacity=".6"/>
+     <rect x="68" y="70" width="8" height="14" fill="${sky}" opacity=".6"/>
+     <rect x="0" y="82" width="114" height="2" fill="${ink}" opacity=".3"/>`,
+    /* bungalow */
+    `<path d="M16 60 57 36l41 24v24H16z" fill="${ink}" opacity=".5"/>
+     <rect x="48" y="66" width="12" height="18" fill="${sky}" opacity=".8"/>
+     <rect x="26" y="66" width="10" height="10" fill="${sky}" opacity=".62"/>
+     <rect x="74" y="66" width="10" height="10" fill="${sky}" opacity=".62"/>
+     <rect x="0" y="82" width="114" height="2" fill="${ink}" opacity=".3"/>`
+  ][variant];
+
+  const body = landed ? landedHouse : highRise;
+  return `<svg viewBox="0 0 114 84" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${l.project}">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+    <rect width="114" height="84" fill="url(#${gid})"/>
+    ${body}
+    <rect y="84" width="114" height="0" fill="${ink}"/>
+  </svg>`;
+}
+
+/* ============================================================
+   SHARE
+   ============================================================ */
+function shareURL(id){
+  return location.origin + location.pathname + "#listing=" + id;
+}
+function shareText(l){
+  const price = l.deal === "rent" ? money(l.price)+"/mo" : money(l.price);
+  return `${l.project} — ${l.beds} bed, ${fmt(l.built)} sq ft, ${price} · ${l.area}, ${l.state}`;
+}
+function shareButtonHTML(id){
+  return `<div class="sharewrap">
+    <button class="btn btn--icon" data-share="${id}" aria-haspopup="true" aria-expanded="false" aria-label="Share this listing">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12.5" cy="3.5" r="1.8"/><circle cx="12.5" cy="12.5" r="1.8"/><circle cx="3.5" cy="8" r="1.8"/><path d="M5.1 7.1 10.9 4M5.1 8.9l5.8 3.1"/></svg>
+    </button>
+    <div class="sharepop" data-sharepop="${id}"></div>
+  </div>`;
+}
+function sharePopHTML(l){
+  const url = shareURL(l.id), text = encodeURIComponent(shareText(l)), u = encodeURIComponent(url);
+  const items = [
+    {label:"Facebook", bg:"#1877F2", href:`https://www.facebook.com/sharer/sharer.php?u=${u}`,
+     icon:`<svg width="14" height="14" viewBox="0 0 16 16" fill="#FFF"><path d="M10.5 5.2H9.1c-.4 0-.6.3-.6.7v1.3h2l-.3 2H8.5V15H6.2V9.2H4.7v-2h1.5V5.6c0-1.5.9-2.6 2.4-2.6h1.9v2.2Z"/></svg>`},
+    {label:"WhatsApp", bg:"#25D366", href:`https://wa.me/?text=${text}%20${u}`,
+     icon:`<svg width="14" height="14" viewBox="0 0 16 16" fill="#FFF"><path d="M8 2.7A5.3 5.3 0 0 0 3.4 11l-.7 2.6 2.7-.7A5.3 5.3 0 1 0 8 2.7Zm3.1 7.5c-.1.4-.8.7-1.1.8-.3 0-.6.1-2-.4-1.7-.7-2.8-2.4-2.9-2.5-.1-.1-.7-.9-.7-1.7 0-.8.4-1.2.6-1.3.2-.2.4-.2.5-.2h.4c.1 0 .3 0 .4.3l.6 1.4c0 .1.1.2 0 .3l-.3.4c-.1.1-.2.2-.1.4.2.3.6.9 1.2 1.4.7.6 1.2.8 1.4.9.2.1.3.1.4-.1l.5-.6c.2-.2.3-.2.4-.1l1.3.6c.1.1.2.1.3.2 0 .1 0 .5-.1.9Z"/></svg>`},
+    {label:"X (Twitter)", bg:"#0F1419", href:`https://twitter.com/intent/tweet?text=${text}&url=${u}`,
+     icon:`<svg width="12" height="12" viewBox="0 0 16 16" fill="#FFF"><path d="M9.5 6.8 14.4 1h-1.2L9 6l-3.4-5H1.5l5.2 7.5-5.2 6h1.2l4.5-5.3L11 14.5h3.9L9.5 6.8Z"/></svg>`},
+    {label:"Telegram", bg:"#26A5E4", href:`https://t.me/share/url?url=${u}&text=${text}`,
+     icon:`<svg width="14" height="14" viewBox="0 0 16 16" fill="#FFF"><path d="M2 7.8 13.4 3.3c.5-.2 1 .2.8.9l-1.9 9c-.1.6-.5.7-.9.4l-2.7-2-1.3 1.3c-.1.1-.3.2-.5.2l.2-2.9 5.3-4.8c.2-.2 0-.3-.3-.1L6 9.2 3.1 8.3c-.6-.2-.6-.6.1-.8Z"/></svg>`},
+    {label:"Email", bg:"var(--text-2)", href:`mailto:?subject=${text}&body=${u}`,
+     icon:`<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FFF" stroke-width="1.4"><rect x="2" y="3.5" width="12" height="9" rx="1.2"/><path d="m2.5 4.2 5.5 4.3 5.5-4.3"/></svg>`}
+  ];
+  return `
+    ${items.map(it=>`<a class="sharepop__item" href="${it.href}" target="_blank" rel="noopener noreferrer" data-shareitem>
+        <span class="sharepop__icon" style="background:${it.bg}">${it.icon}</span>${it.label}
+      </a>`).join("")}
+    <div class="sharepop__divider"></div>
+    <div class="sharepop__link">
+      <input readonly value="${url}" data-sharefield onclick="this.select()">
+      <button data-copylink="${l.id}">Copy</button>
+    </div>`;
+}
+function closeAllShare(except){
+  $$(".sharepop[data-visible='true']").forEach(p=>{
+    if(p !== except){ p.dataset.visible="false"; p.previousElementSibling?.setAttribute("aria-expanded","false"); }
+  });
+}
+function toggleShare(id, btn){
+  const pop = btn.parentElement.querySelector(`[data-sharepop="${id}"]`) || btn.nextElementSibling;
+  if(!pop) return;
+  const willOpen = pop.dataset.visible !== "true";
+  closeAllShare(willOpen ? pop : null);
+  if(willOpen){
+    const l = L.find(x=>x.id===id);
+    pop.innerHTML = sharePopHTML(l);
+  }
+  pop.dataset.visible = willOpen ? "true" : "false";
+  btn.setAttribute("aria-expanded", String(willOpen));
+}
+
+function stationChip(l){
+  if(!l.line) return `<span class="transit transit--none">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11h12M4.5 11V7l3.5-3 3.5 3v4M6 13.5h4"/></svg>
+    No rail within 2 km — car recommended</span>`;
+  const ln = LINES[l.line];
+  return `<span class="transit">
+    <span class="linecode" style="background:${ln.color}">${ln.code}</span>
+    <span>${l.station}</span>
+    <span style="color:var(--text-3)">·</span>
+    <span class="mono">${l.walk} m</span>
+    <span style="color:var(--text-3)">(${Math.max(1,Math.round(l.walk/80))} min walk)</span>
+  </span>`;
+}
+
+/* ============================================================
+   FILTERING
+   ============================================================ */
+function matches(l){
+  if(l.deal !== S.deal) return false;
+  if(S.qState !== "all" && l.state !== S.qState) return false;
+  if(S.qType !== "all" && l.type !== S.qType) return false;
+  if(S.qText){
+    const hay = (l.project+" "+l.area+" "+l.state+" "+l.type+" "+(l.station||"")).toLowerCase();
+    if(!hay.includes(S.qText.toLowerCase())) return false;
+  }
+  if(S.pMin != null && l.price < S.pMin) return false;
+  if(S.pMax != null && l.price > S.pMax) return false;
+  if(S.areas.size && !S.areas.has(l.area)) return false;
+  if(S.types.size && !S.types.has(l.type)) return false;
+  if(S.beds.size && !S.beds.has(bedKey(l))) return false;
+  if(S.baths.size && !S.baths.has(Math.min(l.baths,4))) return false;
+  if(S.sMin != null && l.built < S.sMin) return false;
+  if(S.sMax != null && l.built > S.sMax) return false;
+  if(S.bays != null && l.bays < S.bays) return false;
+  if(S.covered && !l.covered) return false;
+  if(S.furnish.size && !S.furnish.has(l.furnish)) return false;
+  if(S.deal !== "rent"){
+    if(S.tenure.size){
+      const t = l.tenure.startsWith("Freehold") ? "Freehold" : "Leasehold";
+      if(!S.tenure.has(t)) return false;
+    }
+    if(S.title.size && !S.title.has(l.title)) return false;
+    if(S.bumi === "exclude" && l.bumi) return false;
+    if(S.bumi === "only" && !l.bumi) return false;
+    if(S.foreign && !l.foreign) return false;
+  }
+  if(S.lines.size && (!l.line || !S.lines.has(l.line))) return false;
+  if(S.walk != null && (!l.walk || l.walk > S.walk)) return false;
+  if(S.fac.size){ for(const f of S.fac) if(!l.fac.includes(f)) return false; }
+  if(S.ren && !l.verified) return false;
+  if(S.west && /West/.test(l.facing)) return false;
+  if(S.pet && !l.pet) return false;
+  return true;
+}
+function bedKey(l){ return l.beds === "Studio" ? "Studio" : String(l.bedsN >= 5 ? "5+" : l.bedsN) ; }
+
+function sortList(arr){
+  const c = { new:(a,b)=>a.listed-b.listed,
+              plow:(a,b)=>a.price-b.price,
+              phigh:(a,b)=>b.price-a.price,
+              size:(a,b)=>b.built-a.built,
+              psf:(a,b)=>(a.price/a.built)-(b.price/b.built) };
+  return arr.sort(c[S.sort]);
+}
+
+/* ============================================================
+   RENDER — cards
+   ============================================================ */
+function cardHTML(l){
+  const isRent = l.deal === "rent";
+  const short = S.shortlist.has(l.id);
+  const cmp = S.compare.has(l.id);
+  const badges = [];
+  if(l.listed <= 3) badges.push(`<span class="badge badge--new">New</span>`);
+  if(l.verified) badges.push(`<span class="badge badge--verified">✓ REN verified</span>`);
+  if(l.bumi) badges.push(`<span class="badge badge--bumi">Bumi lot</span>`);
+  if(l.telegramSource) badges.push(`<span class="badge" style="background:#455A64;color:#fff">Telegram</span>`);
+  if(l.incomplete) badges.push(`<span class="badge" style="background:#B4530A;color:#fff" title="Missing: ${(l.missingFields||[]).join(', ')}">⚠️ Info incomplete</span>`);
+
+  const feats = [];
+  feats.push(`<span class="feat${isRent?" feat--hi":""}">${l.furnish}</span>`);
+  if(!isRent) feats.push(`<span class="feat feat--hi">${l.tenure}</span>`);
+  if(!isRent && l.title) feats.push(`<span class="feat">${l.title}</span>`);
+  feats.push(`<span class="feat">${l.covered?"Covered parking":"Open parking"}</span>`);
+  feats.push(`<span class="feat">${l.facing} facing</span>`);
+  if(l.deal === "new") feats.push(`<span class="feat feat--hi">Completion ${l.completion}</span>`);
+  if(!isRent && l.foreign) feats.push(`<span class="feat">Foreign buyer OK</span>`);
+  if(l.pet) feats.push(`<span class="feat">Pet friendly</span>`);
+
+  return `<article class="card" data-id="${l.id}">
+    <div class="card__media">
+      ${media(l)}
+      <div class="card__badges">${badges.join("")}</div>
+      <span class="card__photocount">1 / 12</span>
+    </div>
+    <div class="card__body">
+      <div class="card__eyebrow">
+        <span class="typetag">${l.type}</span>
+        <span class="card__where">${l.area}, ${l.state}${l.year?` · Built ${l.year}`:""}</span>
+      </div>
+      <h3 class="card__title"><button data-open="${l.id}">${l.project}</button></h3>
+      <div class="specs">
+        <div class="spec"><div class="spec__k">Beds</div><div class="spec__v">${l.beds}</div></div>
+        <div class="spec"><div class="spec__k">Baths</div><div class="spec__v">${l.baths}</div></div>
+        <div class="spec"><div class="spec__k">Built-up</div><div class="spec__v">${sizeLabel(l.built)} <small>${sizeUnit()}</small></div></div>
+        ${l.land?`<div class="spec"><div class="spec__k">Land</div><div class="spec__v">${sizeLabel(l.land)} <small>${sizeUnit()}</small></div></div>`:""}
+        <div class="spec"><div class="spec__k">Car park</div><div class="spec__v">${l.bays}</div></div>
+      </div>
+      ${stationChip(l)}
+      <div class="featrow">${feats.join("")}</div>
+    </div>
+    <div class="card__side">
+      <div>
+        <div class="price">${money(l.price)}${isRent?`<small> /mo</small>`:""}</div>
+        <div class="psf">${psfLabel(l)}</div>
+      </div>
+      <div class="card__actions">
+        <button class="btn btn--primary" data-open="${l.id}">View</button>
+        <button class="btn btn--icon" data-heart="${l.id}" aria-pressed="${short}" aria-label="Shortlist">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="${short?"currentColor":"none"}" stroke="currentColor" stroke-width="1.5"><path d="M8 13.6 3.2 9a2.9 2.9 0 0 1 4.1-4.1L8 5.6l.7-.7A2.9 2.9 0 0 1 12.8 9L8 13.6Z"/></svg>
+        </button>
+        ${shareButtonHTML(l.id)}
+      </div>
+      <label class="cmp"><input type="checkbox" data-cmp="${l.id}" ${cmp?"checked":""}> Compare</label>
+      <div class="agentline">
+        <b>${l.agent.name}</b><br>
+        <span class="ren">${l.agent.ren}</span> · ${l.agent.agency}<br>
+        Listed ${l.listed} day${l.listed===1?"":"s"} ago
+      </div>
+    </div>
+  </article>`;
+}
+
+function render(){
+  const res = sortList(L.filter(matches));
+  $("#resN").textContent = res.length;
+  $("#listView").innerHTML = res.length
+    ? res.map(cardHTML).join("")
+    : `<div class="empty">
+         <h3>No listings match all of those filters</h3>
+         <p>The Malaysian market is thinner than Japan's in most segments — try widening the price band or dropping the rail filter.</p>
+         <button class="btn btn--primary" style="flex:0 0 auto;padding-inline:22px" id="emptyReset">Reset filters</button>
+       </div>`;
+  renderActive();
+  renderMap(res);
+  $("#slCount").textContent = S.shortlist.size;
+  renderCompare();
+}
+
+/* ---------- active filter chips ---------- */
+function renderActive(){
+  const chips = [];
+  const add = (label, fn) => chips.push({label, fn});
+  if(S.qState !== "all") add(S.qState, ()=>{ S.qState="all"; $("#qState").value="all"; });
+  if(S.qText) add(`"${S.qText}"`, ()=>{ S.qText=""; $("#qText").value=""; });
+  if(S.qType !== "all") add(S.qType, ()=>{ S.qType="all"; $("#qType").value="all"; });
+  if(S.pMin!=null||S.pMax!=null) add(`${S.pMin!=null?money(S.pMin):"Any"} – ${S.pMax!=null?money(S.pMax):"Any"}`,()=>{S.pMin=S.pMax=null;$("#pMin").value="";$("#pMax").value="";});
+  S.areas.forEach(a=>add(a,()=>S.areas.delete(a)));
+  S.types.forEach(t=>add(t,()=>S.types.delete(t)));
+  S.beds.forEach(b=>add(b==="Studio"?"Studio":`${b} bed`,()=>S.beds.delete(b)));
+  S.baths.forEach(b=>add(`${b}${b===4?"+":""} bath`,()=>S.baths.delete(b)));
+  if(S.sMin!=null||S.sMax!=null) add(`${S.sMin??0}–${S.sMax??"∞"} sq ft`,()=>{S.sMin=S.sMax=null;$("#sMin").value="";$("#sMax").value="";});
+  if(S.bays!=null) add(`${S.bays}+ car park`,()=>S.bays=null);
+  if(S.covered) add("Covered parking",()=>{S.covered=false;$("#fCovered").checked=false;});
+  S.furnish.forEach(f=>add(f,()=>S.furnish.delete(f)));
+  S.tenure.forEach(t=>add(t,()=>S.tenure.delete(t)));
+  S.title.forEach(t=>add(t,()=>S.title.delete(t)));
+  if(S.deal!=="rent" && S.bumi==="only") add("Bumi lot only",()=>S.bumi="exclude");
+  if(S.deal!=="rent" && S.bumi==="include") add("Incl. Bumi lots",()=>S.bumi="exclude");
+  if(S.foreign) add("Foreign eligible",()=>{S.foreign=false;$("#fForeign").checked=false;});
+  S.lines.forEach(k=>add(LINES[k].name,()=>S.lines.delete(k)));
+  if(S.walk!=null) add(`≤ ${S.walk} m to station`,()=>{S.walk=null;$("#fWalk").value="";});
+  S.fac.forEach(f=>add(f,()=>S.fac.delete(f)));
+  if(S.ren) add("Verified agents only",()=>{S.ren=false;$("#fRen").checked=false;});
+  if(S.west) add("No west facing",()=>{S.west=false;$("#fWest").checked=false;});
+  if(S.pet) add("Pet friendly",()=>{S.pet=false;$("#fPet").checked=false;});
+
+  const box = $("#activeFilters");
+  box.innerHTML = chips.length
+    ? chips.map((c,i)=>`<span class="afchip">${c.label}<button data-af="${i}" aria-label="Remove">×</button></span>`).join("")
+      + `<button class="linkbtn" id="clearAll" style="margin-left:4px">Clear all</button>`
+    : "";
+  box._chips = chips;
+}
+
+/* ---------- map ---------- */
+const MAP_POS = {
+  "Mont Kiara":[38,30],"Ara Damansara":[22,44],"Bangsar South":[43,48],"Cyberjaya":[36,86],
+  "Bukit Jalil":[52,72],"Petaling Jaya":[28,50],"KL Sentral":[49,45],"Subang Jaya":[24,58],
+  "TTDI":[33,38],"Tanjung Tokong":[8,10],"Iskandar Puteri":[70,94],"Cheras":[64,55],
+  "Kepong":[40,20],"Kajang":[70,72],"Kota Damansara":[24,32],"Semenyih":[76,82]
+};
+function renderMap(res){
+  const c = $("#mapCanvas");
+  const seen = {};
+  const pins = res.map(l=>{
+    const p = MAP_POS[l.area] || [50,50];
+    seen[l.area] = (seen[l.area]||0)+1;
+    const off = (seen[l.area]-1)*3.2;
+    const label = l.deal==="rent" ? `RM${(l.price/1000).toFixed(1)}k` : `RM${(l.price/1000).toFixed(0)}k`;
+    return `<button class="pin" style="left:${p[0]+off}%;top:${p[1]+off}%" data-open="${l.id}" title="${l.project}, ${l.area}">${label}</button>`;
+  }).join("");
+  c.innerHTML = pins + `<div class="mapview__note">
+    <strong>Map view.</strong> In production this layer is Google Maps JS API with the Klang Valley rail overlay, drive-time isochrones and school catchments — the three things Malaysian buyers actually navigate by. Pins above are positioned schematically to show the interaction.
+  </div>`;
+}
+
+/* ---------- compare bar ---------- */
+function renderCompare(){
+  const bar = $("#cmpBar");
+  bar.dataset.visible = S.compare.size >= 1;
+  $("#cmpItems").innerHTML = [...S.compare].map(id=>{
+    const l = L.find(x=>x.id===id);
+    return `<span class="cmpbar__chip">${l.project} <button data-uncmp="${id}" aria-label="Remove">×</button></span>`;
+  }).join("");
+}
+
+/* ============================================================
+   RENDER — detail
+   ============================================================ */
+function stampDuty(p){
+  let d = 0;
+  d += Math.min(p,100000) * .01;
+  if(p>100000) d += (Math.min(p,500000)-100000) * .02;
+  if(p>500000) d += (Math.min(p,1000000)-500000) * .03;
+  if(p>1000000) d += (p-1000000) * .04;
+  return Math.round(d);
+}
+function legalFee(p){
+  let f = 0;
+  f += Math.min(p,500000) * .0125;
+  if(p>500000) f += (Math.min(p,7500000)-500000) * .01;
+  return Math.round(Math.max(f,500));
+}
+function instalment(loan, rate=4.1, years=35){
+  const r = rate/100/12, n = years*12;
+  return Math.round(loan * r / (1 - Math.pow(1+r,-n)));
+}
+
+/* ---------- Floor plan: the Malaysian answer to SUUMO's 間取り図 ----------
+   Room vocabulary is deliberately local — wet/dry kitchen, yard and the
+   maid's room have no Japanese equivalent and no place on a 1LDK diagram. */
+function floorPlan(l){
+  const sqftOf = share => Math.round(l.built * share);
+  const R = (label, span, sub, cls="") =>
+    `<div class="room ${cls}" style="grid-row:span ${span}"><b>${label}</b>${sub?`<span>${sub}</span>`:""}</div>`;
+  let cols;
+
+  if(l.cat === "landed"){
+    cols = [
+      R("Car porch", 2, `${l.bays} bays`, "room--out") + R("Living", 3, sqftOf(.16)+" sq ft") + R("Dining", 3, sqftOf(.11)+" sq ft"),
+      R("Dry kitchen", 2, sqftOf(.07)+" sq ft") + R("Wet kitchen", 2, "enclosed", "room--wet") + R("Yard", 2, "washing area", "room--my") + R("Bath 1", 2),
+      R("Master bedroom", 4, sqftOf(.13)+" sq ft") + R("Master bath", 2) + R("Bath 2", 2),
+      R("Bedroom 2", 3, sqftOf(.09)+" sq ft") + R("Bedroom 3", 3, sqftOf(.08)+" sq ft") + (l.bedsN>=4 ? R("Bedroom 4", 2, sqftOf(.07)+" sq ft") : R("Store", 2, "", "room--out"))
+    ];
+  } else if(l.beds === "Studio"){
+    cols = [
+      R("Balcony", 2, "", "room--out") + R("Living / sleeping", 6, sqftOf(.55)+" sq ft"),
+      R("Kitchenette", 3, "open, dry only", "room--wet") + R("Bathroom", 3) + R("Entry", 2, "", "room--out")
+    ];
+  } else {
+    const hasMaid = l.beds.includes("+");
+    cols = [
+      R("Balcony", 1, "", "room--out") + R("Living", 4, sqftOf(.22)+" sq ft") + R("Dining", 3, sqftOf(.13)+" sq ft"),
+      R("Dry kitchen", 2, sqftOf(.08)+" sq ft") + R("Wet kitchen", 2, "enclosed", "room--wet") + R("Yard", 2, "washing area", "room--my") + R("Common bath", 2),
+      R("Master bedroom", hasMaid?4:5, sqftOf(.17)+" sq ft") + R("Master bath", hasMaid?2:3) + (hasMaid ? R("Maid's room", 2, "with own bath", "room--my") : "")
+    ];
+    if(l.bedsN >= 3) cols.push(R("Bedroom 2", 4, sqftOf(.11)+" sq ft") + R("Bedroom 3", 4, sqftOf(.10)+" sq ft"));
+    else if(l.bedsN === 2) cols.push(R("Bedroom 2", 8, sqftOf(.15)+" sq ft"));
+  }
+
+  return `<div class="panel">
+    <h3>Floor plan <span class="tag-my" style="font-size:9.5px">MY</span></h3>
+    <div class="plan" style="grid-template-columns:repeat(${cols.length},1fr)">${cols.join("")}</div>
+    <div class="planlegend">
+      <span><i style="border-color:var(--accent);background:var(--accent-wash)"></i>No Japanese equivalent</span>
+      <span><i style="border-color:var(--brand-2);background:var(--brand-wash);border-style:dashed"></i>Wet zone</span>
+      <span><i style="border-color:var(--line);border-style:dashed"></i>Outdoor / service</span>
+    </div>
+    <p class="disclaim">Indicative layout — the developer's dimensioned plan attaches here. Malaysian units separate a <strong>dry kitchen</strong> from an enclosed <strong>wet kitchen</strong> for heavy cooking, and put a <strong>yard</strong> behind it for laundry. Neither exists in a Japanese 3LDK, which is why the 1K / 2LDK notation cannot be reused here.</p>
+  </div>`;
+}
+
+function openDetail(id){
+  const l = L.find(x=>x.id===id);
+  if(!l) return;
+  const isRent = l.deal==="rent";
+  $("#dtTitle").textContent = `${l.project} — ${l.area}, ${l.state}`;
+
+  const facts = [
+    ["Property type", l.type],
+    ["Bedrooms", l.beds + (l.beds.includes("+") ? " (incl. maid's room)" : "")],
+    ["Bathrooms", l.baths],
+    ["Built-up area", `<span class="mono">${fmt(l.built)}</span> sq ft <span style="color:var(--text-3)">(${sqm(l.built)} sq m)</span>`],
+    l.land ? ["Land area", `<span class="mono">${fmt(l.land)}</span> sq ft`] : null,
+    ["Car park", `${l.bays} bay${l.bays===1?"":"s"} — ${l.covered?"covered / basement":"open"}`],
+    ["Furnishing", l.furnish],
+    ["Unit facing", l.facing + (/West/.test(l.facing) ? " — afternoon sun" : "")],
+    ["Year built", l.deal==="new" ? `Completing ${l.completion}` : l.year],
+    !isRent ? ["Tenure", l.tenure] : null,
+    !isRent ? ["Title type", l.title] : null,
+    !isRent ? ["Bumi lot", l.bumi ? "Yes — state consent required" : "No"] : null,
+    !isRent ? ["Foreign buyer", l.foreign ? "Eligible" : "Not eligible — below state threshold"] : null,
+    !isRent && l.maint ? ["Maintenance", `<span class="mono">RM ${l.maint.toFixed(2)}</span> psf/month ≈ <span class="mono">RM ${fmt(Math.round(l.maint*l.built))}</span>/mo`] : null
+  ].filter(Boolean);
+
+  /* Malaysian cost breakdown */
+  let cost;
+  if(isRent){
+    const util = Math.round(l.price*0.5);
+    const card = 200, stamp = Math.round((l.price*12-2400)/250)*10 || 0;
+    cost = `<h3>Move-in cost <span class="tag-my" style="font-size:9.5px">MY</span></h3>
+      <div class="costrow"><span>First month's rent</span><span>RM ${fmt(l.price)}</span></div>
+      <div class="costrow"><span>Security deposit (2 months)</span><span>RM ${fmt(l.price*2)}</span></div>
+      <div class="costrow"><span>Utility deposit (½ month)</span><span>RM ${fmt(util)}</span></div>
+      <div class="costrow"><span>Access card / key deposit</span><span>RM ${fmt(card)}</span></div>
+      <div class="costrow"><span>Tenancy stamping (est.)</span><span>RM ${fmt(Math.max(stamp,10))}</span></div>
+      <div class="costtotal"><span>Cash needed on signing</span><b>RM ${fmt(l.price*3 + util + card + Math.max(stamp,10))}</b></div>
+      <p class="disclaim">Malaysia's standard "2 + 1" structure. Japanese portals compute 礼金／敷金 here instead — different arithmetic, same purpose.</p>`;
+  } else {
+    const loan = Math.round(l.price*0.9), sd = stampDuty(l.price), lf = legalFee(l.price);
+    const mi = instalment(loan);
+    cost = `<h3>Purchase cost <span class="tag-my" style="font-size:9.5px">MY</span></h3>
+      <div class="costrow"><span>Down payment (10%)</span><span>RM ${fmt(l.price - loan)}</span></div>
+      <div class="costrow"><span>MOT stamp duty (tiered)</span><span>RM ${fmt(sd)}</span></div>
+      <div class="costrow"><span>SPA legal fees (est.)</span><span>RM ${fmt(lf)}</span></div>
+      <div class="costrow"><span>Loan agreement stamp (0.5%)</span><span>RM ${fmt(Math.round(loan*0.005))}</span></div>
+      <div class="costtotal"><span>Cash needed upfront</span><b>RM ${fmt(l.price-loan+sd+lf+Math.round(loan*0.005))}</b></div>
+      <div style="height:14px"></div>
+      <div class="costrow"><span>Monthly instalment<br><small style="color:var(--text-3)">90% margin · 4.10% p.a. · 35 years</small></span><span>RM ${fmt(mi)}</span></div>
+      ${l.maint?`<div class="costrow"><span>Maintenance &amp; sinking fund</span><span>RM ${fmt(Math.round(l.maint*l.built))}</span></div>`:""}
+      <div class="costtotal"><span>Monthly outlay</span><b>RM ${fmt(mi + Math.round((l.maint||0)*l.built))}</b></div>
+      <p class="disclaim">Stamp duty computed on the Malaysian tiered scale: 1% on the first RM100k, 2% to RM500k, 3% to RM1m, 4% above. Indicative only — confirm with your lawyer and banker.</p>`;
+  }
+
+  const transit = l.line
+    ? `<div class="trow"><span class="linecode" style="background:${LINES[l.line].color}">${LINES[l.line].code}</span>
+         <span>${l.station} — ${LINES[l.line].name}</span><span class="trow__d">${l.walk} m</span></div>
+       <div class="trow"><span style="color:var(--text-3)">🚗</span><span>Nearest highway access</span><span class="trow__d">~${(1.5+l.walk/1000).toFixed(1)} km</span></div>`
+    : `<div class="trow" style="color:var(--warn)"><span>⚠</span><span>No rail station within 2 km</span><span class="trow__d">car recommended</span></div>
+       <div class="trow"><span style="color:var(--text-3)">🚗</span><span>Nearest highway access</span><span class="trow__d">~2.4 km</span></div>`;
+
+  $("#dtBody").innerHTML = `
+    <div class="dt">
+      <div>
+        <div class="dt__gallery">
+          ${media(l,1)}
+          <div class="dt__thumbs">${[2,3,4,5,6].map(i=>media(l,i)).join("")}</div>
+        </div>
+
+        <div class="panel">
+          <h3>About this property</h3>
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:var(--text-2)">${l.blurb}</p>
+          <div class="factgrid">
+            ${facts.map(f=>`<div class="fact"><div class="fact__k">${f[0]}</div><div class="fact__v">${f[1]}</div></div>`).join("")}
+          </div>
+        </div>
+
+        ${floorPlan(l)}
+
+        ${l.fac.length ? `<div class="panel"><h3>Facilities</h3>
+          <div class="faclist">${l.fac.map(f=>`<span class="facitem">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m3.5 8.5 3 3 6-7"/></svg>${f}</span>`).join("")}</div></div>` : ""}
+
+        <div class="panel">
+          <h3>Getting around</h3>
+          <div class="tlist">${transit}</div>
+          <p class="disclaim">Outside the Klang Valley there is effectively no urban rail, so drive time — not walk-to-station — is the metric that decides most Malaysian searches.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <div class="price" style="font-size:30px">${money(l.price)}${isRent?`<small> /month</small>`:""}</div>
+          <div class="psf" style="margin-bottom:12px">${psfLabel(l)}</div>
+          <div class="card__actions" style="gap:8px">
+            <button class="btn btn--primary" style="padding-block:10px">Request a viewing</button>
+            <button class="btn btn--icon" data-heart="${l.id}" aria-pressed="${S.shortlist.has(l.id)}" aria-label="Shortlist">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="${S.shortlist.has(l.id)?"currentColor":"none"}" stroke="currentColor" stroke-width="1.5"><path d="M8 13.6 3.2 9a2.9 2.9 0 0 1 4.1-4.1L8 5.6l.7-.7A2.9 2.9 0 0 1 12.8 9L8 13.6Z"/></svg>
+            </button>
+            ${shareButtonHTML(l.id)}
+          </div>
+        </div>
+
+        <div class="panel">${cost}</div>
+
+        <div class="panel">
+          <h3>Listed by</h3>
+          <div class="agentcard">
+            <div class="avatar">${l.agent.name.split(" ").map(w=>w[0]).slice(0,2).join("")}</div>
+            <div>
+              <div style="font-weight:700;font-size:15.5px">${l.agent.name}</div>
+              <div style="font-size:13.5px;color:var(--text-2)">${l.agent.agency}</div>
+              <div class="mono" style="font-size:12.5px;color:var(--text-3);margin-top:2px">${l.agent.ren} · Firm ${l.agent.firm}</div>
+              ${l.verified?`<span class="verif">✓ Verified with LPPEH register</span>`:`<span class="verif" style="color:var(--warn);background:var(--accent-wash)">Registration not yet verified</span>`}
+            </div>
+          </div>
+          <div class="card__actions" style="margin-top:14px">
+            <button class="btn btn--primary" style="padding-block:9px">WhatsApp</button>
+            <button class="btn" style="flex:1;text-align:center">Call</button>
+          </div>
+          <p class="disclaim">Every listing is tied to a registration number issued by the Board of Valuers, Appraisers, Estate Agents and Property Managers. This is the discipline REINS enforces in Japan — adapted here as verification rather than a closed database.</p>
+        </div>
+      </div>
+    </div>`;
+  $("#dtShareSlot").innerHTML = shareButtonHTML(l.id);
+  $("#detailOverlay").dataset.visible = "true";
+  document.body.style.overflow = "hidden";
+  location.hash = "listing=" + l.id;
+}
+
+/* ============================================================
+   BUILD FILTER CONTROLS
+   ============================================================ */
+function buildControls(){
+  /* price selects */
+  const steps = PRICE_STEPS[S.deal];
+  const opt = (v,label) => `<option value="${v}">${label}</option>`;
+  $("#pMin").innerHTML = opt("","Min") + steps.slice(1).map(v=>opt(v, money(v))).join("");
+  $("#pMax").innerHTML = opt("","Max") + steps.slice(1).map(v=>opt(v, money(v))).join("");
+  $("#priceNote").textContent = S.deal === "rent"
+    ? "Monthly rent, excluding utilities & maintenance."
+    : "Asking price. Stamp duty and legal fees are calculated on each listing page.";
+
+  /* budget quick select */
+  $("#qBudget").innerHTML = opt("","Any") + steps.slice(1).map(v=>opt(v, money(v))).join("");
+
+  /* size selects */
+  $("#sMin").innerHTML = opt("","Min") + SIZE_STEPS.slice(1).map(v=>opt(v, fmt(S.unit==="sqft"?v:sqm(v)))).join("");
+  $("#sMax").innerHTML = opt("","Max") + SIZE_STEPS.slice(1).map(v=>opt(v, fmt(S.unit==="sqft"?v:sqm(v)))).join("");
+
+  /* areas with counts, from the active deal only */
+  const pool = activeSet();
+  const areaCount = {};
+  pool.forEach(l => areaCount[l.area] = (areaCount[l.area]||0)+1);
+  $("#areaChecks").innerHTML = Object.keys(areaCount).sort().map(a=>
+    `<label class="check"><input type="checkbox" data-area="${a}" ${S.areas.has(a)?"checked":""}>${a}<span class="n">${areaCount[a]}</span></label>`).join("");
+
+  const typeCount = {};
+  pool.forEach(l => typeCount[l.type] = (typeCount[l.type]||0)+1);
+  $("#typeChecks").innerHTML = Object.keys(typeCount).sort().map(t=>
+    `<label class="check"><input type="checkbox" data-type="${t}" ${S.types.has(t)?"checked":""}>${t}<span class="n">${typeCount[t]}</span></label>`).join("");
+
+  $("#bedChips").innerHTML = ["Studio","1","2","3","4","5+"].map(b=>
+    `<button class="chip" data-bed="${b}" aria-pressed="${S.beds.has(b)}">${b==="Studio"?"Studio":b}</button>`).join("");
+  $("#bathChips").innerHTML = [1,2,3,4].map(b=>
+    `<button class="chip" data-bath="${b}" aria-pressed="${S.baths.has(b)}">${b}${b===4?"+":""}</button>`).join("");
+  $("#bayChips").innerHTML = [0,1,2,3].map(b=>
+    `<button class="chip" data-bay="${b}" aria-pressed="${S.bays===b}">${b}${b===3?"+":""}</button>`).join("");
+
+  $("#furnishChecks").innerHTML = ["Fully furnished","Partly furnished","Unfurnished"].map(f=>
+    `<label class="check"><input type="checkbox" data-furnish="${f}" ${S.furnish.has(f)?"checked":""}>${f}</label>`).join("");
+
+  $("#tenureChecks").innerHTML = ["Freehold","Leasehold"].map(t=>
+    `<label class="check"><input type="checkbox" data-tenure="${t}" ${S.tenure.has(t)?"checked":""}>${t}</label>`).join("");
+  $("#titleChecks").innerHTML = ["Individual title","Strata title","Master title (not yet issued)"].map(t=>
+    `<label class="check"><input type="checkbox" data-title="${t}" ${S.title.has(t)?"checked":""}>${t}</label>`).join("");
+
+  $("#lineChecks").innerHTML = Object.entries(LINES).map(([k,v])=>
+    `<label class="lineitem"><input type="checkbox" data-line="${k}" ${S.lines.has(k)?"checked":""}>
+      <span class="linebar" style="background:${v.color}"></span>${v.name}</label>`).join("");
+
+  $("#facChecks").innerHTML = FACILITIES.map(f=>
+    `<label class="check"><input type="checkbox" data-fac="${f}" ${S.fac.has(f)?"checked":""}>${f}</label>`).join("");
+
+  /* show/hide deal-specific groups */
+  $$("[data-only]").forEach(el=>{
+    el.hidden = !el.dataset.only.split(" ").includes(S.deal);
+  });
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+document.addEventListener("click", e=>{
+  const t = e.target;
+  const closest = sel => t.closest(sel);
+
+  /* deal tabs */
+  const dealBtn = closest("[data-deal]");
+  if(dealBtn){
+    S.deal = dealBtn.dataset.deal;
+    $$(".deal").forEach(b=>b.setAttribute("aria-selected", b===dealBtn));
+    S.pMin=S.pMax=null; S.areas.clear(); S.types.clear(); S.compare.clear();
+    buildControls(); render(); return;
+  }
+
+  /* open detail */
+  const openBtn = closest("[data-open]");
+  if(openBtn){ openDetail(openBtn.dataset.open); return; }
+
+  /* share */
+  const shareBtn = closest("[data-share]");
+  if(shareBtn){ toggleShare(shareBtn.dataset.share, shareBtn); return; }
+  const copyBtn = closest("[data-copylink]");
+  if(copyBtn){
+    const field = copyBtn.previousElementSibling;
+    const finish = ok => { copyBtn.textContent = ok ? "Copied!" : "Copy failed"; toast(ok ? "Link copied" : "Couldn't copy — select and copy manually"); setTimeout(()=>copyBtn.textContent="Copy",1600); };
+    if(navigator.clipboard?.writeText){
+      navigator.clipboard.writeText(field.value).then(()=>finish(true)).catch(()=>{ field.select(); finish(false); });
+    } else {
+      field.select();
+      try{ finish(document.execCommand("copy")); }catch{ finish(false); }
+    }
+    return;
+  }
+  if(!closest(".sharewrap")) closeAllShare();
+
+  /* heart */
+  const heart = closest("[data-heart]");
+  if(heart){
+    const id = heart.dataset.heart;
+    S.shortlist.has(id) ? S.shortlist.delete(id) : S.shortlist.add(id);
+    toast(S.shortlist.has(id) ? "Added to shortlist" : "Removed from shortlist");
+    if(window.__ckToggleFavorite) window.__ckToggleFavorite(id, S.shortlist.has(id));
+    render();
+    if($("#detailOverlay").dataset.visible==="true") openDetail(id);
+    return;
+  }
+
+  /* chips */
+  const bed = closest("[data-bed]");
+  if(bed){ const v=bed.dataset.bed; S.beds.has(v)?S.beds.delete(v):S.beds.add(v);
+    bed.setAttribute("aria-pressed", S.beds.has(v)); render(); return; }
+  const bath = closest("[data-bath]");
+  if(bath){ const v=+bath.dataset.bath; S.baths.has(v)?S.baths.delete(v):S.baths.add(v);
+    bath.setAttribute("aria-pressed", S.baths.has(v)); render(); return; }
+  const bay = closest("[data-bay]");
+  if(bay){ const v=+bay.dataset.bay; S.bays = (S.bays===v)?null:v;
+    $$("[data-bay]").forEach(b=>b.setAttribute("aria-pressed", +b.dataset.bay===S.bays)); render(); return; }
+
+  /* unit toggle */
+  const unit = closest("[data-unit]");
+  if(unit){ S.unit = unit.dataset.unit;
+    $$("[data-unit]").forEach(b=>b.setAttribute("aria-pressed", b===unit));
+    buildControls(); render(); return; }
+
+  /* bumi segment */
+  const bumi = closest("[data-bumi]");
+  if(bumi){ S.bumi = bumi.dataset.bumi;
+    $$("[data-bumi]").forEach(b=>b.setAttribute("aria-pressed", b===bumi)); render(); return; }
+
+  /* view toggle */
+  const view = closest("[data-view]");
+  if(view){ S.view = view.dataset.view;
+    $$("[data-view]").forEach(b=>b.setAttribute("aria-pressed", b===view));
+    $("#listView").hidden = S.view!=="list";
+    $("#mapView").hidden  = S.view!=="map";
+    return; }
+
+  /* active filter removal */
+  const af = closest("[data-af]");
+  if(af){ $("#activeFilters")._chips[+af.dataset.af].fn(); buildControls(); render(); return; }
+  if(t.id==="clearAll" || t.id==="resetAll" || t.id==="emptyReset"){ resetAll(); return; }
+
+  /* compare remove */
+  const unc = closest("[data-uncmp]");
+  if(unc){ S.compare.delete(unc.dataset.uncmp); render(); return; }
+  if(t.id==="cmpClear"){ S.compare.clear(); render(); return; }
+  if(t.id==="cmpGo"){ toast(`Comparing ${S.compare.size} listings side by side`); return; }
+
+  /* overlays */
+  const close = closest("[data-close]");
+  if(close){ $("#"+close.dataset.close).dataset.visible="false"; document.body.style.overflow=""; return; }
+  if(t.classList.contains("overlay")){ t.dataset.visible="false"; document.body.style.overflow=""; return; }
+  if(t.closest("#postBtn")){ window.location.href = "agent-portal.html"; return; }
+  if(t.closest("#notesBtn")){ $("#notesPanel").dataset.visible="true"; return; }
+  if(t.closest("#authBtn")){
+    if(window.__ckAuthUser){ window.__ckSignOut && window.__ckSignOut(); return; }
+    $("#authOverlay").dataset.visible="true"; document.body.style.overflow="hidden"; return;
+  }
+  if(t.closest("#authSignInBtn")){ window.__ckSignIn && window.__ckSignIn(); return; }
+  if(t.closest("#authSignUpBtn")){ window.__ckSignUp && window.__ckSignUp(); return; }
+  if(t.id==="notesClose"){ $("#notesPanel").dataset.visible="false"; return; }
+  if(t.closest("#shortlistBtn")){
+    if(!S.shortlist.size){ toast("Your shortlist is empty — tap the heart on any listing"); return; }
+    toast(`${S.shortlist.size} listing${S.shortlist.size===1?"":"s"} shortlisted`); return;
+  }
+  if(t.id==="saveSearch"){ toast("Search saved — you'll get an alert when a matching unit is listed"); return; }
+  if(t.id==="pfSubmit"){
+    const ren = $("#pfRen").value.trim();
+    const ok = /^(REN\s?\d{4,6}|E\(\d\)\d{4})$/i.test(ren);
+    $("#renMsg").textContent = ok ? "✓ Matches LPPEH register format." : "Invalid — use REN 12345 or E(3)1234.";
+    $("#renMsg").style.color = ok ? "var(--good)" : "var(--alert)";
+    toast(ok ? "Listing submitted for verification" : "Fix the REN number before publishing");
+    return;
+  }
+  if(t.closest("#themeBtn")){
+    const cur = document.documentElement.dataset.theme;
+    const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = cur ? (cur==="dark"?"light":"dark") : (sysDark?"light":"dark");
+    render(); return;
+  }
+
+  /* language */
+  const lang = closest("[data-lang]");
+  if(lang){ setLang(lang.dataset.lang);
+    $$("[data-lang]").forEach(b=>b.setAttribute("aria-pressed", b===lang)); return; }
+});
+
+document.addEventListener("change", e=>{
+  const t = e.target, d = t.dataset;
+  const toggleSet = (set, key) => { t.checked ? set.add(key) : set.delete(key); };
+  if(d.area!=null){ toggleSet(S.areas,d.area); }
+  else if(d.type!=null){ toggleSet(S.types,d.type); }
+  else if(d.furnish!=null){ toggleSet(S.furnish,d.furnish); }
+  else if(d.tenure!=null){ toggleSet(S.tenure,d.tenure); }
+  else if(d.title!=null){ toggleSet(S.title,d.title); }
+  else if(d.line!=null){ toggleSet(S.lines,d.line); }
+  else if(d.fac!=null){ toggleSet(S.fac,d.fac); }
+  else if(d.cmp!=null){ t.checked ? S.compare.add(d.cmp) : S.compare.delete(d.cmp); }
+  else if(t.id==="pMin"){ S.pMin = t.value?+t.value:null; }
+  else if(t.id==="pMax"){ S.pMax = t.value?+t.value:null; }
+  else if(t.id==="sMin"){ S.sMin = t.value?+t.value:null; }
+  else if(t.id==="sMax"){ S.sMax = t.value?+t.value:null; }
+  else if(t.id==="qState"){ S.qState = t.value; }
+  else if(t.id==="qType"){ S.qType = t.value; }
+  else if(t.id==="qBudget"){ S.pMax = t.value?+t.value:null; $("#pMax").value = t.value; }
+  else if(t.id==="fWalk"){ S.walk = t.value?+t.value:null; }
+  else if(t.id==="fCovered"){ S.covered = t.checked; }
+  else if(t.id==="fForeign"){ S.foreign = t.checked; }
+  else if(t.id==="fRen"){ S.ren = t.checked; }
+  else if(t.id==="fWest"){ S.west = t.checked; }
+  else if(t.id==="fPet"){ S.pet = t.checked; }
+  else if(t.id==="sortSel"){ S.sort = t.value; }
+  else if(t.id==="pfBuilt"){ $("#sqmEcho").textContent = "= " + sqm(+t.value||0) + " sq m"; return; }
+  else if(t.id==="pfDeal"){ return; }
+  else return;
+  render();
+});
+
+$("#qText").addEventListener("input", e=>{ S.qText = e.target.value.trim(); render(); });
+$("#qGo").addEventListener("click", ()=>{ render(); toast(`${$("#resN").textContent} listings found`); });
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape"){
+    $$(".overlay").forEach(o=>o.dataset.visible="false");
+    $("#notesPanel").dataset.visible="false";
+    document.body.style.overflow="";
+    closeAllShare();
+  }
+});
+
+function resetAll(){
+  Object.assign(S,{qState:"all",qText:"",qType:"all",pMin:null,pMax:null,sMin:null,sMax:null,
+    bays:null,covered:false,bumi:"exclude",foreign:false,walk:null,ren:false,west:false,pet:false});
+  [S.areas,S.types,S.beds,S.baths,S.furnish,S.tenure,S.title,S.lines,S.fac].forEach(s=>s.clear());
+  $("#qState").value="all"; $("#qText").value=""; $("#qType").value="all"; $("#qBudget").value="";
+  ["fCovered","fForeign","fRen","fWest","fPet"].forEach(id=>$("#"+id).checked=false);
+  $("#fWalk").value="";
+  $$("[data-bumi]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.bumi==="exclude"));
+  buildControls(); render();
+  toast("Filters reset");
+}
+
+/* i18n */
+function setLang(code){
+  S.lang = code;
+  $$("[data-i18n]").forEach(el=>{
+    const k = el.dataset.i18n;
+    if(!EN_CACHE[k]) EN_CACHE[k] = el.textContent;
+    el.textContent = (code==="en") ? EN_CACHE[k] : (I18N[code][k] || EN_CACHE[k]);
+  });
+}
+
+/* deep link: a link shared via the share menu opens straight to that unit */
+function openFromHash(){
+  const m = location.hash.match(/listing=([\w-]+)/);
+  if(!m) return;
+  const l = L.find(x=>x.id===m[1]);
+  if(!l) return;
+  if(l.deal !== S.deal){
+    S.deal = l.deal;
+    $$(".deal").forEach(b=>b.setAttribute("aria-selected", b.dataset.deal===l.deal));
+    buildControls();
+  }
+  render();
+  openDetail(l.id);
+}
+
+/* boot */
+buildControls();
+render();
+openFromHash();
+
+/* expose to the live-data / auth module script below */
+window.S = S;
+window.render = render;
+window.toast = toast;
+</script>
+
+<!-- ============================ LIVE DATA (Telegram → Firestore) ============================
+     This block fetches the listings your team's Telegram group has been synced into Firestore
+     (see the telegram-sync Python project) and merges them into the page's listing array.
+
+     Fill in YOUR_FIREBASE_CONFIG below — get it from:
+       Firebase console → Project settings → General → "Your apps" → Web app → SDK setup and config
+     This is the PUBLIC web config (apiKey etc.) — it is safe to expose in client-side code;
+     access control is enforced by Firestore Security Rules, not by hiding this object.
+
+     NOTE: this live-data block needs real network access to Firebase, so it will NOT work if this
+     page is opened as a claude.ai Artifact (Artifacts block external requests). Deploy this file
+     to Firebase Hosting (or any normal web host) — see SETUP.md in the telegram-sync project. -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const YOUR_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+    authDomain: "voiceout.asia",
+    projectId: "voiceout-asia",
+    storageBucket: "voiceout-asia.firebasestorage.app",
+    messagingSenderId: "103693807034",
+    appId: "1:103693807034:web:89d1b868d541957323c183"
+  };
+
+  async function loadTelegramListings(){
+    try{
+      const app = initializeApp(YOUR_FIREBASE_CONFIG);
+      const db = getFirestore(app);
+      // 只抓「已審核通過」的房源。網站是人工策展的（見 DECISIONS.md Decision 012）——
+      // 沒有經過後台 admin.html 按下「標記已審核」的房源，一律不會出現在公開網站上。
+      // 這樣就算資料庫裡還躺著舊的 Telegram 垃圾資料，網站也完全不受影響。
+      const q = query(collection(db, "listings"), where("review_status", "==", "reviewed"));
+      const snap = await getDocs(q);
+      const docs = [];
+      snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+      if(docs.length && window.mergeTelegramListings){
+        window.mergeTelegramListings(docs);
+        console.log(`PetaRumah: merged ${docs.length} approved listings from Firestore.`);
+      } else {
+        console.log("PetaRumah: no approved listings in Firestore yet — showing sample data only.");
+      }
+    }catch(err){
+      // Fails quietly on purpose: if Firebase isn't configured yet (e.g. still using
+      // PASTE_YOUR_* placeholders), the site should keep working with the sample data.
+      console.warn("PetaRumah: could not load live Telegram listings.", err);
+    }
+  }
+
+  loadTelegramListings();
+
+  /* ------------------------------------------------------------------
+     買家登入 + 雲端收藏（Firebase Auth + Firestore）
+     未登入時 shortlist 只存在記憶體（跟原本行為一樣，重整頁面就消失）；
+     登入後，收藏會讀寫到 users/{uid}/favorites/{listingId}，換裝置也看得到。
+     ------------------------------------------------------------------ */
+  const authApp = initializeApp(YOUR_FIREBASE_CONFIG, "authApp");
+  const auth = getAuth(authApp);
+  const authDb = getFirestore(authApp);
+
+  function setAuthBtnLabel(user){
+    const btn = document.getElementById("authBtn");
+    if(!btn) return;
+    btn.textContent = user ? (user.email.split("@")[0] + " ▾ 登出") : "登入";
+  }
+
+  async function loadFavoritesFor(user){
+    try{
+      const snap = await getDocs(collection(authDb, "users", user.uid, "favorites"));
+      const ids = [];
+      snap.forEach(d => ids.push(d.id));
+      if(window.S){
+        window.S.shortlist = new Set(ids);
+        window.render && window.render();
+      }
+    }catch(err){
+      console.warn("PetaRumah: could not load favorites.", err);
+    }
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    window.__ckAuthUser = user || null;
+    setAuthBtnLabel(user);
+    if(user){
+      document.getElementById("authOverlay").dataset.visible = "false";
+      document.body.style.overflow = "";
+      loadFavoritesFor(user);
+    } else if(window.S){
+      window.S.shortlist = new Set();
+      window.render && window.render();
+    }
+  });
+
+  function authFields(){
+    return {
+      email: document.getElementById("authEmail").value.trim(),
+      password: document.getElementById("authPassword").value,
+      errEl: document.getElementById("authErr")
+    };
+  }
+  function authErrMsg(err){
+    if(err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") return "帳號或密碼錯誤";
+    if(err.code === "auth/email-already-in-use") return "這個 email 已經註冊過了，請直接登入";
+    if(err.code === "auth/weak-password") return "密碼至少要 6 個字";
+    if(err.code === "auth/invalid-email") return "Email 格式不正確";
+    return err.message;
+  }
+
+  window.__ckSignIn = function(){
+    const { email, password, errEl } = authFields();
+    errEl.textContent = "";
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => window.toast && window.toast("登入成功"))
+      .catch(err => errEl.textContent = authErrMsg(err));
+  };
+  window.__ckSignUp = function(){
+    const { email, password, errEl } = authFields();
+    errEl.textContent = "";
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => window.toast && window.toast("註冊成功，已自動登入"))
+      .catch(err => errEl.textContent = authErrMsg(err));
+  };
+  window.__ckSignOut = function(){
+    signOut(auth).then(() => window.toast && window.toast("已登出"));
+  };
+  window.__ckToggleFavorite = function(listingId, isFavorited){
+    const user = window.__ckAuthUser;
+    if(!user) return; // 未登入：只留在記憶體裡，跟原本行為一樣
+    const ref = doc(authDb, "users", user.uid, "favorites", listingId);
+    (isFavorited ? setDoc(ref, { saved_at: new Date().toISOString() }) : deleteDoc(ref))
+      .catch(err => console.warn("PetaRumah: could not sync favorite.", err));
+  };
+</script>
+
+</body>
+</html>

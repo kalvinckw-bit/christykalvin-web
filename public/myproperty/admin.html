@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetaRumah 後台管理</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;
+    --bg:#F4F1EA; --card:#FFFFFF; --line:#DDD6C7; --text:#20302F; --muted:#6B7876;
+    --danger:#B4530A; --ok:#2E7D32; --new:#1565C0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Meiryo","Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--petrol);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;}
+  header button{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+  header button:hover{background:rgba(255,255,255,.12);}
+
+  #loginScreen{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px;}
+  #loginScreen h2{margin-top:0;font-size:16px;}
+  #loginScreen input{width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  #loginScreen button{width:100%;padding:10px;background:var(--petrol);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:700;}
+  #loginErr{color:var(--danger);font-size:13px;min-height:18px;margin-top:6px;}
+
+  main{max-width:1200px;margin:0 auto;padding:20px 24px 60px;}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .toolbar select,.toolbar input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;}
+  .stat{font-size:13px;color:var(--muted);margin-left:auto;}
+
+  .grid{display:flex;flex-direction:column;gap:10px;}
+  .row{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .row-head{display:flex;gap:10px;align-items:center;cursor:pointer;flex-wrap:wrap;}
+  .row-head .proj{font-weight:700;font-size:15px;flex:1;min-width:160px;}
+  .tag{font-size:11px;padding:2px 8px;border-radius:10px;color:#fff;font-weight:700;}
+  .tag.new{background:var(--new);}
+  .tag.reviewed{background:var(--ok);}
+  .tag.hidden{background:#777;}
+  .tag.incomplete{background:var(--danger);}
+  .tag.edited{background:var(--gold-d);}
+  .meta{font-size:12px;color:var(--muted);}
+  .chev{transition:transform .15s;}
+  .row.open .chev{transform:rotate(90deg);}
+
+  .detail{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .row.open .detail{display:block;}
+  .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px;}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .field input,.field select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;}
+  .raw{background:#FAF8F2;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto;margin-bottom:12px;color:var(--muted);}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .actions button{padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
+  .actions button.primary{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+  .actions button.warn{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .actions button.ghost{background:transparent;}
+  .actions button:hover{opacity:.85;}
+  .savedFlash{font-size:12px;color:var(--ok);margin-left:6px;display:none;}
+  #empty{text-align:center;color:var(--muted);padding:60px 0;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tab{padding:10px 16px;background:transparent;border:none;border-bottom:2px solid transparent;font-size:14px;cursor:pointer;color:var(--muted);font-weight:700;}
+  .tab.active{color:var(--petrol);border-bottom-color:var(--petrol);}
+  .tab .badge-count{background:var(--danger);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;margin-left:6px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .agentRow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
+  .agentRow .info{flex:1;min-width:220px;}
+  .agentRow .info b{font-size:14px;}
+  .agentRow .info .meta{display:block;margin-top:2px;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <h2>PetaRumah 後台登入</h2>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="密碼" autocomplete="current-password">
+  <button id="loginBtn">登入</button>
+  <div id="loginErr"></div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>PetaRumah 後台管理 <span style="font-weight:400;font-size:12px;opacity:.7">Powered by CK Holdings</span></h1>
+    <div class="user">
+      <span id="whoami"></span>
+      <button id="logoutBtn">登出</button>
+    </div>
+  </header>
+  <main>
+    <div class="tabs">
+      <button class="tab active" data-tab="listings">房源管理</button>
+      <button class="tab" data-tab="agents">Agent 審核 <span class="badge-count" id="pendingCount" style="display:none">0</span></button>
+    </div>
+
+    <div class="panel active" id="panel-listings">
+      <div class="toolbar">
+        <select id="filterStatus">
+          <option value="all">全部狀態</option>
+          <option value="new">未審核</option>
+          <option value="reviewed">已審核</option>
+          <option value="hidden">已隱藏</option>
+        </select>
+        <select id="filterComplete">
+          <option value="all">全部完整度</option>
+          <option value="incomplete">⚠️ 資訊不完整</option>
+          <option value="complete">資訊完整</option>
+        </select>
+        <input id="searchBox" type="text" placeholder="搜尋案名 / Agent 聯絡方式...">
+        <span class="stat" id="statLine"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div id="empty" style="display:none;">沒有符合條件的房源</div>
+    </div>
+
+    <div class="panel" id="panel-agents">
+      <p style="font-size:13px;color:var(--muted)">Agent 在「刊登物件」頁面註冊後會出現在這裡，審核通過(Approve)之後，他就能登入自己編輯/刪除自己貼的房源。</p>
+      <div id="agentsGrid"></div>
+      <div id="agentsEmpty" style="display:none;text-align:center;color:var(--muted);padding:60px 0;">目前沒有 agent 申請</div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const loginScreen = document.getElementById("loginScreen");
+const appEl = document.getElementById("app");
+const loginErr = document.getElementById("loginErr");
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+function doLogin(){
+  loginErr.textContent = "";
+  const email = document.getElementById("email").value.trim();
+  const pw = document.getElementById("password").value;
+  signInWithEmailAndPassword(auth, email, pw).catch(err => {
+    loginErr.textContent = "登入失敗：" + (err.code === "auth/invalid-credential" ? "帳號或密碼錯誤" : err.message);
+  });
+}
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+let allListings = [];
+let unsub = null;
+
+let unsubAgents = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.style.display = "none";
+    appEl.style.display = "block";
+    document.getElementById("whoami").textContent = user.email;
+    startListening();
+    startListeningAgents();
+  } else {
+    loginScreen.style.display = "block";
+    appEl.style.display = "none";
+    if (unsub) unsub();
+    if (unsubAgents) unsubAgents();
+  }
+});
+
+/* ---------------- 分頁切換 ---------------- */
+document.querySelectorAll(".tab").forEach(tabBtn => {
+  tabBtn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tabBtn.classList.add("active");
+    document.getElementById("panel-" + tabBtn.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---------------- Agent 審核 ---------------- */
+let allAgents = [];
+
+function startListeningAgents(){
+  unsubAgents = onSnapshot(collection(db, "agents"), (snap) => {
+    allAgents = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    renderAgents();
+  }, (err) => {
+    document.getElementById("agentsEmpty").style.display = "block";
+    document.getElementById("agentsEmpty").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+function renderAgents(){
+  const grid = document.getElementById("agentsGrid");
+  const empty = document.getElementById("agentsEmpty");
+  const pendingCount = allAgents.filter(a => !a.is_approved && !a.is_rejected).length;
+  const badge = document.getElementById("pendingCount");
+  if (pendingCount > 0) { badge.style.display = "inline"; badge.textContent = pendingCount; }
+  else { badge.style.display = "none"; }
+
+  if (allAgents.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  const sorted = [...allAgents].sort((a, b) => {
+    const rank = a => !a.is_approved && !a.is_rejected ? 0 : a.is_approved ? 1 : 2;
+    return rank(a) - rank(b);
+  });
+
+  grid.innerHTML = sorted.map(a => {
+    const status = a.is_approved ? `<span class="tag reviewed">已核准</span>`
+      : a.is_rejected ? `<span class="tag hidden">已拒絕</span>`
+      : `<span class="tag new">待審核</span>`;
+    return `
+    <div class="agentRow">
+      <div class="info">
+        <b>${esc(a.name) || "(未填姓名)"}</b> ${status}
+        <span class="meta">${esc(a.email)} · ${esc(a.phone) || "無電話"} · REN: ${esc(a.ren_number) || "未填"}</span>
+        <span class="meta">申請時間：${a.requested_at ? new Date(a.requested_at).toLocaleString("zh-TW") : "-"}</span>
+      </div>
+      <div class="actions">
+        <button class="primary" data-approve="${a.uid}">核准</button>
+        <button class="warn" data-reject="${a.uid}">拒絕</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  grid.querySelectorAll("[data-approve]").forEach(btn => {
+    btn.addEventListener("click", () => decideAgent(btn.dataset.approve, true));
+  });
+  grid.querySelectorAll("[data-reject]").forEach(btn => {
+    btn.addEventListener("click", () => decideAgent(btn.dataset.reject, false));
+  });
+}
+
+async function decideAgent(uid, approve){
+  try {
+    await updateDoc(doc(db, "agents", uid), {
+      is_approved: approve,
+      is_rejected: !approve,
+      decided_at: new Date().toISOString()
+    });
+  } catch (err) {
+    alert("操作失敗：" + err.message);
+  }
+}
+
+function startListening(){
+  const q = query(collection(db, "listings"), orderBy("created_at", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allListings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, (err) => {
+    document.getElementById("statLine").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+const FIELD_DEFS = [
+  ["project", "案名 Project"],
+  ["deal", "sale / rent"],
+  ["state", "州屬 State"],
+  ["type", "類型 Type"],
+  ["price", "價格 RM"],
+  ["sqft", "面積 sqft"],
+  ["land_dims", "地皮尺寸"],
+  ["bedrooms", "房數"],
+  ["bathrooms", "浴室數"],
+  ["tenure", "Freehold/Leasehold"],
+  ["furnish", "裝潢狀態"],
+  ["agent_name", "Agent 姓名"],
+  ["agent_contact", "Agent 聯絡方式"],
+];
+
+function render(){
+  const status = document.getElementById("filterStatus").value;
+  const complete = document.getElementById("filterComplete").value;
+  const search = document.getElementById("searchBox").value.trim().toLowerCase();
+
+  let list = allListings.filter(l => {
+    if (status !== "all" && (l.review_status || "new") !== status) return false;
+    if (complete === "incomplete" && l.is_complete) return false;
+    if (complete === "complete" && !l.is_complete) return false;
+    if (search) {
+      const hay = [l.project, l.agent_contact, l.agent_name, l.state].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("statLine").textContent = `共 ${allListings.length} 筆，符合篩選 ${list.length} 筆`;
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+
+  if (list.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  grid.innerHTML = list.map(l => rowHTML(l)).join("");
+
+  list.forEach(l => {
+    const rowEl = document.getElementById("row_" + l.id);
+    rowEl.querySelector(".row-head").addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      rowEl.classList.toggle("open");
+    });
+    rowEl.querySelector(".btn-save").addEventListener("click", () => saveRow(l.id));
+    rowEl.querySelector(".btn-hide").addEventListener("click", () => setStatus(l.id, "hidden"));
+    rowEl.querySelector(".btn-approve").addEventListener("click", () => setStatus(l.id, "reviewed"));
+    rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(l.id, l.project));
+  });
+}
+
+function esc(s){
+  return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function rowHTML(l){
+  const status = l.review_status || "new";
+  const tags = [`<span class="tag ${status}">${status === "new" ? "未審核" : status === "reviewed" ? "已審核" : "已隱藏"}</span>`];
+  if (!l.is_complete) tags.push(`<span class="tag incomplete">⚠️ 缺: ${esc((l.missing_fields||[]).join(", "))}</span>`);
+  if (l.human_edited) tags.push(`<span class="tag edited">已手動修改</span>`);
+
+  const fieldsHTML = FIELD_DEFS.map(([key, label]) => `
+    <div class="field">
+      <label>${label}</label>
+      <input data-key="${key}" value="${esc(l[key])}">
+    </div>
+  `).join("");
+
+  return `
+  <div class="row" id="row_${l.id}">
+    <div class="row-head">
+      <span class="chev">▶</span>
+      <span class="proj">${esc(l.project) || "(無標題)"}</span>
+      ${tags.join("")}
+      <span class="meta">${esc(l.state) || ""} · 訊息 #${esc(l.source_message_id)} · ${l.created_at ? new Date(l.created_at).toLocaleDateString("zh-TW") : ""}</span>
+    </div>
+    <div class="detail">
+      <div class="fields">${fieldsHTML}</div>
+      <div class="raw">${esc(l.raw_text) || "(無原文)"}</div>
+      <div class="actions">
+        <button class="primary btn-save">儲存修改</button>
+        <button class="btn-approve">標記已審核</button>
+        <button class="btn-hide">隱藏（不在網站顯示）</button>
+        <button class="warn btn-delete">永久刪除</button>
+        <span class="savedFlash">已儲存 ✓</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveRow(id){
+  const rowEl = document.getElementById("row_" + id);
+  const inputs = rowEl.querySelectorAll(".fields input");
+  const update = { human_edited: true };
+  inputs.forEach(inp => {
+    const key = inp.dataset.key;
+    let val = inp.value.trim();
+    if (key === "price" || key === "sqft" || key === "bathrooms") {
+      update[key] = val === "" ? null : Number(val);
+    } else {
+      update[key] = val === "" ? null : val;
+    }
+  });
+  try {
+    await updateDoc(doc(db, "listings", id), update);
+    const flash = rowEl.querySelector(".savedFlash");
+    flash.style.display = "inline";
+    setTimeout(() => flash.style.display = "none", 2000);
+  } catch (err) {
+    alert("儲存失敗：" + err.message);
+  }
+}
+
+async function setStatus(id, status){
+  try {
+    await updateDoc(doc(db, "listings", id), { review_status: status });
+  } catch (err) {
+    alert("操作失敗：" + err.message);
+  }
+}
+
+async function removeRow(id, project){
+  if (!confirm(`確定要永久刪除「${project || "(無標題)"}」嗎？此動作無法復原。`)) return;
+  try {
+    await deleteDoc(doc(db, "listings", id));
+  } catch (err) {
+    alert("刪除失敗：" + err.message);
+  }
+}
+
+document.getElementById("filterStatus").addEventListener("change", render);
+document.getElementById("filterComplete").addEventListener("change", render);
+document.getElementById("searchBox").addEventListener("input", render);
+</script>
+</body>
+</html>

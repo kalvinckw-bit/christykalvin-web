@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>家庭行程調度系統 (穩固單機鎖定版)</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --bg-main: #f1f5f9;
+            --border-color: #cbd5e1;
+            --red-holiday: #fff1f2;
+            --red-holiday-border: #f43f5e;
+            --tianyu: #3b82f6;
+            --tianxiang: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: #1e293b;
+            margin: 0;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .dashboard {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            margin-bottom: 15px;
+        }
+
+        #formCard { order: 2; }
+        #resultCard { order: 1; }
+        #configCard { order: 3; }
+
+        h3 { 
+            margin: 0 0 12px 0; 
+            color: #0f172a; 
+            font-size: 1.1rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 8px;
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #475569;
+        }
+
+        .segmented-control {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .radio-box {
+            flex: 1;
+            min-width: 65px;
+            position: relative;
+        }
+
+        .day-box {
+            min-width: 35px;
+            flex: 1;
+        }
+
+        .radio-box input[type="radio"], .radio-box input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            margin: 0;
+            z-index: 2;
+        }
+
+        .radio-label {
+            display: block;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 8px 2px;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.1s;
+        }
+
+        .day-box .radio-label {
+            font-size: 0.8rem;
+            padding: 8px 0;
+        }
+
+        .radio-box input:checked + .radio-label {
+            background-color: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .radio-box #person_ty:checked + .radio-label { background-color: #dbeafe; border-color: var(--tianyu); color: var(--tianyu); }
+        .radio-box #person_tx:checked + .radio-label { background-color: #dcfce7; border-color: var(--tianxiang); color: var(--tianxiang); }
+        .day-box input:checked + .radio-label { background-color: #e0f2fe; border-color: #0284c7; color: #0284c7; }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #f8fafc;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+        }
+        .btn:active { background-color: #4338ca; }
+        
+        .btn-cancel { background-color: #94a3b8; margin-top: 8px; display: none; }
+
+        .task-list { max-height: 280px; overflow-y: auto; }
+        .task-item {
+            background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 8px;
+            border-left: 4px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center;
+        }
+        .task-item.item-ty { border-left-color: var(--tianyu); }
+        .task-item.item-tx { border-left-color: var(--tianxiang); }
+        .task-item.is-canceled { opacity: 0.4; background: #e2e8f0; text-decoration: line-through; }
+
+        .action-btns { display: flex; gap: 5px; }
+        .btn-sm { border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; color: white; }
+        .btn-edit { background-color: #eab308; }
+        .btn-del { background-color: #ef4444; }
+
+        .gantt-overflow { overflow-x: auto; margin: 0 -15px; padding: 0 15px; }
+        
+        .gantt-chart { 
+            display: grid; 
+            grid-template-columns: 65px repeat(24, 32px); 
+            align-items: center; 
+            width: max-content; 
+            padding-bottom: 10px; 
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px);
+            background-size: 32px 100%;
+            background-position: 65px 0;
+        }
+        
+        .timeline-header { grid-column: 2 / span 24; display: grid; grid-template-columns: repeat(12, 64px); font-size: 0.75rem; font-weight: bold; color: #64748b; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 8px; }
+        .name-col { font-weight: bold; color: #334155; border-right: 2px solid #e2e8f0; height: 100%; display: flex; align-items: center; font-size: 0.9rem; }
+        .row-space { grid-column: 1 / span 25; height: 1px; background-color: #e2e8f0; margin: 8px 0; }
+
+        .gantt-bar { height: 50px; border-radius: 6px; color: white; font-size: 0.7rem; padding: 2px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; line-height: 1.1; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .gantt-bar.is-canceled { background-color: #94a3b8 !important; text-decoration: line-through; opacity: 0.5; box-shadow: none; }
+
+        .holiday-banner { background-color: #fee2e2; border: 1px dashed #f43f5e; color: #e11d48; padding: 8px; text-align: center; font-weight: bold; border-radius: 8px; margin-bottom: 10px; display: none; }
+
+        .admin-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 10px; }
+        .inline-form { display: flex; gap: 8px; margin-bottom: 10px; }
+        .inline-form input { flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; }
+        .inline-form button { background: #0f172a; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .tag-container { display: flex; flex-wrap: wrap; gap: 6px; }
+        .config-tag { background: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+        .config-tag span { cursor: pointer; color: #ef4444; font-weight: bold; font-size: 1rem; }
+
+        @media screen and (orientation: landscape) and (max-width: 950px) {
+            body { padding: 5px; background-color: #ffffff; }
+            .dashboard { max-width: 100%; }
+            #formCard, #configCard, h4, .task-list, label[for="filterDayRadio"] { display: none !important; }
+            #resultCard { box-shadow: none; padding: 5px; margin: 0; }
+            .gantt-chart {
+                width: 100% !important;
+                grid-template-columns: 80px repeat(24, 1fr) !important;
+                background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px);
+                background-size: calc((100% - 80px) / 24) 100%;
+                background-position: 80px 0;
+            }
+            .timeline-header { grid-template-columns: repeat(12, 2fr) !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    
+    <div class="card" id="resultCard">
+        <label style="font-weight: bold; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 6px;">切換查看星期：</label>
+        <div style="display: flex; flex-direction: column; margin-bottom: 12px; gap: 10px;">
+            <div class="segmented-control" id="filterDayContainer">
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_1" value="1"><label class="radio-label" for="f_day_1">一</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_2" value="2"><label class="radio-label" for="f_day_2">二</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_3" value="3"><label class="radio-label" for="f_day_3">三</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_4" value="4"><label class="radio-label" for="f_day_4">四</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_5" value="5"><label class="radio-label" for="f_day_5">五</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_6" value="6" checked><label class="radio-label" for="f_day_6">六</label></div>
+                <div class="radio-box day-box"><input type="radio" name="filterDayRadio" id="f_day_7" value="7"><label class="radio-label" for="f_day_7">日</label></div>
+            </div>
+            
+            <div class="radio-box" style="width: auto; min-width: 120px;">
+                <input type="checkbox" id="isRedHoliday">
+                <label class="radio-label" for="isRedHoliday" style="color: #ef4444; border-color: #fca5a5; padding: 8px; font-size: 0.8rem;">🚨 紅日子(假期)</label>
+            </div>
+        </div>
+
+        <div class="holiday-banner" id="holidayBanner">⚠️ 今日為紅日子（大假期），行程僅供參考！</div>
+
+        <div class="gantt-overflow">
+            <div class="gantt-chart" id="ganttChart"></div>
+        </div>
+
+        <h4>本日清單（點擊黃色按鈕可進行編輯修改）：</h4>
+        <div class="task-list" id="listContainer"></div>
+    </div>
+    
+    <div class="card" id="formCard">
+        <h3 id="formTitle">新增行程</h3>
+        <form id="scheduleForm">
+            <input type="hidden" id="editId" value="">
+
+            <div class="form-group">
+                <label>選擇人物 (可同時勾選多位 👥)</label>
+                <div class="segmented-control">
+                    <div class="radio-box">
+                        <input type="checkbox" name="person" id="person_ty" value="添宇" checked>
+                        <label class="radio-label" for="person_ty">添宇</label>
+                    </div>
+                    <div class="radio-box">
+                        <input type="checkbox" name="person" id="person_tx" value="添翔">
+                        <label class="radio-label" for="person_tx">添翔</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>星期幾</label>
+                <div class="segmented-control">
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_1" value="1"><label class="radio-label" for="day_1">一</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_2" value="2"><label class="radio-label" for="day_2">二</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_3" value="3"><label class="radio-label" for="day_3">三</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_4" value="4"><label class="radio-label" for="day_4">四</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_5" value="5"><label class="radio-label" for="day_5">五</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_6" value="6" checked><label class="radio-label" for="day_6">六</label></div>
+                    <div class="radio-box day-box"><input type="radio" name="dayOfWeek" id="day_7" value="7"><label class="radio-label" for="day_7">日</label></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>開始時間 (7am - 7pm)</label>
+                    <input type="time" class="form-control" id="startTime" min="07:00" max="19:00" required>
+                </div>
+                <div class="form-group">
+                    <label>結束時間</label>
+                    <input type="time" class="form-control" id="endTime" min="07:00" max="19:00" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>在哪裡 (地點 / 項目)</label>
+                <div class="segmented-control" id="locationOptionsContainer"></div>
+            </div>
+
+            <div class="form-group">
+                <label>🚗 誰負責【載去】？</label>
+                <div class="segmented-control" id="driverGoContainer"></div>
+            </div>
+
+            <div class="form-group">
+                <label>🚌 誰負責【載回】？</label>
+                <div class="segmented-control" id="driverBackContainer"></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <div class="radio-box" style="display: inline-block; width: auto; min-width: 150px;">
+                    <input type="checkbox" id="hasTuition" checked>
+                    <label class="radio-label" for="hasTuition" style="padding: 8px;">🟢 今日照常有補習/上學</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">＋ 新增行程</button>
+            <button type="button" class="btn btn-cancel" id="cancelBtn" onclick="resetToCreateMode()">取消修改</button>
+        </form>
+    </div>
+
+    <div class="card" id="configCard" style="border-top: 4px solid #0f172a;">
+        <h3>⚙️ 選項清單自訂管理（免動代碼）</h3>
+        <p style="font-size: 0.8rem; color:#64748b; margin-top:-5px;">在這裡新增或刪除的項目，會立刻變成上面表單的點選按鈕喔！</p>
+        
+        <div class="admin-section">
+            <label style="font-weight: bold; font-size: 0.85rem; color:#334155;">📍 管理「地點 / 項目」按鈕</label>
+            <div class="inline-form" style="margin-top: 5px;">
+                <input type="text" id="newLocInput" placeholder="輸入新地點，如: 英文班">
+                <button type="button" onclick="addConfigItem('locations', 'newLocInput')">新增</button>
+            </div>
+            <div class="tag-container" id="adminLocationsContainer"></div>
+        </div>
+
+        <div class="admin-section">
+            <label style="font-weight: bold; font-size: 0.85rem; color:#334155;">🚗 管理「接送人員」按鈕</label>
+            <div class="inline-form" style="margin-top: 5px;">
+                <input type="text" id="newDriverInput" placeholder="輸入新人員，如: 爺爺">
+                <button type="button" onclick="addConfigItem('drivers', 'newDriverInput')">新增</button>
+            </div>
+            <div class="tag-container" id="adminDriversContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 🔒 完全切斷外部網路，使用獨立的系統版本，100%鎖定在本地
+    let schedules = JSON.parse(localStorage.getItem('family_schedules_final_v1')) || [];
+    let holidaySettings = JSON.parse(localStorage.getItem('holiday_settings_final_v1')) || {};
+    
+    let config = JSON.parse(localStorage.getItem('family_config_final_v1')) || {
+        locations: ["安親班", "馬來文補習", "英文補習", "心算補習", "學校打鼓專科"],
+        drivers: ["爸爸", "媽媽", "公公", "婆婆", "爺爺", "嫲嫲", "姑姐"]
+    };
+
+    const form = document.getElementById('scheduleForm');
+    const isRedHolidayCheckbox = document.getElementById('isRedHoliday');
+
+    function getSelectedFilterDay() {
+        return document.querySelector('input[name="filterDayRadio"]:checked').value;
+    }
+
+    function saveData() {
+        localStorage.setItem('family_schedules_final_v1', JSON.stringify(schedules));
+        localStorage.setItem('holiday_settings_final_v1', JSON.stringify(holidaySettings));
+        localStorage.setItem('family_config_final_v1', JSON.stringify(config));
+    }
+
+    function initSystem() {
+        renderFormOptions();
+        renderAdminPanel();
+        isRedHolidayCheckbox.checked = !!holidaySettings[getSelectedFilterDay()];
+        render();
+    }
+
+    function renderFormOptions() {
+        const locContainer = document.getElementById('locationOptionsContainer');
+        if (!locContainer) return;
+        locContainer.innerHTML = '';
+        config.locations.forEach((loc, index) => {
+            const div = document.createElement('div');
+            div.className = 'radio-box';
+            div.innerHTML = `
+                <input type="radio" name="location" id="loc_${index}" value="${loc}" ${index === 0 ? 'checked' : ''}>
+                <label class="radio-label" for="loc_${index}">${loc}</label>
+            `;
+            locContainer.appendChild(div);
+        });
+
+        const goContainer = document.getElementById('driverGoContainer');
+        if (goContainer) {
+            goContainer.innerHTML = '';
+            config.drivers.forEach((drv, index) => {
+                const div = document.createElement('div');
+                div.className = 'radio-box';
+                div.innerHTML = `
+                    <input type="radio" name="driverGo" id="drv_go_${index}" value="${drv}" ${index === 0 ? 'checked' : ''}>
+                    <label class="radio-label" for="drv_go_${index}">${drv}</label>
+                `;
+                goContainer.appendChild(div);
+            });
+        }
+
+        const backContainer = document.getElementById('driverBackContainer');
+        if (backContainer) {
+            backContainer.innerHTML = '';
+            config.drivers.forEach((drv, index) => {
+                const div = document.createElement('div');
+                div.className = 'radio-box';
+                div.innerHTML = `
+                    <input type="radio" name="driverBack" id="drv_bk_${index}" value="${drv}" ${index === 0 ? 'checked' : ''}>
+                    <label class="radio-label" for="drv_bk_${index}">${drv}</label>
+                `;
+                backContainer.appendChild(div);
+            });
+        }
+    }
+
+    function renderAdminPanel() {
+        const adminLoc = document.getElementById('adminLocationsContainer');
+        if (adminLoc) {
+            adminLoc.innerHTML = '';
+            config.locations.forEach(loc => {
+                const span = document.createElement('div');
+                span.className = 'config-tag';
+                span.innerHTML = `${loc} <span onclick="deleteConfigItem('locations', '${loc}')">×</span>`;
+                adminLoc.appendChild(span);
+            });
+        }
+
+        const adminDrv = document.getElementById('adminDriversContainer');
+        if (adminDrv) {
+            adminDrv.innerHTML = '';
+            config.drivers.forEach(drv => {
+                const span = document.createElement('div');
+                span.className = 'config-tag';
+                span.innerHTML = `${drv} <span onclick="deleteConfigItem('drivers', '${drv}')">×</span>`;
+                adminDrv.appendChild(span);
+            });
+        }
+    }
+
+    function addConfigItem(type, inputId) {
+        const input = document.getElementById(inputId);
+        const value = input.value.trim();
+        if (!value) return;
+        if (config[type].includes(value)) { alert("這個項目已經存在囉！"); return; }
+        config[type].push(value);
+        input.value = '';
+        saveData();
+        renderFormOptions();
+        renderAdminPanel();
+    }
+
+    function deleteConfigItem(type, value) {
+        if (confirm(`確定要刪除「${value}」按鈕嗎？`)) {
+            config[type] = config[type].filter(item => item !== value);
+            saveData();
+            renderFormOptions();
+            renderAdminPanel();
+        }
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const editId = document.getElementById('editId').value;
+        const selectedDay = document.querySelector('input[name="dayOfWeek"]:checked').value;
+        const selectedLocation = document.querySelector('input[name="location"]:checked').value;
+        const selectedDriverGo = document.querySelector('input[name="driverGo"]:checked').value;
+        const selectedDriverBack = document.querySelector('input[name="driverBack"]:checked').value;
+        const hasTuition = document.getElementById('hasTuition').checked;
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+
+        const checkedPeopleBoxes = document.querySelectorAll('input[name="person"]:checked');
+        if (checkedPeopleBoxes.length === 0) {
+            alert("請至少勾選一位人物！👥");
+            return;
+        }
+
+        const baseTaskData = {
+            dayOfWeek: selectedDay,
+            startTime: startTime,
+            endTime: endTime,
+            location: selectedLocation,
+            driverGo: selectedDriverGo,
+            driverBack: selectedDriverBack,
+            hasTuition: hasTuition
+        };
+
+        if (editId) {
+            const singlePerson = checkedPeopleBoxes[0].value;
+            schedules = schedules.map(item => item.id === editId ? { ...item, ...baseTaskData, person: singlePerson } : item);
+        } else {
+            const groupId = Date.now().toString(); 
+            checkedPeopleBoxes.forEach((box, idx) => {
+                const newTask = {
+                    id: `${groupId}_${idx}`,
+                    groupId: groupId,
+                    person: box.value,
+                    ...baseTaskData
+                };
+                schedules.push(newTask);
+            });
+        }
+
+        saveData();
+        resetToCreateMode();
+        render();
+    });
+
+    function editSchedule(id) {
+        const item = schedules.find(t => t.id === id);
+        if (!item) return;
+
+        document.getElementById('editId').value = item.id;
+        
+        document.querySelectorAll('input[name="person"]').forEach(box => box.checked = false);
+        const currentPersonBox = document.querySelector(`input[name="person"][value="${item.person}"]`);
+        if (currentPersonBox) currentPersonBox.checked = true;
+
+        document.querySelector(`input[name="dayOfWeek"][value="${item.dayOfWeek}"]`).checked = true;
+        
+        document.getElementById('startTime').value = item.startTime;
+        document.getElementById('endTime').value = item.endTime;
+        
+        const locRadio = document.querySelector(`input[name="location"][value="${item.location}"]`);
+        if (locRadio) locRadio.checked = true;
+        
+        const goRadio = document.querySelector(`input[name="driverGo"][value="${item.driverGo}"]`);
+        if (goRadio) goRadio.checked = true;
+
+        const bkRadio = document.querySelector(`input[name="driverBack"][value="${item.driverBack}"]`);
+        if (bkRadio) bkRadio.checked = true;
+
+        document.getElementById('hasTuition').checked = item.hasTuition;
+
+        document.getElementById('formTitle').innerText = "修改/編輯行程";
+        document.getElementById('submitBtn').innerText = "💾 儲存修改內容";
+        document.getElementById('submitBtn').style.backgroundColor = "#eab308";
+        document.getElementById('cancelBtn').style.display = "block";
+        
+        document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetToCreateMode() {
+        document.getElementById('editId').value = "";
+        form.reset();
+        
+        document.getElementById('person_ty').checked = true;
+        document.getElementById('person_tx').checked = false;
+        
+        document.getElementById('day_6').checked = true; 
+        document.getElementById('hasTuition').checked = true;
+        renderFormOptions();
+
+        document.getElementById('formTitle').innerText = "新增行程";
+        document.getElementById('submitBtn').innerText = "＋ 新增行程";
+        document.getElementById('submitBtn').style.backgroundColor = "var(--primary)";
+        document.getElementById('cancelBtn').style.display = "none";
+    }
+
+    function deleteSchedule(id) {
+        if(confirm("確定要刪除這個行程嗎？")) {
+            schedules = schedules.filter(item => item.id !== id);
+            saveData();
+            render();
+        }
+    }
+
+    document.querySelectorAll('input[name="filterDayRadio"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const currentDay = getSelectedFilterDay();
+            isRedHolidayCheckbox.checked = !!holidaySettings[currentDay];
+            render();
+        });
+    });
+
+    if (isRedHolidayCheckbox) {
+        isRedHolidayCheckbox.addEventListener('change', () => {
+            const currentDay = getSelectedFilterDay();
+            holidaySettings[currentDay] = isRedHolidayCheckbox.checked;
+            saveData();
+            render();
+        });
+    }
+
+    function timeToGridColumn(timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const startHour = 7; 
+        const offsetHalfHours = ((hours - startHour) * 60 + minutes) / 30;
+        return Math.floor(2 + offsetHalfHours);
+    }
+
+    function render() {
+        const currentDay = getSelectedFilterDay();
+        const isHoliday = !!holidaySettings[currentDay];
+        
+        const banner = document.getElementById('holidayBanner');
+        if (banner) banner.style.display = isHoliday ? 'block' : 'none';
+
+        const listContainer = document.getElementById('listContainer');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+        const dayFilteredList = schedules.filter(item => item.dayOfWeek === currentDay);
+        
+        dayFilteredList.sort((a,b) => a.startTime.localeCompare(b.startTime));
+
+        dayFilteredList.forEach(item => {
+            const div = document.createElement('div');
+            const personClass = item.person === '添宇' ? 'item-ty' : 'item-tx';
+            const canceledClass = item.hasTuition ? '' : 'is-canceled';
+            div.className = `task-item ${personClass} ${canceledClass}`;
+            
+            div.innerHTML = `
+                <div>
+                    <strong style="color:${item.person==='添宇'?'var(--tianyu)':'var(--tianxiang)'}">[${item.person}]</strong> 
+                    <span>${item.startTime}-${item.endTime}</span><br>
+                    <strong>${item.location}</strong> <br>
+                    <span style="font-size:0.8rem; color:#475569;">去：🚘${item.driverGo || '無'} | 回：🚌${item.driverBack || '無'}</span>
+                    ${item.hasTuition ? '' : '<span style="color:red;font-weight:bold;">[停課]</span>'}
+                </div>
+                <div class="action-btns">
+                    <button class="btn-sm btn-edit" onclick="editSchedule('${item.id}')">修改</button>
+                    <button class="btn-sm btn-del" onclick="deleteSchedule('${item.id}')">刪除</button>
+                </div>
+            `;
+            listContainer.appendChild(div);
+        });
+
+        const chart = document.getElementById('ganttChart');
+        if (!chart) return;
+        chart.innerHTML = '';
+
+        const blankDiv = document.createElement('div');
+        chart.appendChild(blankDiv);
+
+        const headerTimeline = document.createElement('div');
+        headerTimeline.className = 'timeline-header';
+        for(let h=7; h<=18; h++) {
+            const timeLabel = document.createElement('div');
+            timeLabel.innerText = h >= 12 ? (h === 12 ? '12pm' : (h-12)+'pm') : h+'am';
+            headerTimeline.appendChild(timeLabel);
+        }
+        chart.appendChild(headerTimeline);
+
+        const people = ['添宇', '添翔'];
+        people.forEach((person, index) => {
+            if (index > 0) {
+                const space = document.createElement('div');
+                space.className = 'row-space';
+                chart.appendChild(space);
+            }
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'name-col';
+            nameDiv.innerText = person;
+            chart.appendChild(nameDiv);
+
+            const personTasks = dayFilteredList.filter(item => item.person === person);
+
+            if(personTasks.length === 0) {
+                const emptyPlaceholder = document.createElement('div');
+                emptyPlaceholder.style.gridColumn = "2 / span 24";
+                emptyPlaceholder.style.color = "#94a3b8";
+                emptyPlaceholder.style.fontSize = "0.8rem";
+                emptyPlaceholder.innerText = "暫無行程";
+                chart.appendChild(emptyPlaceholder);
+            } else {
+                personTasks.forEach(task => {
+                    const startGrid = timeToGridColumn(task.startTime);
+                    const endGrid = timeToGridColumn(task.endTime);
+                    const span = endGrid - startGrid;
+
+                    const bar = document.createElement('div');
+                    let statusClass = '';
+                    if (!task.hasTuition) statusClass = 'is-canceled';
+                    
+                    bar.className = `gantt-bar ${statusClass}`;
+                    bar.style.gridColumn = `${startGrid} / span ${Math.max(1, span)}`;
+                    
+                    if (task.location.includes("打鼓")) {
+                        bar.style.backgroundColor = "#f97316"; 
+                    } else if (task.location.includes("補習")) {
+                        bar.style.backgroundColor = "#3b82f6"; 
+                    } else if (task.location.includes("心算")) {
+                        bar.style.backgroundColor = "#8b5cf6"; 
+                    } else if (task.location.includes("安親班")) {
+                        bar.style.backgroundColor = "#ec4899"; 
+                    } else if (task.location.includes("學校")) {
+                        bar.style.backgroundColor = "#10b981"; 
+                    } else if (task.location.includes("回家") || task.location.includes("家")) {
+                        bar.style.backgroundColor = "#ef4444"; 
+                    } else {
+                        bar.style.backgroundColor = "#6366f1"; 
+                    }
+                    
+                    bar.innerHTML = `
+                        <div style="font-weight:bold; font-size:0.65rem;">${task.startTime}-${task.endTime}</div>
+                        <div style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; width:100%; font-weight:bold; margin: 1px 0;">${task.location}</div>
+                        <div style="font-size:0.6rem; opacity:0.95;">去:${task.driverGo} 回:${task.driverBack}</div>
+                    `;
+                    chart.appendChild(bar);
+                });
+            }
+        });
+    }
+
+    // 啟動初始化
+    initSystem();
+</script>
+
+</body>
+</html>

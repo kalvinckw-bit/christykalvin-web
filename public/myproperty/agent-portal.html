@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>刊登物件｜PetaRumah Agent 專區</title>
+<style>
+  :root{
+    --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;
+    --bg:#F4F1EA; --card:#FFFFFF; --line:#DDD6C7; --text:#20302F; --muted:#6B7876;
+    --danger:#B4530A; --ok:#2E7D32; --new:#1565C0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Meiryo","Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--petrol);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+  header a{color:#fff;text-decoration:none;font-size:13px;opacity:.8;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;}
+  header button{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+  header button:hover{background:rgba(255,255,255,.12);}
+
+  main{max-width:760px;margin:0 auto;padding:32px 24px 60px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:26px;}
+  .card h2{margin-top:0;font-size:17px;}
+  .card p.sub{color:var(--muted);font-size:13px;margin-top:-8px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field input,.field select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .btn{padding:10px 18px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:14px;cursor:pointer;}
+  .btn.primary{background:var(--petrol);color:#fff;border-color:var(--petrol);font-weight:700;}
+  .btn.warn{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .btn:hover{opacity:.88;}
+  .err{color:var(--danger);font-size:13px;min-height:18px;margin:8px 0;}
+  .switchLine{font-size:13px;color:var(--muted);margin-top:14px;text-align:center;}
+  .switchLine a{color:var(--petrol);cursor:pointer;font-weight:700;}
+
+  .pending{text-align:center;padding:40px 20px;}
+  .pending .icon{font-size:40px;}
+
+  .dash-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .listRow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:10px;}
+  .listRow .head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .listRow .proj{font-weight:700;font-size:15px;}
+  .listRow .meta{font-size:12px;color:var(--muted);}
+  .tag{font-size:11px;padding:2px 8px;border-radius:10px;color:#fff;font-weight:700;}
+  .tag.new{background:var(--new);} .tag.reviewed{background:var(--ok);} .tag.hidden{background:#777;}
+  .actions{display:flex;gap:8px;}
+  .actions button{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:12px;cursor:pointer;}
+  #empty{text-align:center;color:var(--muted);padding:50px 0;}
+  .savedFlash{font-size:12px;color:var(--ok);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PetaRumah — Agent 專區 <span style="font-weight:400;font-size:12px;opacity:.7">Powered by CK Holdings</span></h1>
+  <div class="user">
+    <a href="../myproperty.html">← 回到搜尋頁</a>
+    <span id="whoami"></span>
+    <button id="logoutBtn" style="display:none">登出</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- 未登入：登入 / 註冊 -->
+  <div id="authCard" class="card">
+    <h2 id="authTitle">Agent 登入</h2>
+    <p class="sub">登入後可以刊登、編輯、刪除你自己的房源。第一次使用請先註冊。</p>
+
+    <div id="signupExtra" style="display:none">
+      <div class="row2">
+        <div class="field"><label>姓名</label><input id="rName" placeholder="你的姓名"></div>
+        <div class="field"><label>電話</label><input id="rPhone" placeholder="012-3456789"></div>
+      </div>
+      <div class="field"><label>REN 執照號碼（如有）</label><input id="rRen" placeholder="REN 12345"></div>
+    </div>
+
+    <div class="field"><label>Email</label><input id="authEmail" type="email"></div>
+    <div class="field"><label>密碼</label><input id="authPassword" type="password" placeholder="至少 6 個字"></div>
+    <div class="err" id="authErr"></div>
+    <button class="btn primary" id="authSubmitBtn" style="width:100%">登入</button>
+    <div class="switchLine">
+      <span id="switchToSignup">還沒有帳號？<a id="goSignup">註冊一個</a></span>
+      <span id="switchToLogin" style="display:none">已經有帳號？<a id="goLogin">直接登入</a></span>
+    </div>
+  </div>
+
+  <!-- 已登入但還沒審核通過 -->
+  <div id="pendingCard" class="card pending" style="display:none">
+    <div class="icon">⏳</div>
+    <h2 id="pendingTitle">申請審核中</h2>
+    <p id="pendingMsg" style="color:var(--muted)">CK 收到你的申請後會盡快審核，通過後這裡就能開始刊登房源。</p>
+  </div>
+
+  <!-- 已核准：我的房源儀表板 -->
+  <div id="dashCard" style="display:none">
+    <div class="dash-toolbar">
+      <h2 style="margin:0">我的房源</h2>
+      <button class="btn primary" id="newListingBtn">+ 新增房源</button>
+    </div>
+    <div id="myListings"></div>
+    <div id="empty" style="display:none">你還沒有貼過任何房源</div>
+  </div>
+
+  <!-- 新增 / 編輯表單 -->
+  <div id="formCard" class="card" style="display:none">
+    <h2 id="formTitle">新增房源</h2>
+    <div class="row2">
+      <div class="field"><label>案名 Project</label><input id="fProject"></div>
+      <div class="field"><label>類型</label>
+        <select id="fDeal"><option value="sale">出售 Sale</option><option value="rent">出租 Rent</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>州屬 State</label><input id="fState" placeholder="例：Selangor"></div>
+      <div class="field"><label>房型 Type</label><input id="fType" placeholder="例：Condominium"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>價格 RM</label><input id="fPrice" type="number"></div>
+      <div class="field"><label>面積 sqft</label><input id="fSqft" type="number"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>房數</label><input id="fBedrooms"></div>
+      <div class="field"><label>浴室數</label><input id="fBathrooms" type="number"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Freehold / Leasehold</label>
+        <select id="fTenure"><option value="">未填</option><option value="Freehold">Freehold</option><option value="Leasehold">Leasehold</option></select>
+      </div>
+      <div class="field"><label>裝潢狀態</label><input id="fFurnish" placeholder="例：Fully furnished"></div>
+    </div>
+    <div class="field"><label>地皮尺寸（如為有地房產）</label><input id="fLandDims"></div>
+    <div class="field"><label>你的聯絡方式（顯示給買家看）</label><input id="fContact" placeholder="電話 / WhatsApp"></div>
+    <div class="err" id="formErr"></div>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn primary" id="formSaveBtn">儲存</button>
+      <button class="btn" id="formCancelBtn">取消</button>
+      <span class="savedFlash" id="formSaved" style="display:none">已儲存 ✓</span>
+    </div>
+  </div>
+
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+let isSignupMode = false;
+let currentUser = null;
+let myListingsUnsub = null;
+let editingId = null; // null = 新增模式
+
+/* ---------------- 登入 / 註冊 ---------------- */
+$("goSignup").addEventListener("click", () => setMode(true));
+$("goLogin").addEventListener("click", () => setMode(false));
+function setMode(signup){
+  isSignupMode = signup;
+  $("signupExtra").style.display = signup ? "block" : "none";
+  $("authTitle").textContent = signup ? "Agent 註冊" : "Agent 登入";
+  $("authSubmitBtn").textContent = signup ? "註冊" : "登入";
+  $("switchToSignup").style.display = signup ? "none" : "inline";
+  $("switchToLogin").style.display = signup ? "inline" : "none";
+  $("authErr").textContent = "";
+}
+
+$("authSubmitBtn").addEventListener("click", async () => {
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  const errEl = $("authErr");
+  errEl.textContent = "";
+  try{
+    if (isSignupMode){
+      const name = $("rName").value.trim();
+      const phone = $("rPhone").value.trim();
+      const ren = $("rRen").value.trim();
+      if (!name){ errEl.textContent = "請填姓名"; return; }
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "agents", cred.user.uid), {
+        email, name, phone, ren_number: ren,
+        is_approved: false, is_rejected: false,
+        requested_at: new Date().toISOString()
+      });
+    } else {
+      await signInWithEmailAndPassword(auth, email, password);
+    }
+  }catch(err){
+    errEl.textContent = authErrMsg(err);
+  }
+});
+
+function authErrMsg(err){
+  if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") return "帳號或密碼錯誤";
+  if (err.code === "auth/email-already-in-use") return "這個 email 已經註冊過了，請直接登入";
+  if (err.code === "auth/weak-password") return "密碼至少要 6 個字";
+  if (err.code === "auth/invalid-email") return "Email 格式不正確";
+  return err.message;
+}
+
+$("logoutBtn").addEventListener("click", () => signOut(auth));
+
+/* ---------------- Auth 狀態切換畫面 ---------------- */
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (myListingsUnsub) { myListingsUnsub(); myListingsUnsub = null; }
+
+  if (!user){
+    $("authCard").style.display = "block";
+    $("pendingCard").style.display = "none";
+    $("dashCard").style.display = "none";
+    $("formCard").style.display = "none";
+    $("logoutBtn").style.display = "none";
+    $("whoami").textContent = "";
+    return;
+  }
+
+  $("logoutBtn").style.display = "inline-block";
+  $("whoami").textContent = user.email;
+  $("authCard").style.display = "none";
+
+  const agentSnap = await getDoc(doc(db, "agents", user.uid));
+  const agent = agentSnap.exists() ? agentSnap.data() : null;
+
+  if (!agent || (!agent.is_approved && !agent.is_rejected)){
+    $("pendingCard").style.display = "block";
+    $("pendingTitle").textContent = "申請審核中";
+    $("pendingMsg").textContent = "CK 收到你的申請後會盡快審核，通過後這裡就能開始刊登房源。";
+    $("dashCard").style.display = "none";
+    return;
+  }
+  if (agent.is_rejected){
+    $("pendingCard").style.display = "block";
+    $("pendingTitle").textContent = "申請未通過";
+    $("pendingMsg").textContent = "請直接聯絡 CK 了解詳情。";
+    $("dashCard").style.display = "none";
+    return;
+  }
+
+  $("pendingCard").style.display = "none";
+  $("dashCard").style.display = "block";
+  startMyListings(user.uid);
+});
+
+/* ---------------- 我的房源 ---------------- */
+function startMyListings(uid){
+  const q = query(collection(db, "listings"), where("owner_uid", "==", uid));
+  myListingsUnsub = onSnapshot(q, (snap) => {
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMyListings(rows);
+  });
+}
+
+function esc(s){
+  return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderMyListings(rows){
+  const box = $("myListings");
+  const empty = $("empty");
+  if (rows.length === 0){ box.innerHTML = ""; empty.style.display = "block"; return; }
+  empty.style.display = "none";
+  box.innerHTML = rows.map(l => {
+    const status = l.review_status || "new";
+    return `
+    <div class="listRow">
+      <div class="head">
+        <span class="proj">${esc(l.project) || "(無標題)"}</span>
+        <span class="tag ${status}">${status === "new" ? "未審核" : status === "reviewed" ? "已審核" : "已隱藏"}</span>
+        <span class="meta">${esc(l.state) || ""} · RM ${l.price ?? "-"}${l.deal === "rent" ? "/mo" : ""}</span>
+        <div class="actions">
+          <button data-edit="${l.id}">編輯</button>
+          <button data-del="${l.id}">刪除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openForm(rows.find(r => r.id === b.dataset.edit))));
+  box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => deleteListing(b.dataset.del)));
+}
+
+async function deleteListing(id){
+  if (!confirm("確定要刪除這筆房源嗎？此動作無法復原。")) return;
+  try{ await deleteDoc(doc(db, "listings", id)); }
+  catch(err){ alert("刪除失敗：" + err.message); }
+}
+
+/* ---------------- 新增 / 編輯表單 ---------------- */
+$("newListingBtn").addEventListener("click", () => openForm(null));
+$("formCancelBtn").addEventListener("click", () => { $("formCard").style.display = "none"; });
+
+function openForm(listing){
+  editingId = listing ? listing.id : null;
+  $("formTitle").textContent = listing ? "編輯房源" : "新增房源";
+  $("fProject").value = listing?.project || "";
+  $("fDeal").value = listing?.deal || "sale";
+  $("fState").value = listing?.state || "";
+  $("fType").value = listing?.type || "";
+  $("fPrice").value = listing?.price ?? "";
+  $("fSqft").value = listing?.sqft ?? "";
+  $("fBedrooms").value = listing?.bedrooms || "";
+  $("fBathrooms").value = listing?.bathrooms ?? "";
+  $("fTenure").value = listing?.tenure || "";
+  $("fFurnish").value = listing?.furnish || "";
+  $("fLandDims").value = listing?.land_dims || "";
+  $("fContact").value = listing?.agent_contact || "";
+  $("formErr").textContent = "";
+  $("formCard").style.display = "block";
+  $("formCard").scrollIntoView({ behavior: "smooth" });
+}
+
+$("formSaveBtn").addEventListener("click", async () => {
+  const errEl = $("formErr");
+  errEl.textContent = "";
+  const project = $("fProject").value.trim();
+  if (!project){ errEl.textContent = "請填案名"; return; }
+  if (!currentUser){ errEl.textContent = "登入狀態異常，請重新整理頁面"; return; }
+
+  const num = v => v === "" ? null : Number(v);
+  const data = {
+    project,
+    deal: $("fDeal").value,
+    state: $("fState").value.trim() || null,
+    type: $("fType").value.trim() || null,
+    price: num($("fPrice").value),
+    sqft: num($("fSqft").value),
+    bedrooms: $("fBedrooms").value.trim() || null,
+    bathrooms: num($("fBathrooms").value),
+    tenure: $("fTenure").value || null,
+    furnish: $("fFurnish").value.trim() || null,
+    land_dims: $("fLandDims").value.trim() || null,
+    agent_contact: $("fContact").value.trim() || null,
+    owner_uid: currentUser.uid,
+    source: "agent_portal",
+    human_edited: true,
+    is_complete: true,
+    missing_fields: [],
+    updated_at: new Date().toISOString()
+  };
+
+  try{
+    if (editingId){
+      await updateDoc(doc(db, "listings", editingId), data);
+    } else {
+      data.review_status = "new";
+      data.created_at = data.updated_at;
+      const newRef = doc(collection(db, "listings"));
+      await setDoc(newRef, data);
+    }
+    $("formSaved").style.display = "inline";
+    setTimeout(() => { $("formSaved").style.display = "none"; $("formCard").style.display = "none"; }, 900);
+  }catch(err){
+    errEl.textContent = "儲存失敗：" + err.message;
+  }
+});
+</script>
+</body>
+</html>

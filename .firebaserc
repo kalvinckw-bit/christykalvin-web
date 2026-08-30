@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "voiceout-asia"
+  },
+  "targets": {
+    "voiceout-asia": {
+      "hosting": {
+        "christykalvin-web": [
+          "christykalvin-web"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

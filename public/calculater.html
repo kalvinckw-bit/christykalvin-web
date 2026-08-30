@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>日本代購利潤售價計算機</title>
+    <style>
+        :root {
+            --primary-color: #e84393;
+            --bg-color: #f1f2f6;
+            --card-bg: #ffffff;
+            --text-color: #2d3436;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            text-align: center;
+            color: #2d3436;
+            margin: 15px 0 20px 0;
+            font-size: 20px;
+        }
+
+        .input-form {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 12px 12px 32px;
+            border: 2px solid #edf2f7;
+            border-radius: 10px;
+            font-size: 16px;
+            background-color: #f8f9fa;
+            color: #2d3436;
+            font-weight: bold;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            background-color: #fff;
+            outline: none;
+        }
+
+        .input-group .rate-input {
+            padding-left: 12px;
+        }
+
+        /* 隱藏瀏覽器預設的數字上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .btn-calc {
+            flex: 2;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(232, 67, 147, 0.2);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .btn-calc:active {
+            background-color: #d63031;
+        }
+
+        .btn-reset {
+            flex: 1;
+            padding: 14px;
+            background-color: #b2bec3;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .btn-reset:active {
+            background-color: #636e72;
+        }
+
+        .list-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin: 15px 0 10px 5px;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .profit-card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-left: 6px solid #ccc;
+        }
+
+        .card-low  { border-left-color: #a4b0be; background-color: #ffffff; }
+        .card-mid  { border-left-color: #70a1ff; background-color: #f7faff; }
+        .card-high { border-left-color: #2ed573; background-color: #f4fdf7; }
+
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .card-profit-detail {
+            font-size: 13px;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .card-jpy-price {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .card-myr-price {
+            font-size: 20px;
+            font-weight: 900;
+            color: #d63031;
+        }
+
+        /* 加減按鈕專用樣式 */
+        .stepper-wrapper {
+            display: flex;
+            align-items: center;
+            border: 2px solid #edf2f7;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            overflow: hidden;
+        }
+        .stepper-btn {
+            background-color: #e2e8f0;
+            color: #2d3436;
+            border: none;
+            padding: 12px 22px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .stepper-btn:active {
+            background-color: #cbd5e1;
+        }
+        .stepper-wrapper input {
+            flex: 1;
+            border: none !important;
+            border-radius: 0 !important;
+            background-color: transparent !important;
+            text-align: center;
+            padding: 12px !important;
+            font-size: 18px !important;
+        }
+        .stepper-wrapper input:focus {
+            outline: none;
+            background-color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🇯🇵 日本代購手機專用計算機 🇲🇾</h2>
+    
+    <div class="input-form">
+        <div class="input-group">
+            <label>商品進貨價</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="itemPrice" value="" placeholder="輸入日幣金額">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>日本國內運費</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="jpShipping" value="" placeholder="可空白">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>國際空海運費</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">¥</span>
+                <input type="number" id="intShipping" value="" placeholder="可空白">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>馬幣匯率乘數</label>
+            <div class="stepper-wrapper">
+                <button type="button" class="stepper-btn" id="btnMinus">-</button>
+                <input type="number" id="exchangeRate" class="rate-input" value="0.0260" step="0.0001" placeholder="例如 0.0260">
+                <button type="button" class="stepper-btn" id="btnPlus">+</button>
+            </div>
+        </div>
+        <div class="btn-container">
+            <button type="button" class="btn-reset" id="btnReset">重置</button>
+            <button type="button" class="btn-calc" id="btnCalc">立即計算對照表</button>
+        </div>
+    </div>
+
+    <div class="list-title">利潤售價對照結果：</div>
+    
+    <div id="cardContainer" class="card-list">
+        </div>
+</div>
+
+<script>
+    function calculateMobileList() {
+        const itemPriceInput = document.getElementById('itemPrice').value;
+        const jpShippingInput = document.getElementById('jpShipping').value;
+        const intShippingInput = document.getElementById('intShipping').value;
+        const exchangeRateInput = document.getElementById('exchangeRate').value;
+
+        const itemPrice = parseFloat(itemPriceInput) || 0;
+        const jpShipping = parseFloat(jpShippingInput) || 0;
+        const intShipping = parseFloat(intShippingInput) || 0;
+        const exchangeRate = parseFloat(exchangeRateInput) || 0.0260;
+
+        const container = document.getElementById('cardContainer');
+        if (!container) return;
+        container.innerHTML = ''; 
+
+        if (itemPrice === 0) {
+            return;
+        }
+
+        for (let profitPercent = 10; profitPercent <= 100; profitPercent += 10) {
+            const profitJPY = itemPrice * (profitPercent / 100);
+            const sellingPriceJPY = itemPrice + profitJPY + jpShipping + intShipping;
+            const rawMYR = sellingPriceJPY * exchangeRate;
+            
+            let finalMYR = Math.ceil(rawMYR / 10) * 10;
+            if (finalMYR < 10) {
+                finalMYR = 10;
+            }
+
+            let colorClass = 'card-low';
+            if (profitPercent > 30 && profitPercent <= 60) {
+                colorClass = 'card-mid';
+            } else if (profitPercent > 60) {
+                colorClass = 'card-high';
+            }
+
+            const card = document.createElement('div');
+            card.className = `profit-card ${colorClass}`;
+            card.innerHTML = `
+                <div class="card-row">
+                    <span class="card-label">想賺 ${profitPercent}%</span>
+                    <span class="card-myr-price">RM ${finalMYR}</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-profit-detail">淨賺 +¥${Math.round(profitJPY).toLocaleString()}</span>
+                    <span class="card-jpy-price">日幣售價: ¥${Math.round(sellingPriceJPY).toLocaleString()}</span>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    }
+
+    // 處理匯率加減的函數
+    function adjustRate(amount) {
+        const rateInput = document.getElementById('exchangeRate');
+        if (!rateInput) return;
+        
+        let currentRate = parseFloat(rateInput.value) || 0;
+        let newRate = currentRate + amount;
+        
+        // 確保不會扣到負數
+        if (newRate < 0) newRate = 0;
+        
+        // 固定顯示小數點後四位
+        rateInput.value = newRate.toFixed(4);
+        
+        // 按下加減後，如果有輸入價錢，自動重新計算
+        const itemPriceInput = document.getElementById('itemPrice');
+        if (itemPriceInput && itemPriceInput.value && parseFloat(itemPriceInput.value) > 0) {
+            calculateMobileList();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('jpShipping').value = '';
+        document.getElementById('intShipping').value = '';
+        document.getElementById('exchangeRate').value = '0.0260';
+        document.getElementById('cardContainer').innerHTML = '';
+    }
+
+    // 終極防呆綁定：確保網頁元素都準備好後，才強行綁定按鈕功能
+    window.onload = function() {
+        resetForm();
+
+        const btnMinus = document.getElementById('btnMinus');
+        const btnPlus = document.getElementById('btnPlus');
+        const btnCalc = document.getElementById('btnCalc');
+        const btnReset = document.getElementById('btnReset');
+
+        if(btnMinus) {
+            btnMinus.onclick = function() { adjustRate(-0.001); };
+        }
+        if(btnPlus) {
+            btnPlus.onclick = function() { adjustRate(0.001); };
+        }
+        if(btnCalc) {
+            btnCalc.onclick = function() { calculateMobileList(); };
+        }
+        if(btnReset) {
+            btnReset.onclick = function() { resetForm(); };
+        }
+    };
+</script>
+
+</body>
+</html>
