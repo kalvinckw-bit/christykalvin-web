@@ -144,7 +144,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = getFirestore(app, "christykalvin-db");
 
 const loginScreen = document.getElementById("loginScreen");
 const appEl = document.getElementById("app");

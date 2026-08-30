@@ -2156,7 +2156,7 @@ window.toast = toast;
   async function loadTelegramListings(){
     try{
       const app = initializeApp(YOUR_FIREBASE_CONFIG);
-      const db = getFirestore(app);
+      const db = getFirestore(app, "christykalvin-db");
       // 只抓「已審核通過」的房源。網站是人工策展的（見 DECISIONS.md Decision 012）——
       // 沒有經過後台 admin.html 按下「標記已審核」的房源，一律不會出現在公開網站上。
       // 這樣就算資料庫裡還躺著舊的 Telegram 垃圾資料，網站也完全不受影響。

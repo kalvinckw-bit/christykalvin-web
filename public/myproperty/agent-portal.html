@@ -162,7 +162,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = getFirestore(app, "christykalvin-db");
 
 const $ = id => document.getElementById(id);
 let isSignupMode = false;
