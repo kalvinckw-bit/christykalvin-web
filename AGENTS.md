@@ -44,3 +44,14 @@ All AI assistants (Antigravity, Claude Code, ChatGPT, Codex, Cursor, Gemini) col
 > [!NOTE]
 > ### 🛡️ 用戶情報採集規範（Maximum Telemetry Policy）
 > **所有前端專案在用戶登入與會話中，必須透過 ck-telemetry.js 自動採集用戶全部可獲取之情報（IP、Geo、Device、OS、螢幕、CPU/RAM、語言、時區、來源），並即時寫入 Firestore users/{uid}/telemetry_logs。**
+
+
+### Action: sync (或 sync master)
+當使用者在對話途中輸入 sync 或 sync master 時：
+1. **立即重新讀取 Master SSoT**：
+   - 📖 C:\\Users\\kalvi\\OneDrive\\Projects\\GROUP_GLOBAL_STATUS.md
+   - 📖 C:\\Users\\kalvi\\OneDrive\\Projects\\00 Master AI Context Template\\AI_CONTEXT\\DECISIONS.md
+   - 📖 C:\\Users\\kalvi\\OneDrive\\Projects\\00 Master AI Context Template\\AI_CONTEXT\\COMPANY_PROFILE.md
+2. 比對是否有最新集團決策、全域架構或基礎設施變更。
+3. 在當前對話中即時套用最新政策（不中斷、不關閉 Session）。
+4. 簡短回報：=== MASTER SYNC COMPLETED === 與對齊之最新變更要點。

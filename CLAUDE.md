@@ -18,3 +18,5 @@
 > **對齊集團最新指示後，方可繼續執行本地專案之 `AI_CONTEXT/START_SESSION.md`！**
 
 ﻿
+
+- **中途同步指令 (sync / sync master)**：當用戶在 Session 進行中輸入 sync 或 sync master，AI 必須立即重新讀取 GROUP_GLOBAL_STATUS.md 與 Master DECISIONS.md，即時更新大腦決策！
