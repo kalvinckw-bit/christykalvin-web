@@ -146,7 +146,7 @@ a{color:var(--brand-2)}
   height:60px;display:flex;align-items:center;gap:26px;
 }
 .brand{display:flex;align-items:center;gap:9px;flex-shrink:0}
-.brand__mark{width:26px;height:26px;flex-shrink:0}
+.brand__mark{width:26px;height:26px;flex-shrink:0;object-fit:cover;border-radius:6px}
 .brand__name{
   font-family:var(--font-display);font-weight:800;font-size:20px;
   letter-spacing:-.015em;color:#FFF;
@@ -628,10 +628,7 @@ a{color:var(--brand-2)}
 <header class="topbar">
   <div class="topbar__in">
     <div class="brand">
-      <svg class="brand__mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M4 15L16 5l12 10v12a2 2 0 0 1-2 2h-8v-9h-4v9H6a2 2 0 0 1-2-2V15Z" fill="#E4A03A"/>
-        <circle cx="16" cy="13" r="3.1" fill="#082F33"/>
-      </svg>
+      <img class="brand__mark" src="petarumah-icon.png" alt="" aria-hidden="true">
       <span class="brand__name">Peta<em>Rumah</em></span>
     </div>
 
