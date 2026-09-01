@@ -1,3 +1,11 @@
+## ⚡ Step 9: Mandatory Git Commit & Push to Cloud (收工強制推送雲端)
+**AI 必須自動依序執行（嚴禁要求使用者手動執行！）：**
+1. `git add -A`（納入自身 session 檔、REGISTRY.md、TODO.md 及修改的程式碼）
+2. `git commit -m "..."`
+3. `git pull --rebase origin <branch>`
+4. `git push origin <branch>`
+**確認輸出中包含遠端 push 成功訊息，並在交接報告中附上 Commit Hash！**
+
 # Reusable Action: end (Master Handoff & Auto-Sync Protocol)
 
 Triggered whenever the user says `end` or requests to finish/hand off the session.

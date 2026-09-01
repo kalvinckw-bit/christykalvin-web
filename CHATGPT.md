@@ -1,4 +1,10 @@
 > [!CAUTION]
+> ### ⚡ 鋼鐵憲法：開局必 Pull，收工必 Push（Mandatory Git Cloud Sync）
+> **1. 任何 AI 執行 `start` 時，第一動作必須自動執行 `git pull --rebase` 拉取 GitHub 雲端最新代碼！**
+> **2. 任何 AI 執行 `end` 時，必須自動執行 `git add`、`git commit` 並立即 `git push` 推上 GitHub 雲端！**
+> **3. 嚴禁任何 AI 宣稱『不需要 push 到 GitHub』或將 push/pull 留給使用者手動！自動同步雲端是 AI 的基本職責！**
+
+> [!CAUTION]
 > ### ⚡ AI 嚴禁怠惰與推卸責任原則（Zero Lazy Delegation & Strict Self-Execution）
 > 1. **嚴禁將自動化工作推給用戶（Zero Homework）**：
 >    - 嚴禁詢問「需要我現在幫你建 repo 嗎？還是你自己處理？」等推諉發言！

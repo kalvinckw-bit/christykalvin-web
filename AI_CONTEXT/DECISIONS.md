@@ -64,3 +64,20 @@ This document records permanent architectural, design, and policy decisions appr
      - 同步追加寫入至子集合 users/{uid}/telemetry_logs/{logId} 作為完整歷史審計日誌。
   3. **非阻塞與容錯原則（Graceful Fallback）**：
      - 能收集到的全部收集，若特定瀏覽器沙盒或隱私限制無法取得某欄位，則優雅降級 (Fallback)，絕對不可阻礙用戶正常使用介面。
+
+---
+
+### Decision: Mandatory Automatic Git Pull on Start & Git Push on End (開局必 Pull 收工必 Push 鋼鐵憲法)
+- **Status**: APPROVED & MANDATORY
+- **Date**: 2026-09-02
+- **Context**: 針對部分 AI 誤以為 AI_CONTEXT 僅是本機留言板、不需要自動同步雲端的怠惰誤解，集團特此頒布鋼鐵憲法。
+- **Constitutional Rules (憲法級硬性準則)**:
+  1. **開局必 Pull（Mandatory Pull on `start`）**：
+     - 每次使用者輸入 `start` 或 AI 開始新 Session 時，AI **必須首先自動執行 `git pull --rebase`**，將 GitHub 遠端最新進度拉取至本機。嚴禁以「未要求同步雲端」為由略過！
+  2. **收工必 Push（Mandatory Push on `end`）**：
+     - 每次使用者輸入 `end` 或任務告一段落時，AI **必須自動執行 `git add -A`、`git commit` 並立即 `git push` 至 GitHub 遠端儲存庫**。
+     - **嚴禁留給使用者手動執行！嚴禁宣稱『AI_CONTEXT 沒有要求 push』！**
+  3. **雙重同步架構定位（OneDrive + GitHub）**：
+     - OneDrive 負責跨裝置（Windows ⟷ Mac）檔案即時傳輸。
+     - GitHub 負責版本歷史與多 AI 程式碼同步。
+     - **任何 AI 結束工作時未執行 `git push`，即視為嚴重失職與交接漏洞！**

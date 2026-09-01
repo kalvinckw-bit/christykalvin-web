@@ -1,3 +1,10 @@
+## ⚡ Step 0.1: Mandatory Git Pull from Cloud (開局強制同步雲端)
+**AI 必須首先執行：**
+```bash
+git pull --rebase origin <current-branch>
+```
+將 GitHub 雲端其他 AI 或其他裝置最新推上去的代碼與 SSoT 同步到本機，確保工作區絕對處於最新狀態！
+
 
 ## Step 0: Mandatory Master AI Context Alignment (開局對齊集團主中樞)
 Before reading local files, inspect the Group Master SSoT:
