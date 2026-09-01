@@ -575,24 +575,6 @@ a{color:var(--brand-2)}
 }
 .uploadzone b{display:block;font-size:15px;color:var(--text);margin-bottom:4px}
 
-/* notes drawer */
-.notes{
-  position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);z-index:110;
-  background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);
-  transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column;
-}
-.notes[data-visible="true"]{transform:translateX(0)}
-.notes__head{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
-.notes__head h2{font-family:var(--font-display);font-size:18px;margin:0;flex:1;letter-spacing:-.01em}
-.notes__body{padding:20px;overflow-y:auto;flex:1}
-.notes__body h3{font-family:var(--font-display);font-size:15px;margin:22px 0 8px;color:var(--brand-2)}
-.notes__body h3:first-child{margin-top:0}
-.notes__body p{font-size:14.5px;line-height:1.75;color:var(--text-2);margin:0 0 10px}
-.cmpTable{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
-.cmpTable th,.cmpTable td{border:1px solid var(--line-soft);padding:7px 9px;text-align:left;vertical-align:top}
-.cmpTable th{background:var(--surface-2);font-weight:700;font-size:12.5px}
-.cmpTable td:first-child{color:var(--text-3)}
-.cmpTable td:last-child{color:var(--text);font-weight:600}
 
 /* compare bar */
 .cmpbar{
@@ -641,10 +623,6 @@ a{color:var(--brand-2)}
     <div class="topbar__spacer"></div>
 
     <div class="tnav">
-      <button class="tnav__btn" id="notesBtn" title="Design notes">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V7.5M8 5h.01M8 14.5A6.5 6.5 0 1 0 8 1.5a6.5 6.5 0 0 0 0 13Z"/></svg>
-        <span data-i18n="nav.notes">設計筆記</span>
-      </button>
       <button class="tnav__btn" id="shortlistBtn">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13.6 3.2 9a2.9 2.9 0 0 1 4.1-4.1L8 5.6l.7-.7A2.9 2.9 0 0 1 12.8 9L8 13.6Z"/></svg>
         <span data-i18n="nav.shortlist">Shortlist</span>
@@ -1080,54 +1058,6 @@ a{color:var(--brand-2)}
   </div>
 </div>
 
-<!-- ============================ DESIGN NOTES DRAWER ============================ -->
-<aside class="notes" id="notesPanel" aria-label="Design notes">
-  <div class="notes__head">
-    <h2>設計筆記：日本 → 馬來西亞</h2>
-    <button class="closebtn" id="notesClose" aria-label="Close">×</button>
-  </div>
-  <div class="notes__body">
-    <p>這個原型抄的是 SUUMO 的<strong>功能邏輯</strong>（左欄篩選、結果即時更新、規格一目了然），不是它的外觀。視覺上換成孔雀藍＋藏紅花金，字體照你要求用 Meiryo。</p>
-
-    <h3>1. 房型：丟掉 1K / 1R / 2LDK</h3>
-    <p>日本用「房間數＋K/D/L」編碼，因為和室、玄關、獨立浴廁的組合方式固定。馬來西亞不是這樣算的——直接講幾房幾廁。而且大馬有 <strong>3+1</strong>（三房加一個女傭房）這種日本完全沒有的格局，篩選器必須支援。</p>
-
-    <h3>2. 面積：sq ft 是唯一的通用語</h3>
-    <p>「畳」在這裡毫無意義。大馬全部講 <strong>square feet</strong>，連買家心算 psf（每平方尺單價）都是本能反應。所以：預設 sq ft、附 sq m 切換、列表卡直接顯示 psf。另外 landed 房必須分開列「built-up」和「land area」兩個數字，高樓 strata 單位只有 built-up。</p>
-
-    <h3>3. 車位＝大馬第一順位</h3>
-    <p>日本portal幾乎不把車位當篩選條件，因為大家搭電車。吉隆坡相反：<strong>沒車位等於不能住</strong>。所以車位數量拉到主篩選區，還要分「covered / basement」還是露天——曬到爆的露天車位在這裡是實質減分。</p>
-
-    <h3>4. 家具狀態（Furnishing）</h3>
-    <p>日本租屋幾乎一律空屋，所以 SUUMO 沒這欄。大馬租客第一個問的就是 fully / partly / unfurnished。這欄放在租屋模式的顯眼位置。</p>
-
-    <h3>5. 地契與產權——最大的結構性差異</h3>
-    <p>日本沒有對應概念，但大馬買家一定會問：</p>
-    <table class="cmpTable">
-      <tr><th>欄位</th><th>為什麼一定要有</th></tr>
-      <tr><td>Freehold / Leasehold</td><td>99 年地契剩幾年直接影響貸款成數與轉手</td></tr>
-      <tr><td>Individual / Strata / Master title</td><td>Master title 未分割會卡住過戶</td></tr>
-      <tr><td>Bumi Lot</td><td>非土著不能買，先篩掉省下白跑一趟</td></tr>
-      <tr><td>外資門檻</td><td>吉隆坡／檳島 RM100 萬起跳，各州不同</td></tr>
-    </table>
-
-    <h3>6. 交通：不隱藏「沒有捷運」</h3>
-    <p>SUUMO 以「最寄駅徒歩○分」為核心。大馬只有巴生谷有像樣的軌道網，所以我做兩件事：一、提供 MRT／LRT／KTM／Monorail 路線篩選＋步行距離；二、<strong>沒有車站的物件不隱藏，而是明白標示「No rail within 2 km — car recommended」</strong>。假裝每間屋都靠近車站才是騙人。</p>
-
-    <h3>7. REN 編號＝馬來西亞版的 REINS 信任層</h3>
-    <p>REINS 厲害的地方不是介面，是<strong>強制登錄</strong>帶來的資料紀律。大馬做不到強制，但可以做「驗證」：每則刊登綁定 LPPEH 發的 REN／REA 編號和公司 E 牌照，並提供「只看已驗證仲介」的開關。這是對付亂七八糟假盤最實際的一招。</p>
-
-    <h3>8. 費用試算做在物件頁裡</h3>
-    <p>租屋顯示 <strong>2＋1</strong> 押金結構（2 個月租金押金＋1 個月水電＋門卡）；買賣直接算印花稅級距（首 10 萬 1%、次 40 萬 2%、次 50 萬 3%、超過 100 萬 4%）、律師費、90% 貸款月供。日本 portal 有禮金／敷金試算，大馬要的是這一套。</p>
-
-    <h3>9. 語言</h3>
-    <p>EN / BM / 中文三語切換是大馬 portal 的基本盤，日本不需要。介面標籤已接上詞典，物件內文維持英文（符合實際市場習慣）。</p>
-
-    <h3>10. 刻意沒抄的部分</h3>
-    <p>SUUMO 的吉祥物、綠色配色、卡片密度、字型層級——都沒有照搬。抄功能不抄長相，法律上和品牌上都比較乾淨。</p>
-  </div>
-</aside>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1224,7 +1154,7 @@ const I18N = {
   en:{}, // defaults live in the markup
   ms:{
     "tab.rent":"Untuk Disewa","tab.sale":"Untuk Dijual","tab.new":"Projek Baharu",
-    "nav.shortlist":"Senarai Pendek","nav.post":"Iklankan Hartanah","nav.notes":"Nota Reka Bentuk",
+    "nav.shortlist":"Senarai Pendek","nav.post":"Iklankan Hartanah",
     "s.state":"Negeri","s.where":"Kawasan, projek atau stesen MRT/LRT","s.type":"Jenis hartanah","s.budget":"Bajet maksimum","s.go":"Cari",
     "f.title":"Tapis carian","f.reset":"Set semula","f.price":"Harga","f.area":"Kawasan","f.ptype":"Jenis hartanah",
     "f.beds":"Bilik tidur","f.baths":"Bilik air","f.size":"Keluasan binaan","f.park":"Petak parkir",
@@ -1240,7 +1170,7 @@ const I18N = {
   },
   zh:{
     "tab.rent":"出租","tab.sale":"出售","tab.new":"新盤",
-    "nav.shortlist":"收藏","nav.post":"刊登物件","nav.notes":"設計筆記",
+    "nav.shortlist":"收藏","nav.post":"刊登物件",
     "s.state":"州屬","s.where":"地區、項目或捷運站","s.type":"物件類型","s.budget":"預算上限","s.go":"搜尋",
     "f.title":"篩選條件","f.reset":"全部重設","f.price":"價格","f.area":"地區","f.ptype":"物件類型",
     "f.beds":"房間數","f.baths":"浴室數","f.size":"建築面積","f.park":"車位",
@@ -1998,14 +1928,12 @@ document.addEventListener("click", e=>{
   if(close){ $("#"+close.dataset.close).dataset.visible="false"; document.body.style.overflow=""; return; }
   if(t.classList.contains("overlay")){ t.dataset.visible="false"; document.body.style.overflow=""; return; }
   if(t.closest("#postBtn")){ window.location.href = "agent-portal.html"; return; }
-  if(t.closest("#notesBtn")){ $("#notesPanel").dataset.visible="true"; return; }
   if(t.closest("#authBtn")){
     if(window.__ckAuthUser){ window.__ckSignOut && window.__ckSignOut(); return; }
     $("#authOverlay").dataset.visible="true"; document.body.style.overflow="hidden"; return;
   }
   if(t.closest("#authSignInBtn")){ window.__ckSignIn && window.__ckSignIn(); return; }
   if(t.closest("#authSignUpBtn")){ window.__ckSignUp && window.__ckSignUp(); return; }
-  if(t.id==="notesClose"){ $("#notesPanel").dataset.visible="false"; return; }
   if(t.closest("#shortlistBtn")){
     if(!S.shortlist.size){ toast("Your shortlist is empty — tap the heart on any listing"); return; }
     toast(`${S.shortlist.size} listing${S.shortlist.size===1?"":"s"} shortlisted`); return;
@@ -2069,7 +1997,6 @@ $("#qGo").addEventListener("click", ()=>{ render(); toast(`${$("#resN").textCont
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape"){
     $$(".overlay").forEach(o=>o.dataset.visible="false");
-    $("#notesPanel").dataset.visible="false";
     document.body.style.overflow="";
     closeAllShare();
   }
