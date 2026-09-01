@@ -52,6 +52,8 @@
   .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
   .field input,.field select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;}
   .raw{background:#FAF8F2;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto;margin-bottom:12px;color:var(--muted);}
+  .raw-link{margin-bottom:8px;font-size:12.5px;}
+  .raw-link a{color:var(--gold-d);text-decoration:underline;}
   .actions{display:flex;gap:8px;flex-wrap:wrap;}
   .actions button{padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
   .actions button.primary{background:var(--petrol);color:#fff;border-color:var(--petrol);}
@@ -344,6 +346,8 @@ function rowHTML(l){
   const tags = [`<span class="tag ${status}">${status === "new" ? "未審核" : status === "reviewed" ? "已審核" : "已隱藏"}</span>`];
   if (!l.is_complete) tags.push(`<span class="tag incomplete">⚠️ 缺: ${esc((l.missing_fields||[]).join(", "))}</span>`);
   if (l.human_edited) tags.push(`<span class="tag edited">已手動修改</span>`);
+  if (l.agent_contact_source === "same_agent_other_post") tags.push(`<span class="tag edited">📇 聯絡方式借自同 agent 其他貼文</span>`);
+  if (l.agent_contact_source === "platform_fallback") tags.push(`<span class="tag incomplete">📞 聯絡方式用 CK 的 WhatsApp 頂替</span>`);
 
   const fieldsHTML = FIELD_DEFS.map(([key, label]) => `
     <div class="field">
@@ -362,6 +366,7 @@ function rowHTML(l){
     </div>
     <div class="detail">
       <div class="fields">${fieldsHTML}</div>
+      ${l.source_url ? `<div class="raw-link"><a href="${esc(l.source_url)}" target="_blank" rel="noopener">↗ 查看原始 Telegram 貼文（找不到聯絡方式時，回去看原文 / 找發文的人）</a></div>` : ""}
       <div class="raw">${esc(l.raw_text) || "(無原文)"}</div>
       <div class="actions">
         <button class="primary btn-save">儲存修改</button>
