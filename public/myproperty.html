@@ -1077,6 +1077,14 @@ const LINES = {
 
 const FACILITIES = ["Swimming pool","Gym","24-hour security","Playground","Surau","Multipurpose hall","EV charging","Tennis court","Covered parking","Lift lobby card access"];
 
+/* 現階段這個網站是 CK 個人的：Telegram 上抓來的房源都不是 CK 自己刊登的，
+   而是把別人（其他 agent）貼的資料整理上來，讓買家透過這個網站找到 CK 本人，
+   由 CK 去跟原本的 agent 談。所以買家在網站上看到的聯絡方式一律是 CK 的
+   WhatsApp，不能顯示原 agent 自己的號碼（就算貼文裡有寫、或後台抓得到）——
+   不然等哪天要跟其他 agent 談抽成／收費，買家早就繞過 CK 直接找到對方了。 */
+const PLATFORM_CONTACT_DISPLAY = "011-2887 4818";
+const PLATFORM_CONTACT_WA = "601128874818"; // wa.me 格式：去掉開頭 0，補上國碼 60
+
 /* 房源資料一律來自 Firestore（後台 admin.html 審核通過的才會出現）。
    示範資料已於 2026-08-29 全部清空，網站從 0 筆重新開始。 */
 const L = [];
@@ -1123,7 +1131,8 @@ function tgDocToListing(doc){
     fac: [],
     agent: {
       name: doc.agent_name || doc.source_sender_name || "Agent (via Telegram)",
-      ren: doc.agent_contact ? doc.agent_contact : "Not provided",
+      // 一律顯示 CK 的聯絡方式，不顯示原 agent 自己的號碼（見上方註解）。
+      ren: PLATFORM_CONTACT_DISPLAY,
       agency: "UNiTED KCG Subsales Listing Group",
       firm: ""
     },
@@ -1760,8 +1769,8 @@ function openDetail(id){
             </div>
           </div>
           <div class="card__actions" style="margin-top:14px">
-            <button class="btn btn--primary" style="padding-block:9px">WhatsApp</button>
-            <button class="btn" style="flex:1;text-align:center">Call</button>
+            <button class="btn btn--primary" style="padding-block:9px" data-wa="${l.telegramSource ? PLATFORM_CONTACT_WA : ""}">WhatsApp</button>
+            <button class="btn" style="flex:1;text-align:center" data-tel="${l.telegramSource ? PLATFORM_CONTACT_DISPLAY : ""}">Call</button>
           </div>
           <p class="disclaim">Every listing is tied to a registration number issued by the Board of Valuers, Appraisers, Estate Agents and Property Managers. This is the discipline REINS enforces in Japan — adapted here as verification rather than a closed database.</p>
         </div>
@@ -1852,6 +1861,18 @@ document.addEventListener("click", e=>{
   /* open detail */
   const openBtn = closest("[data-open]");
   if(openBtn){ openDetail(openBtn.dataset.open); return; }
+
+  /* contact CK (Listed by panel) */
+  const waBtn = closest("[data-wa]");
+  if(waBtn && waBtn.dataset.wa){
+    window.open(`https://wa.me/${waBtn.dataset.wa}`, "_blank", "noopener");
+    return;
+  }
+  const telBtn = closest("[data-tel]");
+  if(telBtn && telBtn.dataset.tel){
+    window.location.href = `tel:+${telBtn.dataset.tel.replace(/\D/g,"")}`;
+    return;
+  }
 
   /* share */
   const shareBtn = closest("[data-share]");
