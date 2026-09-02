@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaLife-style 真人辦公室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap">
+<style>
+:root {
+  --ground: #050505;
+  --panel: #0a0f12;
+  --panel-2: #0d151a;
+  --line: #1b333a;
+  --line-soft: #122228;
+  --ink: #e8f6f9;
+  --ink-mid: #8fa9b0;
+  --ink-soft: #5f7880;
+  --signal: #00E5FF;
+  --on-signal: #03181d;
+  --online: #3ddc84;
+  --away: #ffa500;
+  --offline: #666;
+  --px: 'Press Start 2P', monospace;
+  --dp: 'Orbitron', 'Noto Sans TC', sans-serif;
+  --tc: 'Noto Sans TC', sans-serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--tc);
+  font-weight: 400;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--signal); color: var(--on-signal); }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.shell { max-width: 1340px; margin: 0 auto; padding: 0 18px 80px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 1.5px solid var(--signal);
+  display: grid;
+  place-items: center;
+  font-family: var(--dp);
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--signal);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.18);
+}
+
+.space-id {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.space-id b {
+  font-family: var(--dp);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.space-id span {
+  font-family: var(--px);
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+
+.topbar .sp { flex: 1; }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--px);
+  font-size: 8px;
+  color: var(--signal);
+  border: 1px solid var(--line);
+  padding: 7px 10px;
+}
+
+.status i {
+  width: 6px;
+  height: 6px;
+  background: var(--signal);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--signal);
+  animation: blip 2.2s ease-in-out infinite;
+}
+
+@keyframes blip { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ---------- intro ---------- */
+.intro {
+  max-width: 66ch;
+  margin: 0 0 20px;
+}
+
+.intro h1 {
+  font-family: var(--dp);
+  font-weight: 900;
+  font-size: clamp(23px, 4.2vw, 34px);
+  letter-spacing: 3px;
+  margin: 0 0 9px;
+  text-wrap: balance;
+}
+
+.intro p {
+  margin: 0;
+  color: var(--ink-mid);
+  font-size: 14px;
+}
+
+.intro b { color: var(--ink); font-weight: 500; }
+
+/* ---------- frame ---------- */
+.frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.stage {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.viewport {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+canvas#map {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 720;
+  touch-action: none;
+  outline: none;
+  cursor: crosshair;
+  background: linear-gradient(135deg, #f5f5f0 0%, #e8e0d0 100%);
+}
+
+/* ---------- invitation panel ---------- */
+.invite-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  font-family: var(--tc);
+  backdrop-filter: blur(4px);
+}
+
+.invite-panel.open { display: flex; }
+
+.invite-box {
+  background: var(--panel);
+  border: 2px solid var(--signal);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.invite-box h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-family: var(--px);
+  letter-spacing: 1px;
+  color: var(--signal);
+}
+
+.invite-box .name {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 24px;
+}
+
+.invite-box .prompt {
+  font-size: 15px;
+  color: var(--ink-mid);
+  margin-bottom: 28px;
+  line-height: 1.7;
+}
+
+.invite-box .buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.invite-box button {
+  flex: 1;
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  font-family: var(--tc);
+  transition: all 0.2s;
+}
+
+.invite-box .accept {
+  background: var(--online);
+  color: #000;
+  border-color: var(--online);
+}
+
+.invite-box .accept:hover { background: #4aef99; transform: translateY(-1px); }
+
+.invite-box .decline {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+
+.invite-box .decline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+
+/* ---------- toolbar ---------- */
+.anchor {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  flex-wrap: wrap;
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--line);
+}
+
+.anchor button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 52px;
+  background: transparent;
+  color: var(--ink-mid);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 9px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.anchor button .ico { font-size: 16px; }
+.anchor button .zh { font-size: 9px; font-weight: 500; white-space: nowrap; }
+
+.anchor button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.anchor button.danger { color: #ff5470; border-color: rgba(255, 84, 112, 0.4); }
+.anchor button.danger:hover { background: #ff5470; color: #fff; }
+
+.anchor .sp { flex: 1; min-width: 4px; }
+.anchor .div { width: 1px; background: var(--line); margin: 6px 6px; flex: none; }
+
+/* ---------- roster ---------- */
+.roster {
+  border-left: 1px solid var(--line);
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roster h2 {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--px);
+  font-size: 8px;
+  color: var(--ink-soft);
+  letter-spacing: 1px;
+}
+
+.rlist { flex: 1; overflow-y: auto; }
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  transition: all 0.15s;
+}
+
+.member:hover { background: rgba(255, 255, 255, 0.05); }
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid;
+  background: linear-gradient(135deg, rgba(100, 150, 200, 0.4), rgba(80, 120, 180, 0.4));
+}
+
+.member-avatar.online {
+  border-color: var(--online);
+  background: linear-gradient(135deg, rgba(61, 220, 132, 0.3), rgba(41, 200, 112, 0.3));
+  box-shadow: 0 0 8px rgba(61, 220, 132, 0.4);
+}
+
+.member-avatar.away {
+  border-color: var(--away);
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(220, 140, 0, 0.2));
+}
+
+.member-avatar.offline {
+  border-color: var(--offline);
+  background: linear-gradient(135deg, rgba(120, 120, 120, 0.2), rgba(90, 90, 90, 0.2));
+}
+
+.member .who { min-width: 0; }
+.member .who b { display: block; font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+.member .who span { display: block; font-family: var(--px); font-size: 7px; color: var(--ink-soft); }
+
+.member .status-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.member .status-dot.online {
+  background: var(--online);
+  box-shadow: 0 0 8px var(--online);
+}
+
+.member .status-dot.away { background: var(--away); animation: none; }
+.member .status-dot.offline { background: var(--offline); opacity: 0.5; animation: none; }
+
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 8px rgba(61, 220, 132, 0.4); } 50% { box-shadow: 0 0 16px rgba(61, 220, 132, 0.8); } }
+
+.self {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-top: 1px solid var(--line);
+  background: rgba(0, 229, 255, 0.06);
+}
+
+.self .member-avatar {
+  width: 36px;
+  height: 36px;
+  border-color: var(--signal);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+.self .who b { font-size: 13px; }
+
+@media (max-width: 940px) {
+  .frame { grid-template-columns: 1fr; }
+  .roster { border-left: 0; border-top: 1px solid var(--line); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="mark">M</div>
+    <div class="space-id"><b>MetaOffice</b><span>REAL PEOPLE</span></div>
+    <div class="sp"></div>
+    <div class="status"><i></i><span id="onlineN">0 ONLINE</span></div>
+  </header>
+
+  <div class="intro">
+    <h1>真人協作空間</h1>
+    <p>這是一個由真人組成的辦公室。<b>走近同事會自動傳來問候邀請</b>，你可以接受或拒絕。如果你問「有空嗎？」對方要先同意才會進入通話。方向鍵或 <kbd>WASD</kbd> 走動，<kbd>E</kbd> 或<kbd>雙擊</kbd>互動。</p>
+  </div>
+
+  <div class="frame">
+    <div class="stage">
+      <div class="viewport">
+        <canvas id="map" tabindex="0" role="img" aria-label="MetaOffice 真人辦公室"></canvas>
+      </div>
+      <div class="anchor">
+        <button id="btnMic"><span class="ico">🎙</span><span class="zh">麥克風</span></button>
+        <button id="btnCam"><span class="ico">📷</span><span class="zh">鏡頭</span></button>
+        <div class="div"></div>
+        <button id="btnHome"><span class="ico">🚏</span><span class="zh">回入口</span></button>
+        <span class="sp"></span>
+        <button id="btnLeave" class="danger"><span class="ico">🚪</span><span class="zh">離開</span></button>
+      </div>
+    </div>
+
+    <aside class="roster">
+      <h2>TEAM MEMBERS</h2>
+      <div class="rlist" id="rlist"></div>
+      <div class="self">
+        <div class="member-avatar online">你</div>
+        <span class="who"><b>你</b><span id="selfWhere">ENTRANCE</span></span>
+      </div>
+    </aside>
+  </div>
+
+  <div class="invite-panel" id="invitePanel">
+    <div class="invite-box">
+      <h2 id="inviteType">打招呼</h2>
+      <div class="name" id="inviteName"></div>
+      <div class="prompt" id="invitePrompt"></div>
+      <div class="buttons">
+        <button class="accept" id="inviteYes">接受</button>
+        <button class="decline" id="inviteNo">拒絕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ==================== team data ==================== */
+const TEAM = [
+  { id: 1, name: "Alice", role: "設計", status: "online", x: 250, y: 280, color: "#FF6B9D" },
+  { id: 2, name: "Bob", role: "工程", status: "online", x: 520, y: 320, color: "#4ECDC4" },
+  { id: 3, name: "Carol", role: "產品", status: "away", x: 380, y: 240, color: "#FFD93D" },
+  { id: 4, name: "Dave", role: "行銷", status: "offline", x: 680, y: 380, color: "#A8DADC" },
+  { id: 5, name: "Eve", role: "HR", status: "online", x: 150, y: 400, color: "#C1666B" },
+];
+
+const HOME = { x: 600, y: 600 };
+const player = { x: HOME.x, y: HOME.y, r: 14, moving: false };
+
+let target = null;
+let near = null;
+let activeInvite = null;
+
+const SPEED = 180;
+const RANGE = 140;
+const keys = new Set();
+const canvas = document.getElementById("map");
+let canvasWidth = 1200, canvasHeight = 720;
+
+function updateCanvasSize() {
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width > 0) {
+    canvasWidth = rect.width * (window.devicePixelRatio || 1);
+    canvasHeight = rect.height * (window.devicePixelRatio || 1);
+  }
+}
+
+function updateOnlineCount() {
+  const online = TEAM.filter(t => t.status === "online").length;
+  document.getElementById("onlineN").textContent = `${online} ONLINE`;
+}
+
+function initRoster() {
+  const rlist = document.getElementById("rlist");
+  rlist.innerHTML = "";
+  for (const member of TEAM) {
+    const btn = document.createElement("button");
+    btn.className = "member";
+    const initial = member.name.charAt(0);
+    btn.innerHTML = `
+      <div class="member-avatar ${member.status}" style="background: linear-gradient(135deg, ${member.color}40, ${member.color}20)">${initial}</div>
+      <span class="who">
+        <b>${member.name}</b>
+        <span>${member.role}</span>
+      </span>
+      <div class="status-dot ${member.status}"></div>
+    `;
+    btn.addEventListener("click", () => {
+      target = { x: member.x, y: member.y };
+    });
+    rlist.appendChild(btn);
+  }
+  updateOnlineCount();
+}
+
+function drawPerson(ctx, x, y, member, isPlayer = false) {
+  const scale = canvas.width / 1200;
+
+  if (isPlayer) {
+    /* player avatar */
+    ctx.fillStyle = "#00c8e0";
+    ctx.beginPath();
+    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0, 229, 255, 0.4)";
+    ctx.lineWidth = 2 * scale;
+    ctx.beginPath();
+    ctx.arc(x, y, 24 * scale, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* player label */
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${11 * scale}px 'Noto Sans TC', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("你", x, y + 30 * scale);
+  } else {
+    /* team member avatar with gradient and shadow */
+    const gradient = ctx.createRadialGradient(x - 6 * scale, y - 6 * scale, 0, x, y, 20 * scale);
+    gradient.addColorStop(0, member.color);
+    gradient.addColorStop(1, member.color + "aa");
+
+    /* shadow */
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 22 * scale, 22 * scale, 6 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* avatar circle */
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* status ring */
+    let ringColor = "#999";
+    if (member.status === "online") ringColor = "#3ddc84";
+    else if (member.status === "away") ringColor = "#ffa500";
+
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth = 2.5 * scale;
+    ctx.beginPath();
+    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* status indicator dot */
+    ctx.fillStyle = ringColor;
+    ctx.beginPath();
+    ctx.arc(x + 15 * scale, y - 8 * scale, 4 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* name label */
+    ctx.fillStyle = "#000";
+    ctx.font = `bold ${11 * scale}px 'Noto Sans TC', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(member.name, x, y + 28 * scale);
+
+    /* role label */
+    ctx.fillStyle = "#666";
+    ctx.font = `9px 'Noto Sans TC', sans-serif`;
+    ctx.fillText(member.role, x, y + 42 * scale);
+  }
+}
+
+function drawBackground(ctx) {
+  const scale = canvas.width / 1200;
+
+  /* floor */
+  const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+  gradient.addColorStop(0, "#f5f5f0");
+  gradient.addColorStop(1, "#e8e0d0");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  /* subtle grid */
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.02)";
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < canvasWidth; x += 60 * scale) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvasHeight);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvasHeight; y += 60 * scale) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvasWidth, y);
+    ctx.stroke();
+  }
+}
+
+function render() {
+  const ctx = canvas.getContext("2d");
+  updateCanvasSize();
+
+  ctx.save();
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+  drawBackground(ctx);
+
+  const scale = canvas.width / 1200;
+
+  /* draw team members */
+  for (const member of TEAM) {
+    drawPerson(ctx, member.x * scale, member.y * scale, member, false);
+  }
+
+  /* draw navigation line */
+  if (target) {
+    const dist = Math.hypot(target.x - player.x, target.y - player.y);
+    if (dist > 4) {
+      ctx.strokeStyle = "rgba(0, 229, 255, 0.3)";
+      ctx.lineWidth = 1.5 * scale;
+      ctx.setLineDash([8 * scale, 6 * scale]);
+      ctx.beginPath();
+      ctx.moveTo(player.x * scale, player.y * scale);
+      ctx.lineTo(target.x * scale, target.y * scale);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  /* draw player */
+  drawPerson(ctx, player.x * scale, player.y * scale, null, true);
+
+  ctx.restore();
+  requestAnimationFrame(render);
+}
+
+function collide() {
+  player.x = Math.max(player.r, Math.min(1200 - player.r, player.x));
+  player.y = Math.max(player.r, Math.min(720 - player.r, player.y));
+}
+
+function update(dt) {
+  let ix = 0, iy = 0;
+  if (keys.has("arrowup") || keys.has("w")) iy -= 1;
+  if (keys.has("arrowdown") || keys.has("s")) iy += 1;
+  if (keys.has("arrowleft") || keys.has("a")) ix -= 1;
+  if (keys.has("arrowright") || keys.has("d")) ix += 1;
+
+  if (ix || iy) {
+    const l = Math.hypot(ix, iy) || 1;
+    player.x += (ix / l) * SPEED * dt;
+    player.y += (iy / l) * SPEED * dt;
+    player.moving = true;
+  } else if (target) {
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 4) {
+      player.x = target.x;
+      player.y = target.y;
+      target = null;
+      player.moving = false;
+    } else {
+      player.x += (dx / d) * SPEED * dt;
+      player.y += (dy / d) * SPEED * dt;
+      player.moving = true;
+    }
+  } else {
+    player.moving = false;
+  }
+
+  collide();
+
+  let best = RANGE, found = null;
+  for (const member of TEAM) {
+    const dd = Math.hypot(player.x - member.x, player.y - member.y);
+    if (dd < best && member.status !== "offline") {
+      best = dd;
+      found = member;
+    }
+  }
+
+  if (found !== near) {
+    near = found;
+    if (near) {
+      showInvitation(near, "greeting");
+    } else {
+      closeInvitation();
+    }
+  }
+
+  document.getElementById("selfWhere").textContent =
+    near ? `NEAR ${near.name.toUpperCase()}` : "ENTRANCE";
+}
+
+function showInvitation(member, type) {
+  activeInvite = { member, type };
+  const panel = document.getElementById("invitePanel");
+
+  if (type === "greeting") {
+    document.getElementById("inviteType").textContent = "打招呼";
+    document.getElementById("invitePrompt").textContent =
+      `${member.name} 向你打招呼。你要回應嗎？`;
+  } else if (type === "chat") {
+    document.getElementById("inviteType").textContent = "聊天邀請";
+    document.getElementById("invitePrompt").textContent =
+      `${member.name} 問你：有空嗎？`;
+  }
+
+  document.getElementById("inviteName").textContent = member.name;
+  panel.classList.add("open");
+}
+
+function closeInvitation() {
+  document.getElementById("invitePanel").classList.remove("open");
+  activeInvite = null;
+}
+
+/* ==================== event handlers ==================== */
+window.addEventListener("keydown", e => {
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(e.key.toLowerCase())) {
+    keys.add(e.key.toLowerCase());
+    target = null;
+    e.preventDefault();
+  }
+  if ((e.key === "e" || e.key === "Enter") && activeInvite) {
+    document.getElementById("inviteYes").click();
+  }
+});
+
+window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+
+canvas.addEventListener("pointerdown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (1200 / rect.width);
+  const y = (e.clientY - rect.top) * (720 / rect.height);
+  target = { x, y };
+});
+
+document.getElementById("btnMic").addEventListener("click", () => {
+  alert("麥克風 toggle (stub)");
+});
+
+document.getElementById("btnCam").addEventListener("click", () => {
+  alert("鏡頭 toggle (stub)");
+});
+
+document.getElementById("btnHome").addEventListener("click", () => {
+  target = HOME;
+});
+
+document.getElementById("btnLeave").addEventListener("click", () => {
+  if (confirm("確定要離開？")) {
+    window.location.href = "/";
+  }
+});
+
+document.getElementById("inviteYes").addEventListener("click", () => {
+  if (activeInvite) {
+    console.log(`Accepted invitation from ${activeInvite.member.name}`);
+    closeInvitation();
+  }
+});
+
+document.getElementById("inviteNo").addEventListener("click", () => {
+  closeInvitation();
+});
+
+/* ==================== main loop ==================== */
+let lastT = 0;
+function tick(t) {
+  const dt = Math.min((t - lastT) / 1000, 0.02);
+  lastT = t;
+  update(dt);
+  requestAnimationFrame(tick);
+}
+
+/* ==================== init ==================== */
+initRoster();
+render();
+requestAnimationFrame(tick);
+canvas.focus();
+</script>
+
+</body>
+</html>
