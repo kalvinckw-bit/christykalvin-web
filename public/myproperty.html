@@ -1948,7 +1948,7 @@ document.addEventListener("click", e=>{
   const close = closest("[data-close]");
   if(close){ $("#"+close.dataset.close).dataset.visible="false"; document.body.style.overflow=""; return; }
   if(t.classList.contains("overlay")){ t.dataset.visible="false"; document.body.style.overflow=""; return; }
-  if(t.closest("#postBtn")){ window.location.href = "agent-portal.html"; return; }
+  if(t.closest("#postBtn")){ window.location.href = "myproperty/agent-portal.html"; return; }
   if(t.closest("#authBtn")){
     if(window.__ckAuthUser){ window.__ckSignOut && window.__ckSignOut(); return; }
     $("#authOverlay").dataset.visible="true"; document.body.style.overflow="hidden"; return;
