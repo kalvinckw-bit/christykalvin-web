@@ -495,6 +495,12 @@ for (const key of Object.keys(SPRITE_B64)) {
   SPRITE_IMG[key] = img;
 }
 
+/* 木質人字拼地板圖磚（48x32，可平鋪），裁自 Room_Builder_free_16x16.png col11-13/row13-14 */
+const FLOOR_TILE_B64 = "iVBORw0KGgoAAAANSUhEUgAAADAAAAAgCAYAAABU1PscAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAMUSURBVFhHxVe9ihtBDPbbpAlX5Q0Mi00KEw47KWIOcglpjpAiqdPkBe4FDC5c+REMbu7BJsy3+oRGs9rsFeMthmXOp59P0qeRFqcv65TPcb9MH9++Sc8fVumw6/R++rlOx6dlOjx2uB9WXTpulum0Xfe/N5K//tik7+/u0svfXbr+2aTL73vcL9v7dN1v0svXHe4LKoDyXacKoFyM0IHnz6v+Lg7gNJKH8+IkAZyftv1dAOQDAFC6X6oCbwTKxQFG0jrQQt46icgLAGZCAUCZpJCR82nW9IoDOaJ0opW8LROWEwHkjBCElpAaWb1XBwaViwO5tvl7C/kMAE7+2gHA5ZtwQABkblQcyEapAMrFiE8vHcBpJE8CMwMZwPlBOCAA8lEO5HRSgTeCyHmCGgdayFsnEXkBwEwoAApTAYw9dkWatAZFgW1xllBMu09zS/mFdgMhFImmRPE1KAry361xEq4iWmN5BcDIEwCFGYGiBkUBzliru4E8ALBm7WNj/4nIixo0DkCpf2xuJN9zwD/38pRrBKQ2qxpkGfjn3qW5pfyC3YCPSzWLCLnyDDKknN2ANVsZaSyvAHyrI0JGICs4bz/1d1vDY63uBvIAAA74WcTXoChgJKwDVEoHvJGW8sOzkOMAv1Rgn3l+6QCM+TJpKF/PQp4DnmBuHmck+P9VDf9HPrLPe9Vg3KAY7gMwHrU4M+oSACNX1PAE+cg+nA9avB3Vw33AGoFz/pExAOCUr+GJ8pH9qfvEMAdeMY/j62vYlcmYfGR/6j5Rc+CV83jFgQGijclH9qfuE+E+AONRizOjruVAdrpodRPkI/twPmjxdlQP9wFrBJHzBDUAcJcXUx+bifKR/an7xOz7QGTflslYi519H4jsK1E9BwQAMzf7PhDZp/PMQMEBAZDP7PtAZN86ycgXHCAAXPxzfcN9ILJvy4TcqDiADMy8D0T21UkhN1urBzf7PhDZZ4SZgQxAW2zBgeCxqGo4mMdtq4yIOiYf2a84IAD0kSs4MNCqijKR79CYwC8BMBNT5SP7tkz4HRoz/gH+0EGdvzKZeAAAAABJRU5ErkJggg==";
+const FLOOR_IMG = new Image();
+FLOOR_IMG.src = "data:image/png;base64," + FLOOR_TILE_B64;
+let FLOOR_PATTERN = null;
+
 /* ==================== team data ==================== */
 const TEAM = [
   { id: 1, name: "Alice", role: "設計", status: "online", x: 250, y: 280, color: "#FF6B9D", sprite: "Amelia" },
@@ -647,27 +653,30 @@ function drawPerson(ctx, x, y, member, isPlayer = false) {
 function drawBackground(ctx) {
   const scale = canvas.width / 1200;
 
-  /* floor */
-  const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
-  gradient.addColorStop(0, "#f5f5f0");
-  gradient.addColorStop(1, "#e8e0d0");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  /* pixel floor tile (LimeZu Modern Interiors free), tiled and pixel-sharp */
+  if (FLOOR_IMG.complete && FLOOR_IMG.naturalWidth > 0) {
+    if (!FLOOR_PATTERN) {
+      FLOOR_PATTERN = ctx.createPattern(FLOOR_IMG, "repeat");
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const tileScale = 1.8 * scale; /* 48x32 native tile displayed a bit larger */
+    ctx.translate(0, 0);
+    ctx.scale(tileScale, tileScale);
+    ctx.fillStyle = FLOOR_PATTERN;
+    ctx.fillRect(0, 0, canvasWidth / tileScale, canvasHeight / tileScale);
+    ctx.restore();
 
-  /* subtle grid */
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.02)";
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x < canvasWidth; x += 60 * scale) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvasHeight);
-    ctx.stroke();
-  }
-  for (let y = 0; y < canvasHeight; y += 60 * scale) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvasWidth, y);
-    ctx.stroke();
+    /* soft light overlay so text/UI on top stays legible */
+    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  } else {
+    /* fallback gradient before the tile image finishes loading */
+    const gradient = ctx.createLinearGradient(0, 0, canvasWidth, canvasHeight);
+    gradient.addColorStop(0, "#f5f5f0");
+    gradient.addColorStop(1, "#e8e0d0");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   }
 }
 
