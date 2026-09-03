@@ -517,28 +517,20 @@ for (const key of Object.keys(FURNITURE_B64)) {
   FURNITURE_IMG[key] = img;
 }
 
-/* 每個座位一張桌子＋椅子＋文件櫃，桌子在人物後方（螢幕朝玩家），椅子在人物腳下 */
+/* 桌子貼在人物身後：桌子底部對齊人物腳邊，桌面/螢幕比人物矮一截，
+   讓人物身體自然疊在桌子前緣上方，讀起來像「站在辦公桌前」而不是
+   「頭上頂著一個方塊」。桌子尺寸相對人物顯示尺寸(pxSize=40*scale)
+   收斂，不再比人物本身還高。 */
 function drawDeskFor(ctx, x, y, scale) {
   const deskImg = FURNITURE_IMG.desk;
-  const chairImg = FURNITURE_IMG.chair;
-  const cabinetImg = FURNITURE_IMG.cabinet;
   if (!deskImg.complete || deskImg.naturalWidth === 0) return;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  const w = 34 * scale;
-  const h = 68 * scale;
-  /* desk sits just above (behind) the character */
-  ctx.drawImage(deskImg, x - w / 2, y - h - 18 * scale, w, h);
-  /* chair under the character's feet */
-  if (chairImg.complete && chairImg.naturalWidth > 0) {
-    const cw = 26 * scale, ch = 52 * scale;
-    ctx.drawImage(chairImg, x - cw / 2, y - ch * 0.32, cw, ch);
-  }
-  /* small file cabinet beside the desk */
-  if (cabinetImg.complete && cabinetImg.naturalWidth > 0) {
-    const bw = 22 * scale, bh = 44 * scale;
-    ctx.drawImage(cabinetImg, x + w / 2 - 2 * scale, y - bh - 14 * scale, bw, bh);
-  }
+  const pxSize = 40 * scale;
+  const w = pxSize * 0.8;
+  const h = pxSize * 1.5; /* native 16x32 aspect (1:2) */
+  const bottomY = y + pxSize * 0.32; /* desk bottom near character's feet */
+  ctx.drawImage(deskImg, x - w / 2, bottomY - h, w, h);
   ctx.restore();
 }
 
@@ -614,13 +606,8 @@ function drawPerson(ctx, x, y, member, isPlayer = false) {
   const scale = canvas.width / 1200;
   const pxSize = 40 * scale; /* 16px sprite 放大顯示尺寸，imageSmoothingEnabled=false 保持銳利 */
 
-  /* pale halo behind the character so it stands out from the floor tile,
-     then the ground shadow on top of it */
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.beginPath();
-  ctx.ellipse(x, y + pxSize * 0.06, pxSize * 0.52, pxSize * 0.58, 0, 0, Math.PI * 2);
-  ctx.fill();
-
+  /* ground shadow (floor is already lightened in drawBackground so the
+     sprite itself has enough contrast without a halo covering it) */
   ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
   ctx.beginPath();
   ctx.ellipse(x, y + pxSize / 2 - 2 * scale, pxSize * 0.32, pxSize * 0.12, 0, 0, Math.PI * 2);
