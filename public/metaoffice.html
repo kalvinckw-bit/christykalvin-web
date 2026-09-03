@@ -517,20 +517,21 @@ for (const key of Object.keys(FURNITURE_B64)) {
   FURNITURE_IMG[key] = img;
 }
 
-/* 桌子貼在人物身後：桌子底部對齊人物腳邊，桌面/螢幕比人物矮一截，
-   讓人物身體自然疊在桌子前緣上方，讀起來像「站在辦公桌前」而不是
-   「頭上頂著一個方塊」。桌子尺寸相對人物顯示尺寸(pxSize=40*scale)
-   收斂，不再比人物本身還高。 */
+/* 桌子畫在人物「旁邊」，不疊在身體/頭部上——desk 素材是站在桌前的
+   正視角，character 是俯視行走角度，兩者疊在同一個 x,y 上會打架
+   （螢幕卡在頭頂變成一頂帽子）。並排放置完全避開這個衝突：桌子
+   永遠在座位的右側固定偏移，人物本身不被遮擋也不遮擋桌子。 */
 function drawDeskFor(ctx, x, y, scale) {
   const deskImg = FURNITURE_IMG.desk;
   if (!deskImg.complete || deskImg.naturalWidth === 0) return;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   const pxSize = 40 * scale;
-  const w = pxSize * 0.8;
-  const h = pxSize * 1.5; /* native 16x32 aspect (1:2) */
-  const bottomY = y + pxSize * 0.32; /* desk bottom near character's feet */
-  ctx.drawImage(deskImg, x - w / 2, bottomY - h, w, h);
+  const w = pxSize * 0.6;
+  const h = pxSize * 1.2; /* native 16x32 aspect (1:2), scaled down */
+  const deskX = x + pxSize * 0.85; /* clear of the character's silhouette */
+  const bottomY = y + pxSize * 0.42;
+  ctx.drawImage(deskImg, deskX - w / 2, bottomY - h, w, h);
   ctx.restore();
 }
 
