@@ -501,6 +501,47 @@ const FLOOR_IMG = new Image();
 FLOOR_IMG.src = "data:image/png;base64," + FLOOR_TILE_B64;
 let FLOOR_PATTERN = null;
 
+/* 辦公室家具（LimeZu Modern Interiors 付費版，16x32px 每件），
+   裁自 1_Interiors/16x16/Theme_Sorter_Singles/13_Conference_Hall_Singles/。
+   完整版授權：可商用，需標註出處 limezu.itch.io（見 LICENSE_LimeZu_Full.txt）。 */
+const FURNITURE_B64 = {
+  desk: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAABRUlEQVR4nO2UvUrDUBTHf4mpjkorHaQoqA+gq5sOmargA7RvEMgeyBDsJijq4CQKint1FnyBgnsrFDJJLU3FjzStcWlSNSlNGkQEz3Iu5+N3//dwuJDQhPWigV2tuOM0p+ZXBcmuVtyscozddJhKp2J560JxJY/WNp8Rbzu8L01G8pntLAAigN10EGv9ZERvN50BAIjVLNY6/hx8QFwFAcCPKuiZ+vgKeqaOrmkBSGQFAA/WU+ASzyR/B/oQvvucwfXVKRM5Az7F232AIMvFkWs8k5ml9dgIzUk7Gy+j+tm9g2F1UmgUUMtdAHILi5j1e9Q67G8Fy0MBarmLrmkAnJxf+me1VApAhirwJp/fzPvnyE9QCjKHRwehcaybLzHhbG1lrM/EV5Benk7SP9jEf8BfBkhvjddkgL3WXDKAUpATAX7fPgBQdvjxG9Y5egAAAABJRU5ErkJggg==",
+  chair: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAAAxUlEQVR4nGNgGAWjgIGBEcawsgr4T6wmHh4+hl27FjEyMDAwsCBLJGemMzAwMDC8e/GFQUiCh+Hdiy8Ymh8+vsVw7sxpOB/FgPOnzyEpxG77q9dvUfhMyBx5WTUiPIAKmAgrIcGAh49v0d8FKIGIHLokG8DDw8cgICzC8OHtGwYBYRGsimFyH96+wTTgy5dPcI1PHt7DagAPDx9cLVYvwCRzY92wGjB58S4M11E3GikygIeHj+HJw3twf2IDxKgZBaNgYAAAC+M6RKIMCR0AAAAASUVORK5CYII=",
+  cabinet: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAABO0lEQVR4nO2Tv0vDQBSAv9RDVAI2WFCXxqE4GBC6iaOC+BcIUhycnLK4FdwUugqZOkv+CaHuTqLQDiWCdbG1FWM5ailKHdrEFNoQfwwd+sHB8d597z3uOGVv/xhj6ZNidaoL4L40iC8k8PajSCeFcvP4gfDk0912P6UCwf1wTFt200mhCE8uF4rkHI0jHpiLTw+VWm6HPCtkU69YGQPTll3RG1PFqupkUxUW11IjuwKcAydXOhYgZRMhZZNyoYKUWqgYxHNAIxbZGsGYFFjdNn4seo4IBq2qTsa5859xJjHr59qNd1puB1tdB5p+fKDA2VaL+eXN0M4bwGH+u8CYXOJfEABvT88A1Ep1aqV6BE3znf+ZwCPnRP8PAwV6Y2uYBzuRJOvi0ndiwc7Xt/cKELr6Z3417YQJE0L4AjhhcUBUMcTRAAAAAElFTkSuQmCC",
+  frame: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAABZElEQVR4nO2QMUhCURSGPysTC8VqEhFcapK2ApGgGnKsxoLCucUpolpraBJqbJEIl4ZmG6K9rYKKCIqEIjLhPXv1nl5tEJ9evIYNLeEPFw7n/Ofjvwc6+gdy1IqZmeXKb5dPTg4cPY2NsU1/28vn288A2IBCQQPqgIh3tNo3PuzeZeke2d8AaFTEO8rF7hEAwiohTEG3q5twfI6r3jvJ26VaPt3cx9JNLN1EmKIeO3lI2BpuDcjpul0XRVkyfhlFpU8CDHk89p/7fW6KokxRlOn1uNiaXZB8NUk3yOk6DFTr9ZU4n0/5+jDoA0Az8uTMHxJUjGormkjhDg7YL5pItZdAE3m8fW7SIyEpQXo8RCp723QDCfCqO8mQJbY0TQaAt/pwKoCfABkjCzjVgJqqpvbUBEjP7yiN77FJBjNnACwer7UGPNy8KAEO3UJTzJoAG9dJddbVCVDMJMDL3qN6uaOO/lrfMDaD05OTzqUAAAAASUVORK5CYII=",
+};
+const FURNITURE_IMG = {};
+for (const key of Object.keys(FURNITURE_B64)) {
+  const img = new Image();
+  img.src = "data:image/png;base64," + FURNITURE_B64[key];
+  FURNITURE_IMG[key] = img;
+}
+
+/* 每個座位一張桌子＋椅子＋文件櫃，桌子在人物後方（螢幕朝玩家），椅子在人物腳下 */
+function drawDeskFor(ctx, x, y, scale) {
+  const deskImg = FURNITURE_IMG.desk;
+  const chairImg = FURNITURE_IMG.chair;
+  const cabinetImg = FURNITURE_IMG.cabinet;
+  if (!deskImg.complete || deskImg.naturalWidth === 0) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  const w = 34 * scale;
+  const h = 68 * scale;
+  /* desk sits just above (behind) the character */
+  ctx.drawImage(deskImg, x - w / 2, y - h - 18 * scale, w, h);
+  /* chair under the character's feet */
+  if (chairImg.complete && chairImg.naturalWidth > 0) {
+    const cw = 26 * scale, ch = 52 * scale;
+    ctx.drawImage(chairImg, x - cw / 2, y - ch * 0.32, cw, ch);
+  }
+  /* small file cabinet beside the desk */
+  if (cabinetImg.complete && cabinetImg.naturalWidth > 0) {
+    const bw = 22 * scale, bh = 44 * scale;
+    ctx.drawImage(cabinetImg, x + w / 2 - 2 * scale, y - bh - 14 * scale, bw, bh);
+  }
+  ctx.restore();
+}
+
 /* ==================== team data ==================== */
 const TEAM = [
   { id: 1, name: "Alice", role: "設計", status: "online", x: 250, y: 280, color: "#FF6B9D", sprite: "Amelia" },
@@ -573,7 +614,13 @@ function drawPerson(ctx, x, y, member, isPlayer = false) {
   const scale = canvas.width / 1200;
   const pxSize = 40 * scale; /* 16px sprite 放大顯示尺寸，imageSmoothingEnabled=false 保持銳利 */
 
-  /* ground shadow (both player and team members) */
+  /* pale halo behind the character so it stands out from the floor tile,
+     then the ground shadow on top of it */
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + pxSize * 0.06, pxSize * 0.52, pxSize * 0.58, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
   ctx.beginPath();
   ctx.ellipse(x, y + pxSize / 2 - 2 * scale, pxSize * 0.32, pxSize * 0.12, 0, 0, Math.PI * 2);
@@ -667,8 +714,10 @@ function drawBackground(ctx) {
     ctx.fillRect(0, 0, canvasWidth / tileScale, canvasHeight / tileScale);
     ctx.restore();
 
-    /* soft light overlay so text/UI on top stays legible */
-    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    /* strong light overlay: floor tile is dark reddish-brown, close to
+       character skin/clothing tones — without this wash people disappear
+       into the floor. Fade the tile to a pale backdrop so figures pop. */
+    ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   } else {
     /* fallback gradient before the tile image finishes loading */
@@ -690,6 +739,11 @@ function render() {
   drawBackground(ctx);
 
   const scale = canvas.width / 1200;
+
+  /* draw desks first so characters stand in front of them */
+  for (const member of TEAM) {
+    drawDeskFor(ctx, member.x * scale, member.y * scale, scale);
+  }
 
   /* draw team members */
   for (const member of TEAM) {
