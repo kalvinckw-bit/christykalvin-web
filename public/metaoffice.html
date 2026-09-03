@@ -475,14 +475,35 @@ canvas#map {
 <script>
 "use strict";
 
+/* ==================== pixel sprites (LimeZu "Modern Interiors" FREE version) ====================
+   授權：非商業用途限定。公開／商業化前必須升級付費版或替換 CC0 素材。
+   詳見 AI_CONTEXT/DECISIONS.md（2026-09-02）與 AGENTS.md 頂部警示。
+   來源：https://limezu.itch.io/moderninteriors
+   每張 idle sprite 為 64x32（4 columns x 2 rows，16x16 每格），
+   本專案只取第 1 格 (0,0,16,16) 作為靜態站立姿。 */
+const SPRITE_B64 = {
+  Adam: "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAAAXNSR0IArs4c6QAAB4NJREFUaIHtmF1sW2cZx3+v668Tf+TLs/PRKmuzWVmAkNKCwO2Kqhn3YtIIGgIqpdFAGkKaEFJvejGJi93tpjcIwbiAqUXKmMQULhjC6lQpYm7FCo1CoVWUhEUln3XTxDnusU+Ofbhwzptj+9jxuCV/ydKxz/N//s//8XvejwOHOMQhDnGIQxziEP+nEPYvqdQEAB6vl0BYgBkytx5nqwgd3REAvP680AsB6xq9EDABauMBVDVHMOwSesGDrhfJZKbkve9cvNyU39EdAbEj8jmTXV0HIJ2+VsV/JqrxaENpqh/udItC/kidvmxAKjWBP1CkkPeZlnBX7xJf+JxHBv/jn7vyenN1ALe3IAAM3W/Wxto5mqaxuhBBVXN0dLuEUQySTl+rMt/VuyQ5tZqbqwPSmD9QFIW8r47/9eRKnba95sV7AVQ1x4nnfWJj1SebKGrN9w7ud1BRlDpTtU0A6hrlFJvf3MKl+FhdiEgTfqUNf1tbQ/P2BlpoxHfSt9egaRpfOR3mD7/z0nesLFYeukinr+GyAu3mFUWRJLuJ2gK3HmflP1MbV/vdpfgA6B3MUsj7TF0vUioZVUO2mXmrJosPVPFr9RrV9M3v6qw8dJm6XgTAnUpN4PEW2dV9VcGKokhxp+ROaDVOVXOE24/IZ/ogvmXeDo+3iFluPDob5fjrnRyq6iXcfoRUagKXrhfZ1X1mrG9ZBtd2vRk6uiMs3gs0jbEPYYDB+A7lUsBEiAaM+sLtOWJ9y+zqPrNUMlrSr+Vb+rpexO1XDHLbRWJAWSvKoWon2Isoa0XWV/qBivmn6iOhqjtmfnOHQFfHgebLWmXoqWqOjs42guEeFu/tG3MpPkfTTvxwu5/c1opQ1YI5e7tizKrfXnfttcUPBMFVLgXMwfhOnYCTifHEWVyKj97BLKqaI7uxJvSikHx7wZqmNTQPlWKNXbeZ3VgTqpqjdzCLS/Exnjh7oHmLXy55zdx2wRyM70jziqIwnjgrDb968pT82DEY3yGvYrpVNUfMQcjq5HjiLMmhYXkvOTTMa7/+FQB6sUChXJb8slakvuz64i2oag6XS87DvPuDH0oNgBsP/sVvM39pyq/FqydPkRwa5vd3/yav7bDyWXA3qJeyVuTaGz92vLe6EKE7aojHG08deZ8F5XKZ7mibWF0Im7X3kkPDJIeGmfj5z1rKZTUQ4BcXL9Xdd8rnqovaw8RLLzUU6uiOUDbaWiqqFZSNNrnD/Ky1AKyv9PPOK+Mt673zyricx1yB4K5YmAvVBdQOHYAzP3kXqKz/hmEA4MRvBQtzIQLB3cpO0thfzy0NO5JDw3UGF+ZC+BVDeL0+AaAc66yr06l2e6zfrwhXXvVIE1ZXALSHT+qSPP/FyrqtqjmKBY0rQzHyqge/YoiFuRCtNMKK8yuGyKsergzFKBY0+TxbGnbYa1lf6ZfNK2huvF4fI8cj4sKbH8g4pxzWb9rDJ1x48wNGjkeE2+2pbIUTiTHcbjeGYZiT33+ZZ7r3pwblWGcl8Xpln5C8fofzo8+KmzOfcmUoxtsP1ulU2nmibZup586Rnp9u2gArJhLsFgV2eeOowtsP1jk/+iw3Zz41b1w6XQmM9e9r7+HRY4OLv/kjbrdbGIZBJjNFIjFGrD1KvlQwp350XtZJrL9a2Pb72C9vEvYGRU5XKw2Ix79GJBLjhZ4u7q9t1k1GwWBYXsfDLvH3lS15okokxgDM1HPnmhqvRWZtBkBYh5JEYowv9XUwlytLfadZ/oWeLnF/bZNsdp25uVtV+ns5D0SiZ1TquwHm5m4xeuoy95cWgf1/yTKVWZsh0TNKen6a2YK7yvzJgQ7uLm3J5APRvqbiSxv7p7aRoyFITZBOXyOTmcJ97tsYhoFlxtK3aknPT3N/bZOjAyfIZKZIpSYYinq5s5g9UNeOgWgfmbUZRo6GGi+DdjOZtZnK9Txy8rNwd2nL/PinL3HmrY8AeD36vabi6flpgsEwf778ZS5c/cTEdiS3clsFSlPzjfM92ND39N/j9URzbQuTsx9K/YYNCAbDvJZ8BMCflhsvURZuXDpN8vodJmc/JNEz6hhjDdGpb8UPzNfRHZH6k7PhA6It/fcIBsNN9VU1h5xnsG2E3p+8aj1PEtq/t1GOtzcVPj8cFWfe+kg+t7G+ZTLO7yaI9S2jzoVIXr8DwDdG+sWtxR3nYFsNtXh/8qq8fjHeKS5c/cS05otW9YPBMC/GO6uPY4nEmJzRYX/yi/UtszAXojccFau5japXSjVNqzpXOGFvqZS6tbl6w1FWcxvmYHxHLsuWuU6lXTzRtqs4qdQEul7EMHYpl8vmyFePNNWfvV3C5XIJt9uD1+uj7jxqzaqD8erT3eztEoCwizvxrAJqj6gnPp//n/JA5W2S1bhWefbXaNbrPSf9hnPAYPll2HtZk56fpr1LiO36FbIOPdkzFSF1GkVpEwCa9tTsyVZm9Fma7xMA2ruEmL1dqlpaF1rgVekvTRMKtQuA/ywtmsMeZ33HBsSCEZGenzbt39c3szTqvhMvFoyIdTXb9HcnyM2NUw1NeI46Owfr/xcogSb+dop7UQAAAABJRU5ErkJggg==",
+  Alex: "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",
+  Amelia: "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",
+  Bob: "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",
+};
+
+const SPRITE_IMG = {};
+for (const key of Object.keys(SPRITE_B64)) {
+  const img = new Image();
+  img.src = "data:image/png;base64," + SPRITE_B64[key];
+  SPRITE_IMG[key] = img;
+}
+
 /* ==================== team data ==================== */
 const TEAM = [
-  { id: 1, name: "Alice", role: "設計", status: "online", x: 250, y: 280, color: "#FF6B9D" },
-  { id: 2, name: "Bob", role: "工程", status: "online", x: 520, y: 320, color: "#4ECDC4" },
-  { id: 3, name: "Carol", role: "產品", status: "away", x: 380, y: 240, color: "#FFD93D" },
-  { id: 4, name: "Dave", role: "行銷", status: "offline", x: 680, y: 380, color: "#A8DADC" },
-  { id: 5, name: "Eve", role: "HR", status: "online", x: 150, y: 400, color: "#C1666B" },
+  { id: 1, name: "Alice", role: "設計", status: "online", x: 250, y: 280, color: "#FF6B9D", sprite: "Amelia" },
+  { id: 2, name: "Bob", role: "工程", status: "online", x: 520, y: 320, color: "#4ECDC4", sprite: "Bob" },
+  { id: 3, name: "Carol", role: "產品", status: "away", x: 380, y: 240, color: "#FFD93D", sprite: "Alex" },
+  { id: 4, name: "Dave", role: "行銷", status: "offline", x: 680, y: 380, color: "#A8DADC", sprite: "Adam" },
+  { id: 5, name: "Eve", role: "HR", status: "online", x: 150, y: 400, color: "#C1666B", sprite: "Amelia" },
 ];
+const PLAYER_SPRITE = "Alex";
 
 const HOME = { x: 600, y: 600 };
 const player = { x: HOME.x, y: HOME.y, r: 14, moving: false };
@@ -533,46 +554,62 @@ function initRoster() {
   updateOnlineCount();
 }
 
+/* 每張 idle sprite 第 1 格 (col 0, row 0) 為正面靜止站姿，16x16 px */
+function drawSprite(ctx, spriteKey, x, y, pxSize) {
+  const img = SPRITE_IMG[spriteKey];
+  if (!img || !img.complete || img.naturalWidth === 0) return false;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, 16, 16, x - pxSize / 2, y - pxSize / 2, pxSize, pxSize);
+  return true;
+}
+
 function drawPerson(ctx, x, y, member, isPlayer = false) {
   const scale = canvas.width / 1200;
+  const pxSize = 40 * scale; /* 16px sprite 放大顯示尺寸，imageSmoothingEnabled=false 保持銳利 */
+
+  /* ground shadow (both player and team members) */
+  ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(x, y + pxSize / 2 - 2 * scale, pxSize * 0.32, pxSize * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
 
   if (isPlayer) {
-    /* player avatar */
-    ctx.fillStyle = "#00c8e0";
-    ctx.beginPath();
-    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
-    ctx.fill();
+    const drawn = drawSprite(ctx, PLAYER_SPRITE, x, y, pxSize);
+    if (!drawn) {
+      /* fallback before sprite finishes loading */
+      ctx.fillStyle = "#00c8e0";
+      ctx.beginPath();
+      ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* range ring to show interaction radius owner */
     ctx.strokeStyle = "rgba(0, 229, 255, 0.4)";
     ctx.lineWidth = 2 * scale;
     ctx.beginPath();
-    ctx.arc(x, y, 24 * scale, 0, Math.PI * 2);
+    ctx.arc(x, y, pxSize * 0.6, 0, Math.PI * 2);
     ctx.stroke();
 
     /* player label */
     ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.lineWidth = 3 * scale;
     ctx.font = `bold ${11 * scale}px 'Noto Sans TC', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("你", x, y + 30 * scale);
+    ctx.strokeText("你", x, y + pxSize / 2 + 4 * scale);
+    ctx.fillText("你", x, y + pxSize / 2 + 4 * scale);
   } else {
-    /* team member avatar with gradient and shadow */
-    const gradient = ctx.createRadialGradient(x - 6 * scale, y - 6 * scale, 0, x, y, 20 * scale);
-    gradient.addColorStop(0, member.color);
-    gradient.addColorStop(1, member.color + "aa");
+    const drawn = drawSprite(ctx, member.sprite, x, y, pxSize);
+    if (!drawn) {
+      /* fallback before sprite finishes loading */
+      ctx.fillStyle = member.color;
+      ctx.beginPath();
+      ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    /* shadow */
-    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
-    ctx.beginPath();
-    ctx.ellipse(x, y + 22 * scale, 22 * scale, 6 * scale, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    /* avatar circle */
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    /* status ring */
+    /* status ring around feet */
     let ringColor = "#999";
     if (member.status === "online") ringColor = "#3ddc84";
     else if (member.status === "away") ringColor = "#ffa500";
@@ -580,26 +617,30 @@ function drawPerson(ctx, x, y, member, isPlayer = false) {
     ctx.strokeStyle = ringColor;
     ctx.lineWidth = 2.5 * scale;
     ctx.beginPath();
-    ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
+    ctx.ellipse(x, y + pxSize / 2 - 2 * scale, pxSize * 0.34, pxSize * 0.13, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     /* status indicator dot */
     ctx.fillStyle = ringColor;
     ctx.beginPath();
-    ctx.arc(x + 15 * scale, y - 8 * scale, 4 * scale, 0, Math.PI * 2);
+    ctx.arc(x + pxSize * 0.32, y - pxSize * 0.38, 4 * scale, 0, Math.PI * 2);
     ctx.fill();
 
-    /* name label */
-    ctx.fillStyle = "#000";
-    ctx.font = `bold ${11 * scale}px 'Noto Sans TC', sans-serif`;
+    /* name label (white outline for legibility over any floor tile) */
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(member.name, x, y + 28 * scale);
+    ctx.font = `bold ${11 * scale}px 'Noto Sans TC', sans-serif`;
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 3 * scale;
+    ctx.strokeText(member.name, x, y + pxSize / 2 + 4 * scale);
+    ctx.fillStyle = "#222";
+    ctx.fillText(member.name, x, y + pxSize / 2 + 4 * scale);
 
     /* role label */
-    ctx.fillStyle = "#666";
     ctx.font = `9px 'Noto Sans TC', sans-serif`;
-    ctx.fillText(member.role, x, y + 42 * scale);
+    ctx.strokeText(member.role, x, y + pxSize / 2 + 18 * scale);
+    ctx.fillStyle = "#666";
+    ctx.fillText(member.role, x, y + pxSize / 2 + 18 * scale);
   }
 }
 
