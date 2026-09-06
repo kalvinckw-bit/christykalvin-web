@@ -3,8 +3,10 @@
  *
  * importProduct: 給一個商品來源連結 (例如 Takashimaya Online、Mercari、BASE 等)，
  * 伺服器端抓取該頁面，解析 og:meta / JSON-LD 商品資料，把照片下載搬到自己的
- * Firebase Storage（避免原網站下架後圖片失效），有設定 ANTHROPIC_API_KEY 的話
+ * Cloud Storage bucket（避免原網站下架後圖片失效），有設定 ANTHROPIC_API_KEY 的話
  * 再呼叫 Claude 把原文標題/描述潤飾翻譯成繁體中文小賣家口吻。
+ *
+ * uploadPhoto / deletePhoto: 後台手動上傳、刪除商品照片。
  *
  * 匯入結果一律先寫成 status:"draft"，需要後台人工核對後才會發布 (published)，
  * 沿用本專案 myproperty 後台「未審核 / 已審核」的人工複核習慣。
@@ -14,10 +16,15 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
-const { randomUUID } = require("crypto");
 const cheerio = require("cheerio");
 
 initializeApp();
+
+// 商品照片存放的 Cloud Storage bucket。
+// 這個專案沒有開通 Firebase Storage，所以改由函式自己建立並維護一個公開讀取的
+// bucket（首次使用時自動建立），照片一律用 https://storage.googleapis.com/... 直連。
+const PHOTO_BUCKET = "christykalvin-shop-photos";
+const PHOTO_BUCKET_LOCATION = "ASIA-NORTHEAST1";
 
 // AI 潤飾用的 Anthropic API Key：從執行環境讀取。
 // 尚未設定時，匯入功能照常運作，只是不做中文翻譯潤飾（匯入原文草稿讓人工補）。
@@ -32,7 +39,44 @@ function db() {
 }
 
 function bucket() {
-  return getStorage().bucket();
+  return getStorage().bucket(PHOTO_BUCKET);
+}
+
+/**
+ * 確保照片 bucket 存在且可公開讀取（冪等，重複呼叫安全）。
+ * 第一次呼叫時建立 bucket 並授予 allUsers 讀取權限，之後直接沿用。
+ */
+let bucketReady = false;
+async function ensurePhotoBucket() {
+  if (bucketReady) return { created: false, warning: "" };
+  const b = bucket();
+  const [exists] = await b.exists();
+  if (exists) {
+    bucketReady = true;
+    return { created: false, warning: "" };
+  }
+  await getStorage().createBucket(PHOTO_BUCKET, {
+    location: PHOTO_BUCKET_LOCATION,
+    iamConfiguration: { uniformBucketLevelAccess: { enabled: true } },
+  });
+  let warning = "";
+  try {
+    const [policy] = await b.iam.getPolicy({ requestedPolicyVersion: 3 });
+    policy.bindings = policy.bindings || [];
+    policy.bindings.push({ role: "roles/storage.objectViewer", members: ["allUsers"] });
+    await b.iam.setPolicy(policy);
+  } catch (err) {
+    warning = `照片 bucket 已建立，但設定公開讀取失敗（照片可能無法在前台顯示）：${err.message}`;
+  }
+  bucketReady = true;
+  return { created: true, warning };
+}
+
+function photoPublicUrl(filePath) {
+  return `https://storage.googleapis.com/${PHOTO_BUCKET}/${filePath
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
 }
 
 async function fetchSourceHtml(url) {
@@ -115,15 +159,8 @@ async function downloadImagesToStorage(productId, imageUrls) {
       const contentType = res.headers.get("content-type") || "image/jpeg";
       const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
       const filePath = `products/${productId}/${i}.${ext}`;
-      const token = randomUUID();
-      const file = b.file(filePath);
-      await file.save(buf, {
-        metadata: { contentType, metadata: { firebaseStorageDownloadTokens: token } },
-      });
-      const encodedPath = encodeURIComponent(filePath);
-      uploaded.push(
-        `https://firebasestorage.googleapis.com/v0/b/${b.name}/o/${encodedPath}?alt=media&token=${token}`
-      );
+      await b.file(filePath).save(buf, { metadata: { contentType } });
+      uploaded.push(photoPublicUrl(filePath));
     } catch (_) {
       // 單張圖失敗不影響其他圖片，略過即可
     }
@@ -191,6 +228,14 @@ exports.importProduct = onCall(
       );
     }
 
+    let bucketWarning = "";
+    try {
+      const bucketState = await ensurePhotoBucket();
+      bucketWarning = bucketState.warning;
+    } catch (err) {
+      throw new HttpsError("internal", `照片儲存空間建立失敗：${err.message}`);
+    }
+
     const productId = db().collection("products").doc().id;
     const uploadedUrls = await downloadImagesToStorage(productId, extracted.images);
     if (uploadedUrls.length === 0) {
@@ -230,7 +275,7 @@ exports.importProduct = onCall(
       photos: uploadedUrls,
       source_url: url,
       source_site: hostname,
-      ai_notes: ai.notes || "",
+      ai_notes: [ai.notes, bucketWarning].filter(Boolean).join(" / "),
       imported_via_ai,
       status: "draft",
       sold: false,
@@ -243,5 +288,62 @@ exports.importProduct = onCall(
 
     await db().collection("products").doc(productId).set(product);
     return { id: productId, ...product };
+  }
+);
+
+/**
+ * 後台手動上傳商品照片。
+ * 因為本專案不使用 Firebase Storage，照片改由前端送 base64 到這裡，
+ * 由函式寫進公開 bucket 後回傳可直接顯示的網址。
+ */
+exports.uploadPhoto = onCall(
+  { region: "asia-east1", timeoutSeconds: 120, memory: "512MiB" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "請先登入後台");
+    const { productId, filename, contentType, dataBase64 } = request.data || {};
+    if (!productId || !dataBase64) {
+      throw new HttpsError("invalid-argument", "缺少 productId 或照片內容");
+    }
+    const buf = Buffer.from(dataBase64, "base64");
+    if (buf.length > 10 * 1024 * 1024) {
+      throw new HttpsError("invalid-argument", "單張照片請小於 10MB");
+    }
+
+    let warning = "";
+    try {
+      warning = (await ensurePhotoBucket()).warning;
+    } catch (err) {
+      throw new HttpsError("internal", `照片儲存空間建立失敗：${err.message}`);
+    }
+
+    const type = contentType || "image/jpeg";
+    const ext = type.includes("png") ? "png" : type.includes("webp") ? "webp" : "jpg";
+    const safeName = String(filename || "photo").replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 40);
+    const filePath = `products/${productId}/manual_${Date.now()}_${safeName}.${ext}`;
+    await bucket().file(filePath).save(buf, { metadata: { contentType: type } });
+
+    return { url: photoPublicUrl(filePath), warning };
+  }
+);
+
+/** 後台刪除商品照片（找不到檔案時視為已刪除，不報錯）。 */
+exports.deletePhoto = onCall(
+  { region: "asia-east1", timeoutSeconds: 60 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "請先登入後台");
+    const url = String((request.data && request.data.url) || "");
+    const prefix = `https://storage.googleapis.com/${PHOTO_BUCKET}/`;
+    if (!url.startsWith(prefix)) return { deleted: false };
+    const filePath = url
+      .slice(prefix.length)
+      .split("/")
+      .map(decodeURIComponent)
+      .join("/");
+    try {
+      await bucket().file(filePath).delete();
+      return { deleted: true };
+    } catch (_) {
+      return { deleted: false };
+    }
   }
 );

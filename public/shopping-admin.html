@@ -164,9 +164,6 @@ import {
   getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
-import {
   getFunctions, httpsCallable
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 
@@ -182,9 +179,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 const functions = getFunctions(app, "asia-east1");
 const importProductFn = httpsCallable(functions, "importProduct");
+const uploadPhotoFn = httpsCallable(functions, "uploadPhoto");
+const deletePhotoFn = httpsCallable(functions, "deletePhoto");
 
 const loginScreen = document.getElementById("loginScreen");
 const appEl = document.getElementById("app");
@@ -408,6 +406,15 @@ async function removeRow(id, title){
   }
 }
 
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(new Error("讀取檔案失敗"));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function addPhotos(id){
   const input = document.createElement("input");
   input.type = "file";
@@ -415,17 +422,17 @@ async function addPhotos(id){
   input.multiple = true;
   input.onchange = async () => {
     const p = allProducts.find(x => x.id === id);
-    const existing = (p && p.photos) || [];
-    const urls = [...existing];
+    const urls = [...((p && p.photos) || [])];
     for (const file of input.files) {
       try {
-        const path = `products/${id}/manual_${Date.now()}_${file.name}`;
-        const r = ref(storage, path);
-        await uploadBytes(r, file);
-        const url = await getDownloadURL(r);
-        urls.push(url);
+        const dataBase64 = await fileToBase64(file);
+        const res = await uploadPhotoFn({
+          productId: id, filename: file.name, contentType: file.type, dataBase64
+        });
+        urls.push(res.data.url);
+        if (res.data.warning) alert(res.data.warning);
       } catch (err) {
-        alert("照片上傳失敗：" + err.message);
+        alert(`照片「${file.name}」上傳失敗：` + (err.message || err));
       }
     }
     await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
@@ -440,7 +447,7 @@ async function removePhoto(id, idx){
   const [removed] = urls.splice(idx, 1);
   await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
   if (removed) {
-    try { await deleteObject(ref(storage, removed)); } catch (_) { /* 忽略刪檔失敗，不影響資料庫更新 */ }
+    try { await deletePhotoFn({ url: removed }); } catch (_) { /* 忽略刪檔失敗，不影響資料庫更新 */ }
   }
 }
 
