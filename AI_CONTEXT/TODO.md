@@ -21,22 +21,21 @@
 - [x] Artifact Registry 清理政策（保留 1 天，避免容器映像堆積產生費用）
 - [x] 解析器測試 `functions/extract.test.js`（12 項，`cd functions && node extract.test.js`）
 - [x] 預覽站台：`https://christykalvin--shop-preview-0sb0v618.web.app`（2026-10-06 到期）
+- [x] **正式網址上線**（2026-09-06）：`firebase deploy --only hosting --project voiceout-asia` 已執行成功，
+      `christykalvin.com/shopping.html`、`christykalvin.com/shopping-admin.html` 生效，
+      未覆蓋既有頁面（myproperty、forex、calculator 等內容不變）。
+- [x] **AI 翻譯潤飾**（2026-09-06）：改用 Gemini（原規劃的 Anthropic 因 Secret Manager 未開通而放棄），
+      `importProduct` 讀 `functions/.env` 的 `GEMINI_API_KEY`（未 commit 進 git），
+      模型 `gemini-3.6-flash`，同時產出中文與英文標題/描述，後台已加上「標題(英文)」「描述(英文)」編輯欄位。
+      實測 bug 修好：`getStorage(...).createBucket is not a function` → 改用 `@google-cloud/storage` 客戶端直接建立 bucket。
+- [x] **後台登入密碼**：已由使用者收信重設完成，可正常登入。
+- [x] **端對端實測**：使用者實際貼 Takashimaya 連結匯入成功，商品照片正常顯示在前台。
 
 ### 待辦
-- [ ] **正式網址上線**：`christykalvin.com` 目前由 `voiceout-asia` 專案的 `christykalvin-web` 站台服務。
-      在專案根目錄執行 `firebase deploy --only hosting --project voiceout-asia` 即可讓
-      `christykalvin.com/shopping.html` 生效。（Claude 於雲端 session 執行此指令會被安全機制擋下，
-      因為該專案同時服務多個品牌網站；`christykalvin` 專案的部署則不受限。）
-      **注意：不可覆蓋 `christykalvin.web.app` 現有的 live 內容（使用者明確要求保留）。**
-- [ ] **AI 翻譯潤飾**：`importProduct` 會讀環境變數 `ANTHROPIC_API_KEY`，目前未設定，
-      所以匯入的是日文原文草稿。設定方式擇一：
-      - `firebase functions:secrets:set ANTHROPIC_API_KEY --project christykalvin`，
-        然後在 `functions/index.js` 的 `importProduct` options 加回 `secrets: ["ANTHROPIC_API_KEY"]` 並重新部署
-      - 或在 `functions/.env` 放 `ANTHROPIC_API_KEY=...`（注意：切勿 commit 進 git）
-- [ ] **後台登入密碼**：`kalvin.ckw@outlook.jp` 帳號已存在於 `christykalvin` 專案，
-      但密碼未知；已寄出重設密碼信，收信設定新密碼即可登入後台。
 - [ ] 之後若要擴充「真正線上購物車 + 金流付款」，目前是刻意先做「WhatsApp 詢問下單」的輕量版本，
       待確認需求後再評估 Stripe/PayPal 等金流串接
+- [ ] `functions/.env` 只存在於這次部署的雲端 session 本機，換一台機器/session 操作前，
+      要重新設定 `GEMINI_API_KEY`（同一組 key，找使用者要）才能重新部署 functions
 
 ## CK Holdings 集團雲端基礎設施與網域生命週期維護 (Domain & Cloud Lifecycle TODO)
 - [x] 2026-08-29: 完成 CK Holdings Master Firebase 專案一號通 (One-Auth) 授權網域配置 (`voiceout.asia`, `sougu.online`, `christykalvin.com`)。
