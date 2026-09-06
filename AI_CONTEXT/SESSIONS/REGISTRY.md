@@ -124,3 +124,18 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Reserved Files**: None
 
 ----------------------------------------
+
+### 11. Claude (Web, Cloud)
+- **AI**: Claude (Claude Code)
+- **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
+- **Machine**: 雲端 Linux 容器（非本機）
+- **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
+- **State**: Standby / Synchronized
+- **Heartbeat**: 2026-09-06
+- **Current Objective**: ChristyKalvin Select 轉賣商城已部署，待正式上線與端對端實測。
+- **Reserved Files**: None
+- **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
+  被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`
+  等高風險指令會被安全機制擋下。詳見該身分的 session 檔開頭。
+
+----------------------------------------
