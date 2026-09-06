@@ -16,7 +16,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
-const cheerio = require("cheerio");
+const { extractFromHtml } = require("./extract");
 
 initializeApp();
 
@@ -90,64 +90,6 @@ async function fetchSourceHtml(url) {
   return res.text();
 }
 
-function extractFromHtml(html) {
-  const $ = cheerio.load(html);
-  const og = (prop) =>
-    $(`meta[property="og:${prop}"]`).attr("content") ||
-    $(`meta[name="og:${prop}"]`).attr("content") ||
-    "";
-
-  let title = og("title") || $("title").first().text().trim();
-  let description = og("description") || $('meta[name="description"]').attr("content") || "";
-
-  let images = [];
-  $('meta[property="og:image"], meta[property="og:image:secure_url"]').each((_, el) => {
-    const c = $(el).attr("content");
-    if (c) images.push(c);
-  });
-
-  let priceRaw = null;
-  let currency = "JPY";
-
-  $('script[type="application/ld+json"]').each((_, el) => {
-    let parsed;
-    try {
-      parsed = JSON.parse($(el).contents().text());
-    } catch (_) {
-      return;
-    }
-    const nodes = Array.isArray(parsed) ? parsed : parsed["@graph"] || [parsed];
-    for (const node of nodes) {
-      if (!node) continue;
-      const type = node["@type"];
-      const isProduct = type === "Product" || (Array.isArray(type) && type.includes("Product"));
-      if (!isProduct) continue;
-      if (!title && node.name) title = node.name;
-      if (!description && node.description) description = node.description;
-      if (node.image) {
-        const imgs = Array.isArray(node.image) ? node.image : [node.image];
-        images.push(...imgs.filter((x) => typeof x === "string"));
-      }
-      const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
-      if (offer) {
-        if (offer.price) priceRaw = offer.price;
-        if (offer.priceCurrency) currency = offer.priceCurrency;
-      }
-    }
-  });
-
-  if (!priceRaw) {
-    const bodyText = $("body").text();
-    const m = bodyText.match(/[¥￥]\s?([\d,]{2,10})/);
-    if (m) priceRaw = m[1].replace(/,/g, "");
-  }
-
-  images = [...new Set(images)].slice(0, 8);
-  const price = priceRaw ? Math.round(Number(String(priceRaw).replace(/,/g, ""))) : null;
-
-  return { title: title || "", description: description || "", images, price, currency };
-}
-
 async function downloadImagesToStorage(productId, imageUrls) {
   const b = bucket();
   const uploaded = [];
@@ -155,8 +97,11 @@ async function downloadImagesToStorage(productId, imageUrls) {
     try {
       const res = await fetch(imageUrls[i], { headers: { "User-Agent": BROWSER_UA } });
       if (!res.ok) continue;
-      const buf = Buffer.from(await res.arrayBuffer());
       const contentType = res.headers.get("content-type") || "image/jpeg";
+      if (!contentType.startsWith("image/")) continue;
+      const buf = Buffer.from(await res.arrayBuffer());
+      // 小於 3KB 多半是追蹤像素或佔位圖，不收
+      if (buf.length < 3072) continue;
       const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
       const filePath = `products/${productId}/${i}.${ext}`;
       await b.file(filePath).save(buf, { metadata: { contentType } });
@@ -220,7 +165,7 @@ exports.importProduct = onCall(
       throw new HttpsError("unavailable", `抓取來源網頁失敗：${err.message}`);
     }
 
-    const extracted = extractFromHtml(html);
+    const extracted = extractFromHtml(html, url);
     if (extracted.images.length === 0) {
       throw new HttpsError(
         "not-found",

@@ -11,18 +11,32 @@
 ## P2: Backlog & Enhancements
 - [ ] Performance optimizations and styling polish.
 
-## ChristyKalvin Select 轉賣商城 (shopping.html) 待辦事項
-- [x] 2026-09-06: 建立前台 `public/shopping.html`、後台 `public/shopping-admin.html`、Cloud Function `functions/importProduct`、`firestore.rules`、`storage.rules`，並更新 `firebase.json`。
-- [ ] **【必須手動執行 - 需要擁有者 Firebase 帳號權限】** 部署到雲端：
-  - `firebase login`（如尚未登入）→ `firebase use voiceout-asia`
-  - `firebase deploy --only firestore:rules,storage:rules,functions,hosting:christykalvin-web`
-  - functions 需要先跑 `cd functions && npm install`
-- [ ] **【必須手動執行 - 需要真人 API 金鑰】** 設定 AI 潤飾用的 Anthropic API Key：
-  - `firebase functions:secrets:set ANTHROPIC_API_KEY`（貼上 Christy 的 Anthropic Console API Key）
-  - 沒有設定的話，「貼連結匯入」功能還是能運作，只是不會自動翻譯成中文，會匯入日文原文草稿讓人工補翻譯
-- [ ] 到 Firebase Console → Authentication 確認/新增管理員登入帳號（跟 `myproperty/admin.html` 共用同一組 Firebase Auth 使用者即可，不需要另外註冊）
-- [ ] 第一次上架商品後，Firestore 若跳出「需要建立複合索引 (composite index)」的錯誤連結，直接點擊該連結建立索引即可（`products` collection 的 `status == published` 查詢）
-- [ ] 之後若要擴充「真正線上購物車 + 金流付款」，目前是刻意先做「WhatsApp 詢問下單」的輕量版本，待確認需求後再評估 Stripe/PayPal 等金流串接
+## ChristyKalvin Select 轉賣商城 (shopping.html)
+
+### 已完成並實際部署（2026-09-06）
+- [x] 前台 `public/shopping.html`、後台 `public/shopping-admin.html`
+- [x] Cloud Functions（`christykalvin` 專案 / asia-east1）：`importProduct`、`uploadPhoto`、`deletePhoto`
+- [x] `firestore.rules` 已部署到 `christykalvin` 專案的 `(default)` 資料庫
+- [x] 商品照片改用函式自建的公開 bucket `christykalvin-shop-photos`（首次上傳時自動建立）
+- [x] Artifact Registry 清理政策（保留 1 天，避免容器映像堆積產生費用）
+- [x] 解析器測試 `functions/extract.test.js`（12 項，`cd functions && node extract.test.js`）
+- [x] 預覽站台：`https://christykalvin--shop-preview-0sb0v618.web.app`（2026-10-06 到期）
+
+### 待辦
+- [ ] **正式網址上線**：`christykalvin.com` 目前由 `voiceout-asia` 專案的 `christykalvin-web` 站台服務。
+      在專案根目錄執行 `firebase deploy --only hosting --project voiceout-asia` 即可讓
+      `christykalvin.com/shopping.html` 生效。（Claude 於雲端 session 執行此指令會被安全機制擋下，
+      因為該專案同時服務多個品牌網站；`christykalvin` 專案的部署則不受限。）
+      **注意：不可覆蓋 `christykalvin.web.app` 現有的 live 內容（使用者明確要求保留）。**
+- [ ] **AI 翻譯潤飾**：`importProduct` 會讀環境變數 `ANTHROPIC_API_KEY`，目前未設定，
+      所以匯入的是日文原文草稿。設定方式擇一：
+      - `firebase functions:secrets:set ANTHROPIC_API_KEY --project christykalvin`，
+        然後在 `functions/index.js` 的 `importProduct` options 加回 `secrets: ["ANTHROPIC_API_KEY"]` 並重新部署
+      - 或在 `functions/.env` 放 `ANTHROPIC_API_KEY=...`（注意：切勿 commit 進 git）
+- [ ] **後台登入密碼**：`kalvin.ckw@outlook.jp` 帳號已存在於 `christykalvin` 專案，
+      但密碼未知；已寄出重設密碼信，收信設定新密碼即可登入後台。
+- [ ] 之後若要擴充「真正線上購物車 + 金流付款」，目前是刻意先做「WhatsApp 詢問下單」的輕量版本，
+      待確認需求後再評估 Stripe/PayPal 等金流串接
 
 ## CK Holdings 集團雲端基礎設施與網域生命週期維護 (Domain & Cloud Lifecycle TODO)
 - [x] 2026-08-29: 完成 CK Holdings Master Firebase 專案一號通 (One-Auth) 授權網域配置 (`voiceout.asia`, `sougu.online`, `christykalvin.com`)。

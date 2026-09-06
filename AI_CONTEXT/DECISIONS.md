@@ -89,8 +89,14 @@ This document records permanent architectural, design, and policy decisions appr
 - **Date**: 2026-09-06
 - **Context**: Christy 需要一個類似 BASE/Mercari 風格的日本代購轉賣網站，網址為 `christykalvin.com/shopping.html`，並且要能「貼上原始商品連結，自動把照片/標題/描述匯入」，減少手動上架的重複工作。
 - **Rule**:
-  1. **沿用既有 Firebase 基礎設施**：Hosting target `christykalvin-web`、Firestore 資料庫 `christykalvin-db`（collection: `products`）、Firebase Auth 與 `myproperty/admin.html` 共用同一組登入帳號，不另外開一套系統。
+  1. **後端獨立於 `christykalvin` 專案（2026-09-06 使用者決定，取代原本共用 `voiceout-asia` 的規劃）**：
+     商城的 Firestore（`(default)` 資料庫，collection: `products`）、Cloud Functions（asia-east1）、
+     Auth 皆位於 Firebase 專案 `christykalvin`（專案編號 488782388942），理由是此站只有 Christy 一位
+     管理員、沒有一般會員，不需要納入集團一號通（One Auth）。
+     靜態網頁（`public/`）仍由 `voiceout-asia` 專案的 `christykalvin-web` 站台服務 `christykalvin.com`，
+     形成「Hosting 在 A 專案、資料在 B 專案」的跨專案架構（前端 SDK 指向 `christykalvin` 的設定即可）。
   2. **前台/後台分離**：`public/shopping.html` 為公開瀏覽/搜尋/詢問頁面（唯讀，只顯示 `status == "published"` 商品）；`public/shopping-admin.html` 為登入後台，負責商品 CRUD、照片上傳、上下架與售出狀態管理。
   3. **購買流程 = WhatsApp 詢問下單**：不做金流/購物車，商品詳情頁的 CTA 一律導去 WhatsApp（沿用 `myproperty` 既有的平台 WhatsApp 號碼 `601128874818`），待需求明確後再評估是否升級成真正線上金流結帳。
-  4. **貼連結自動匯入 = Cloud Function + AI 輔助，人工複核後才發布**：`functions/importProduct`（Firebase Functions v2, callable, region `asia-east1`）伺服器端抓取來源網頁（主要目標為 Takashimaya Online，其餘網店以通用 og:meta / JSON-LD 解析器為主）、下載照片重新上傳到自己的 Firebase Storage（避免原網站下架後圖裂），若有設定 `ANTHROPIC_API_KEY` secret 則呼叫 Claude 把日文標題/描述翻譯潤飾成繁體中文。匯入結果一律先寫成 `status:"draft"`，需要後台人工核對才能改成 `published`，不做全自動免審發布。
+  4. **貼連結自動匯入 = Cloud Function + AI 輔助，人工複核後才發布**：`functions/importProduct`（Firebase Functions v2, callable, region `asia-east1`）伺服器端抓取來源網頁（主要目標為 Takashimaya Online，其餘網店以通用 og:meta / JSON-LD 解析器為主）、下載照片重新上傳到自己的 bucket（避免原網站下架後圖裂），若有設定 `ANTHROPIC_API_KEY` 則呼叫 Claude 把日文標題/描述翻譯潤飾成繁體中文。匯入結果一律先寫成 `status:"draft"`，需要後台人工核對才能改成 `published`，不做全自動免審發布。
+  6. **照片儲存不使用 Firebase Storage**：`christykalvin` 專案未開通 Firebase Storage，且該開通動作只能在 Firebase Console 手動點選、CLI 無對應指令。因此改由 Cloud Function 以自身服務帳號建立並維護一個公開讀取的 Cloud Storage bucket `christykalvin-shop-photos`（`ensurePhotoBucket()`，首次使用時自動建立，冪等）。後台手動上傳照片改走 `uploadPhoto` callable（前端送 base64），刪除走 `deletePhoto`，前台以 `https://storage.googleapis.com/christykalvin-shop-photos/...` 直接顯示。前端不再引用 Firebase Storage SDK。
   5. **貨幣顯示**：前台以日圓 (JPY) 為主要顯示貨幣，另外依訪客 IP 地區（沿用 `ck-telemetry.js` 已使用的 `freeipapi.com`）換算對應在地貨幣顯示在括號內作參考，僅供估算，不做即時金流換匯結帳。
