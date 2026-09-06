@@ -398,7 +398,7 @@ async function toggleSold(id, sold){
 }
 
 async function removeRow(id, title){
-  if (!confirm(`確定要永久刪除「${title || "(未命名商品)"}」嗎？此動作無法復原（照片檔案不會自動清除，如需要請手動到 Firebase Storage 清理）。`)) return;
+  if (!confirm(`確定要永久刪除「${title || "(未命名商品)"}」嗎？此動作無法復原（雲端上的照片檔案不會一併清除）。`)) return;
   try {
     await deleteDoc(doc(db, "products", id));
   } catch (err) {
