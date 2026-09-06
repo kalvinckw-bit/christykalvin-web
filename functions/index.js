@@ -11,7 +11,6 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
@@ -20,13 +19,16 @@ const cheerio = require("cheerio");
 
 initializeApp();
 
-const DB_ID = "christykalvin-db";
-const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+// AI 潤飾用的 Anthropic API Key：從執行環境讀取。
+// 尚未設定時，匯入功能照常運作，只是不做中文翻譯潤飾（匯入原文草稿讓人工補）。
+// 設定方式（需要 Secret Manager API 已開通）：
+//   firebase functions:secrets:set ANTHROPIC_API_KEY --project christykalvin
+// 設定完成後，把下方 onCall 的 options 加上 secrets: ["ANTHROPIC_API_KEY"] 再重新部署即可。
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 function db() {
-  return getFirestore(DB_ID);
+  return getFirestore();
 }
 
 function bucket() {
@@ -164,7 +166,7 @@ async function refineWithClaude(apiKey, title, description) {
 }
 
 exports.importProduct = onCall(
-  { secrets: [ANTHROPIC_API_KEY], region: "asia-east1", timeoutSeconds: 120, memory: "512MiB" },
+  { region: "asia-east1", timeoutSeconds: 120, memory: "512MiB" },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "請先登入後台再匯入商品");
@@ -197,12 +199,7 @@ exports.importProduct = onCall(
 
     let ai = { title_zh: "", description_zh: "", category: "", condition: "", notes: "" };
     let imported_via_ai = false;
-    let apiKey = "";
-    try {
-      apiKey = ANTHROPIC_API_KEY.value();
-    } catch (_) {
-      apiKey = "";
-    }
+    const apiKey = process.env.ANTHROPIC_API_KEY || "";
     if (apiKey) {
       try {
         ai = await refineWithClaude(apiKey, extracted.title, extracted.description);

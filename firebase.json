@@ -17,7 +17,7 @@
     }]
   },
   "firestore": {
-    "database": "christykalvin-db",
+    "database": "(default)",
     "rules": "firestore.rules"
   },
   "storage": {

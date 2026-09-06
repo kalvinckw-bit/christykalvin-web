@@ -171,17 +171,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
-  authDomain: "voiceout.asia",
-  projectId: "voiceout-asia",
-  storageBucket: "voiceout-asia.firebasestorage.app",
-  messagingSenderId: "103693807034",
-  appId: "1:103693807034:web:89d1b868d541957323c183"
+  apiKey: "AIzaSyBbTKwYIs3pdPKffbk4-GiQzK7P8lQpUBQ",
+  authDomain: "christykalvin.firebaseapp.com",
+  projectId: "christykalvin",
+  storageBucket: "christykalvin.firebasestorage.app",
+  messagingSenderId: "488782388942",
+  appId: "1:488782388942:web:0501238a5c77fe9feeba9f"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app, "christykalvin-db");
+const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app, "asia-east1");
 const importProductFn = httpsCallable(functions, "importProduct");
