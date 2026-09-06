@@ -114,7 +114,7 @@ async function downloadImagesToStorage(productId, imageUrls) {
   return uploaded;
 }
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 
 async function refineWithGemini(apiKey, title, description) {
   const prompt = `以下是一個日本網店商品頁面抓到的原始標題與描述，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看。請只回傳純 JSON，不要加任何說明文字：
