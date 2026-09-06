@@ -79,6 +79,13 @@
   .actions button.warn{background:var(--danger);color:#fff;border-color:var(--danger);}
   .actions button:hover{opacity:.85;}
   .savedFlash{font-size:12px;color:var(--ok);margin-left:6px;display:none;}
+  .inqRow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .inqRow.unread{border-left:4px solid var(--danger);}
+  .inqTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+  .inqProduct{font-weight:700;font-size:14px;flex:1;min-width:160px;}
+  .inqContact{font-size:13px;color:var(--petrol-d);font-weight:700;}
+  .inqMsg{font-size:13px;color:var(--text);white-space:pre-wrap;background:#FAF8F2;border-radius:6px;padding:10px;margin-bottom:8px;}
+  .inqMeta{font-size:11.5px;color:var(--muted);}
   #empty{text-align:center;color:var(--muted);padding:60px 0;}
 
   .importBox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;max-width:640px;}
@@ -114,6 +121,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="products">商品管理</button>
       <button class="tab" data-tab="import">貼連結自動匯入 <span class="badge-count" id="draftCount" style="display:none">0</span></button>
+      <button class="tab" data-tab="inquiries">買家詢問 <span class="badge-count" id="inquiryCount" style="display:none">0</span></button>
     </div>
 
     <div class="panel active" id="panel-products">
@@ -152,6 +160,11 @@
         <div class="importStatus" id="importStatus"></div>
       </div>
     </div>
+
+    <div class="panel" id="panel-inquiries">
+      <div class="grid" id="inquiryGrid"></div>
+      <div id="inquiryEmpty" style="display:none;">目前沒有買家詢問</div>
+    </div>
   </main>
 </div>
 
@@ -161,7 +174,7 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -203,7 +216,9 @@ function doLogin(){
 document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
 
 let allProducts = [];
+let allInquiries = [];
 let unsub = null;
+let unsubInquiries = null;
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -211,10 +226,12 @@ onAuthStateChanged(auth, (user) => {
     appEl.style.display = "block";
     document.getElementById("whoami").textContent = user.email;
     startListening();
+    startListeningInquiries();
   } else {
     loginScreen.style.display = "block";
     appEl.style.display = "none";
     if (unsub) unsub();
+    if (unsubInquiries) unsubInquiries();
   }
 });
 
@@ -245,6 +262,74 @@ function startListening(){
   }, (err) => {
     document.getElementById("statLine").textContent = "讀取失敗：" + err.message;
   });
+}
+
+/* ---------------- 買家詢問 ---------------- */
+function startListeningInquiries(){
+  const q = query(collection(db, "inquiries"), orderBy("created_at", "desc"), limit(200));
+  unsubInquiries = onSnapshot(q, (snap) => {
+    allInquiries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const newN = allInquiries.filter(i => i.status === "new").length;
+    const badge = document.getElementById("inquiryCount");
+    if (newN > 0) { badge.style.display = "inline"; badge.textContent = newN; }
+    else { badge.style.display = "none"; }
+    renderInquiries();
+  }, (err) => {
+    document.getElementById("inquiryEmpty").style.display = "block";
+    document.getElementById("inquiryEmpty").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+function renderInquiries(){
+  const grid = document.getElementById("inquiryGrid");
+  const empty = document.getElementById("inquiryEmpty");
+  if (allInquiries.length === 0){
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    empty.textContent = "目前沒有買家詢問";
+    return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = allInquiries.map(i => inquiryRowHTML(i)).join("");
+  allInquiries.forEach(i => {
+    const row = document.getElementById("inq_" + i.id);
+    const markBtn = row.querySelector(".btn-mark");
+    if (markBtn) markBtn.addEventListener("click", () => markInquiryRead(i.id));
+    row.querySelector(".btn-del").addEventListener("click", () => deleteInquiry(i.id));
+  });
+}
+
+function inquiryRowHTML(i){
+  const isNew = i.status === "new";
+  return `
+  <div class="inqRow${isNew ? " unread" : ""}" id="inq_${i.id}">
+    <div class="inqTop">
+      ${isNew ? `<span class="tag draft">新</span>` : ""}
+      <span class="inqProduct">${esc(i.product_title || "(商品已刪除)")}</span>
+      <span class="inqContact">📞 ${esc(i.contact)}</span>
+      <span class="meta">${i.created_at ? new Date(i.created_at).toLocaleString("zh-TW") : ""}</span>
+    </div>
+    <div class="inqMsg">${esc(i.message || "(無留言內容)")}</div>
+    <div class="inqMeta">
+      ${i.color ? `顏色：${esc(i.color)} · ` : ""}${i.price_jpy ? `¥${Number(i.price_jpy).toLocaleString()} · ` : ""}
+      ${i.product_link ? `<a href="${esc(i.product_link)}" target="_blank" rel="noopener">↗ 查看商品</a>` : ""}
+    </div>
+    <div class="actions" style="margin-top:8px;">
+      ${isNew ? `<button class="btn-mark">標記已處理</button>` : ""}
+      <button class="warn btn-del">刪除</button>
+    </div>
+  </div>`;
+}
+
+async function markInquiryRead(id){
+  try { await updateDoc(doc(db, "inquiries", id), { status: "read" }); }
+  catch (err) { alert("操作失敗：" + err.message); }
+}
+
+async function deleteInquiry(id){
+  if (!confirm("確定要刪除這則詢問嗎？")) return;
+  try { await deleteDoc(doc(db, "inquiries", id)); }
+  catch (err) { alert("刪除失敗：" + err.message); }
 }
 
 const FIELD_DEFS = [

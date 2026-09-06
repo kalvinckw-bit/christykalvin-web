@@ -32,6 +32,9 @@
     background:var(--bg);
   }
   .searchWrap input:focus{outline:2px solid var(--gold);}
+  .langToggle{display:flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;flex:none;}
+  .langBtn{padding:7px 14px;border:none;background:#fff;font-size:12px;cursor:pointer;color:var(--text);}
+  .langBtn.active{background:var(--petrol);color:#fff;font-weight:700;}
 
   main{max-width:1180px;margin:0 auto;padding:18px 20px 80px;}
 
@@ -108,6 +111,22 @@
     border-radius:10px;background:#fff;color:var(--petrol-d);font-size:13.5px;font-weight:700;cursor:pointer;margin-top:8px;
   }
   .emailBtn:hover{background:var(--bg);}
+  .inquiryForm{margin-top:10px;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;}
+  .inquiryForm label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .inquiryForm input,.inquiryForm textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;
+    margin-bottom:10px;background:#fff;box-sizing:border-box;
+  }
+  .inquiryForm textarea{min-height:80px;resize:vertical;}
+  .inquiryForm .submitBtn{
+    width:100%;padding:11px;border:none;border-radius:8px;background:var(--petrol);color:#fff;
+    font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .inquiryForm .submitBtn:hover{opacity:.9;}
+  .inquiryForm .submitBtn[disabled]{opacity:.5;cursor:not-allowed;}
+  .inquiryForm .formMsg{font-size:12.5px;margin-top:8px;min-height:16px;}
+  .inquiryForm .formMsg.err{color:var(--danger);}
+  .inquiryForm .formMsg.ok{color:var(--ok);}
   .srcLink{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:10px;cursor:pointer;text-decoration:none;}
   .srcLink:hover{text-decoration:underline;}
 
@@ -124,6 +143,10 @@
   <div class="searchWrap">
     <input id="searchBox" type="text" placeholder="搜尋商品名稱...">
   </div>
+  <div class="langToggle" id="langToggle">
+    <button class="langBtn" data-lang="zh">中文</button>
+    <button class="langBtn" data-lang="en">EN</button>
+  </div>
 </header>
 
 <main>
@@ -131,16 +154,16 @@
   <div class="toolbar2">
     <span class="count" id="countLine"></span>
     <select id="sortSelect">
-      <option value="new">最新上架</option>
-      <option value="priceAsc">價格由低到高</option>
-      <option value="priceDesc">價格由高到低</option>
+      <option value="new" id="optNew">最新上架</option>
+      <option value="priceAsc" id="optPriceAsc">價格由低到高</option>
+      <option value="priceDesc" id="optPriceDesc">價格由高到低</option>
     </select>
   </div>
   <div class="grid" id="grid"></div>
   <div id="empty" hidden>目前沒有符合條件的商品，換個分類看看吧</div>
 </main>
 
-<footer>© Christy Kalvin · 商品皆由日本直送/代購轉賣，圖片與說明僅供參考，實際商品狀況以賣家確認為準</footer>
+<footer id="footerText">© Christy Kalvin · 商品皆由日本直送/代購轉賣，圖片與說明僅供參考，實際商品狀況以賣家確認為準</footer>
 
 <div class="modalMask" id="modalMask" hidden>
   <div class="modalBox">
@@ -153,7 +176,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, query, where, onSnapshot
+  getFirestore, collection, query, where, onSnapshot, addDoc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -168,16 +191,73 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const PLATFORM_CONTACT_WA = "601128874818"; // wa.me 格式：去掉開頭0，補上國碼
-const PLATFORM_CONTACT_EMAIL = "kalvin.ckw@gmail.com";
+const PLATFORM_CONTACT_WA = "818036098818"; // +81-80-3609-8818 的 wa.me 格式：去掉開頭0，補上國碼
 
 const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","其他"];
+const CATS_EN = ["All","Bags","Shoes","Fashion","Accessories","Beauty & Care","Appliances & Electronics","Lifestyle","Other"];
+const COND_EN = {"全新":"New","近新":"Like New","二手良好":"Used - Good","二手一般":"Used - Fair","未知":"Unknown"};
+
+const STR = {
+  zh: {
+    searchPlaceholder: "搜尋商品名稱...", sortNew: "最新上架", sortPriceAsc: "價格由低到高", sortPriceDesc: "價格由高到低",
+    countSuffix: (n) => `共 ${n} 件商品`, emptyText: "目前沒有符合條件的商品，換個分類看看吧",
+    priceInquire: "價格洽詢", sold: "已售出",
+    soldNotice: "此商品已售出，若想詢問類似商品歡迎透過 WhatsApp 聯絡",
+    waBtn: "💬 透過 WhatsApp 詢問 / 下單", inquiryBtn: "📩 留言詢問 / 下單",
+    shareLink: "🔗 分享這件商品的連結", linkCopied: "✓ 連結已複製",
+    specSize: "尺寸", specWeight: "重量", specCode: "商品編號", colorLabel: "顏色",
+    inquiryGreeting: "您好，我想詢問這件商品：",
+    noTitle: "(未命名商品)", noDesc: "(賣家尚未填寫詳細說明，歡迎直接詢問)",
+    footer: "© Christy Kalvin · 商品皆由日本直送/代購轉賣，圖片與說明僅供參考，實際商品狀況以賣家確認為準",
+    formContactLabel: "您的聯絡方式（WhatsApp / Email / Line 皆可）", formContactPh: "方便我們回覆您的聯絡方式",
+    formMsgLabel: "留言內容", formSubmit: "送出詢問", formSubmitting: "送出中...",
+    formOk: "已送出！我們會盡快透過您留下的聯絡方式回覆您。", formErr: "送出失敗，請稍後再試，或改用 WhatsApp 詢問：",
+    formContactRequired: "請留下聯絡方式，我們才能回覆您",
+  },
+  en: {
+    searchPlaceholder: "Search products...", sortNew: "Newest", sortPriceAsc: "Price: Low to High", sortPriceDesc: "Price: High to Low",
+    countSuffix: (n) => `${n} item(s)`, emptyText: "No matching items, try another category",
+    priceInquire: "Price on request", sold: "Sold",
+    soldNotice: "This item is sold. Feel free to ask about similar items via WhatsApp.",
+    waBtn: "💬 Ask on WhatsApp", inquiryBtn: "📩 Send an Inquiry",
+    shareLink: "🔗 Share this item's link", linkCopied: "✓ Link copied",
+    specSize: "Size", specWeight: "Weight", specCode: "Item Code", colorLabel: "Color",
+    inquiryGreeting: "Hi, I'd like to ask about this item:",
+    noTitle: "(Untitled item)", noDesc: "(No description yet — feel free to ask)",
+    footer: "© Christy Kalvin · All items are shipped/resold directly from Japan. Photos and descriptions are for reference only — please confirm the actual condition with the seller.",
+    formContactLabel: "Your contact (WhatsApp / Email / Line, etc.)", formContactPh: "How can we reach you back?",
+    formMsgLabel: "Message", formSubmit: "Send Inquiry", formSubmitting: "Sending...",
+    formOk: "Sent! We'll get back to you via the contact info you provided.", formErr: "Failed to send, please try again later, or use WhatsApp instead:",
+    formContactRequired: "Please provide a way to contact you back",
+  },
+};
+let lang = localStorage.getItem("ck_lang") === "en" ? "en" : "zh";
+function S(){ return STR[lang]; }
+function categoryLabel(cat){
+  if (!cat) return "";
+  if (lang !== "en") return cat;
+  const idx = CATS.indexOf(cat);
+  return idx >= 0 ? CATS_EN[idx] : cat;
+}
+function conditionLabel(cond){
+  if (!cond) return "";
+  return lang === "en" ? (COND_EN[cond] || cond) : cond;
+}
+function productTitle(p){
+  if (lang === "en") return p.title_en || p.title_zh || p.title_ja || S().noTitle;
+  return p.title_zh || p.title_ja || S().noTitle;
+}
+function productDesc(p){
+  if (lang === "en") return p.description_en || p.description_zh || p.description_ja || S().noDesc;
+  return p.description_zh || p.description_ja || S().noDesc;
+}
 
 let allProducts = [];
 let activeCat = "全部";
 let fxRate = null;    // 1 JPY = fxRate * localCurrency
 let fxCode = null;    // 例如 "MYR"
 let urlParamHandled = false;
+let currentProductId = null;
 
 /* ---------------- 讀取商品（即時） ---------------- */
 const q = query(collection(db, "products"), where("status", "==", "published"));
@@ -235,17 +315,44 @@ function fxLine(jpy){
 
 /* ---------------- 分類 chips ---------------- */
 const chipRow = document.getElementById("chipRow");
-chipRow.innerHTML = CATS.map(c => `<button class="chip ${c==="全部"?"active":""}" data-cat="${c}">${c}</button>`).join("");
-chipRow.querySelectorAll(".chip").forEach(btn => {
-  btn.addEventListener("click", () => {
-    activeCat = btn.dataset.cat;
-    chipRow.querySelectorAll(".chip").forEach(b => b.classList.toggle("active", b === btn));
-    render();
+function renderChips(){
+  chipRow.innerHTML = CATS.map((c,i) =>
+    `<button class="chip ${c===activeCat?"active":""}" data-cat="${c}">${esc(categoryLabel(c) || (lang==="en"?CATS_EN[i]:c))}</button>`
+  ).join("");
+  chipRow.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeCat = btn.dataset.cat;
+      chipRow.querySelectorAll(".chip").forEach(b => b.classList.toggle("active", b === btn));
+      render();
+    });
   });
-});
+}
+renderChips();
 
 document.getElementById("searchBox").addEventListener("input", render);
 document.getElementById("sortSelect").addEventListener("change", render);
+
+/* ---------------- 中/英切換 ---------------- */
+function applyStaticStrings(){
+  document.getElementById("searchBox").placeholder = S().searchPlaceholder;
+  document.getElementById("optNew").textContent = S().sortNew;
+  document.getElementById("optPriceAsc").textContent = S().sortPriceAsc;
+  document.getElementById("optPriceDesc").textContent = S().sortPriceDesc;
+  document.getElementById("footerText").textContent = S().footer;
+  document.getElementById("empty").textContent = S().emptyText;
+  document.documentElement.lang = lang === "en" ? "en" : "zh-Hant";
+}
+function setLang(l){
+  lang = l;
+  localStorage.setItem("ck_lang", l);
+  document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("active", b.dataset.lang === l));
+  applyStaticStrings();
+  renderChips();
+  render();
+  if (currentProductId) openModal(currentProductId);
+}
+document.querySelectorAll(".langBtn").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
+setLang(lang);
 
 /* ---------------- 渲染商品列表 ---------------- */
 function esc(s){
@@ -259,7 +366,7 @@ function render(){
   let list = allProducts.filter(p => {
     if (activeCat !== "全部" && (p.category || "其他") !== activeCat) return false;
     if (search){
-      const hay = [p.title_zh, p.title_ja].filter(Boolean).join(" ").toLowerCase();
+      const hay = [p.title_zh, p.title_en, p.title_ja].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(search)) return false;
     }
     return true;
@@ -273,12 +380,13 @@ function render(){
     return (b.created_at||0) - (a.created_at||0);
   });
 
-  document.getElementById("countLine").textContent = `共 ${list.length} 件商品`;
+  document.getElementById("countLine").textContent = S().countSuffix(list.length);
   const grid = document.getElementById("grid");
   const empty = document.getElementById("empty");
 
   if (list.length === 0){
     grid.innerHTML = "";
+    empty.textContent = S().emptyText;
     empty.hidden = false;
     return;
   }
@@ -292,20 +400,20 @@ function render(){
 
 function cardHTML(p){
   const photo = (p.photos && p.photos[0]) || "";
-  const title = p.title_zh || p.title_ja || "(未命名商品)";
-  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : "價格洽詢";
+  const title = productTitle(p);
+  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : S().priceInquire;
   const fx = fxLine(p.price_jpy);
   return `
   <div class="card" data-id="${p.id}">
     <div class="thumb">
       ${photo ? `<img src="${esc(photo)}" loading="lazy" alt="${esc(title)}">` : ""}
-      ${p.category ? `<span class="badge-cat">${esc(p.category)}</span>` : ""}
-      ${p.sold ? `<div class="soldBadge">已售出</div>` : ""}
+      ${p.category ? `<span class="badge-cat">${esc(categoryLabel(p.category))}</span>` : ""}
+      ${p.sold ? `<div class="soldBadge">${esc(S().sold)}</div>` : ""}
     </div>
     <div class="body">
       <div class="title">${esc(title)}</div>
       <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
-      ${p.condition ? `<div class="cond">${esc(p.condition)}</div>` : ""}
+      ${p.condition ? `<div class="cond">${esc(conditionLabel(p.condition))}</div>` : ""}
     </div>
   </div>`;
 }
@@ -324,6 +432,7 @@ function productLink(id){
 function openModal(id){
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
+  currentProductId = id;
   selectedColor = (p.colors && p.colors[0]) || "";
 
   const photos = p.photos && p.photos.length ? p.photos : [""];
@@ -331,16 +440,16 @@ function openModal(id){
     `<img src="${esc(u)}" alt="">`
   ).join("");
 
-  const title = p.title_zh || p.title_ja || "(未命名商品)";
-  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : "價格洽詢";
+  const title = productTitle(p);
+  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : S().priceInquire;
   const fx = fxLine(p.price_jpy);
-  const desc = p.description_zh || p.description_ja || "(賣家尚未填寫詳細說明，歡迎直接詢問)";
+  const desc = productDesc(p);
   const link = productLink(p.id);
 
   const specRows = [
-    p.size ? `<div class="specRow"><b>尺寸</b>${esc(p.size)}</div>` : "",
-    p.weight ? `<div class="specRow"><b>重量</b>${esc(p.weight)}</div>` : "",
-    p.product_code ? `<div class="specRow"><b>商品編號</b>${esc(p.product_code)}</div>` : "",
+    p.size ? `<div class="specRow"><b>${esc(S().specSize)}</b>${esc(p.size)}</div>` : "",
+    p.weight ? `<div class="specRow"><b>${esc(S().specWeight)}</b>${esc(p.weight)}</div>` : "",
+    p.product_code ? `<div class="specRow"><b>${esc(S().specCode)}</b>${esc(p.product_code)}</div>` : "",
   ].filter(Boolean).join("");
   const specNotes = p.spec_notes ? `<div class="specNotes">${esc(p.spec_notes)}</div>` : "";
 
@@ -352,33 +461,80 @@ function openModal(id){
 
   document.getElementById("modalBody").innerHTML = `
     <h2>${esc(title)}</h2>
-    ${p.category ? `<span class="catTag">${esc(p.category)}</span>` : ""}
-    ${p.condition ? `<span class="condTag">${esc(p.condition)}</span>` : ""}
+    ${p.category ? `<span class="catTag">${esc(categoryLabel(p.category))}</span>` : ""}
+    ${p.condition ? `<span class="condTag">${esc(conditionLabel(p.condition))}</span>` : ""}
     <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
-    ${p.sold ? `<div class="soldNotice">此商品已售出，若想詢問類似商品歡迎透過 WhatsApp 聯絡</div>` : ""}
+    ${p.sold ? `<div class="soldNotice">${esc(S().soldNotice)}</div>` : ""}
     <div class="desc">${esc(desc)}</div>
     ${colorsHTML}
     ${specRows ? `<div class="specBox">${specRows}</div>` : ""}
     ${specNotes}
-    <button class="waBtn" id="waBtn">💬 透過 WhatsApp 詢問 / 下單</button>
-    <button class="emailBtn" id="emailBtn">✉️ 透過 Email 詢問 / 下單</button>
-    <a class="srcLink" href="${esc(link)}" id="copyLinkHint">🔗 分享這件商品的連結</a>
+    <button class="waBtn" id="waBtn">${esc(S().waBtn)}</button>
+    <button class="emailBtn" id="inquiryToggleBtn">${esc(S().inquiryBtn)}</button>
+    <div class="inquiryForm" id="inquiryForm" hidden>
+      <label for="inquiryContact">${esc(S().formContactLabel)}</label>
+      <input id="inquiryContact" type="text" placeholder="${esc(S().formContactPh)}">
+      <label for="inquiryMsg">${esc(S().formMsgLabel)}</label>
+      <textarea id="inquiryMsg"></textarea>
+      <button class="submitBtn" id="inquirySubmitBtn">${esc(S().formSubmit)}</button>
+      <div class="formMsg" id="inquiryFormMsg"></div>
+    </div>
+    <a class="srcLink" href="${esc(link)}" id="copyLinkHint">${esc(S().shareLink)}</a>
   `;
 
   function inquiryText(){
-    const colorLine = selectedColor ? `\n顏色：${selectedColor}` : "";
-    return `您好，我想詢問這件商品：\n${title}\n${price}${colorLine}\n${link}`;
+    const colorLine = selectedColor ? `\n${S().colorLabel}: ${selectedColor}` : "";
+    return `${S().inquiryGreeting}\n${title}\n${price}${colorLine}\n${link}`;
   }
 
   document.getElementById("waBtn").addEventListener("click", () => {
     const waText = encodeURIComponent(inquiryText());
     window.open(`https://wa.me/${PLATFORM_CONTACT_WA}?text=${waText}`, "_blank", "noopener");
   });
-  document.getElementById("emailBtn").addEventListener("click", () => {
-    const subject = encodeURIComponent(`商品詢問：${title}`);
-    const body = encodeURIComponent(inquiryText());
-    window.location.href = `mailto:${PLATFORM_CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+
+  const inquiryForm = document.getElementById("inquiryForm");
+  const inquiryMsg = document.getElementById("inquiryMsg");
+  document.getElementById("inquiryToggleBtn").addEventListener("click", () => {
+    inquiryForm.hidden = !inquiryForm.hidden;
+    if (!inquiryForm.hidden && !inquiryMsg.value) inquiryMsg.value = inquiryText();
   });
+  document.getElementById("inquirySubmitBtn").addEventListener("click", async () => {
+    const contact = document.getElementById("inquiryContact").value.trim();
+    const msg = inquiryMsg.value.trim();
+    const formMsgEl = document.getElementById("inquiryFormMsg");
+    if (!contact){
+      formMsgEl.className = "formMsg err";
+      formMsgEl.textContent = S().formContactRequired;
+      return;
+    }
+    const btn = document.getElementById("inquirySubmitBtn");
+    btn.disabled = true;
+    btn.textContent = S().formSubmitting;
+    try {
+      await addDoc(collection(db, "inquiries"), {
+        product_id: p.id,
+        product_title: title,
+        product_link: link,
+        price_jpy: p.price_jpy || null,
+        color: selectedColor || "",
+        contact,
+        message: msg,
+        lang,
+        status: "new",
+        created_at: Date.now(),
+      });
+      formMsgEl.className = "formMsg ok";
+      formMsgEl.textContent = S().formOk;
+      btn.textContent = S().formSubmit;
+      document.getElementById("inquiryContact").value = "";
+    } catch (err) {
+      formMsgEl.className = "formMsg err";
+      formMsgEl.textContent = S().formErr + " " + PLATFORM_CONTACT_WA;
+      btn.disabled = false;
+      btn.textContent = S().formSubmit;
+    }
+  });
+
   const colorRow = document.getElementById("colorRow");
   if (colorRow) {
     colorRow.addEventListener("click", (e) => {
@@ -396,11 +552,11 @@ function openModal(id){
       navigator.clipboard.writeText(link).then(() => {
         const hint = document.getElementById("copyLinkHint");
         const original = hint.textContent;
-        hint.textContent = "✓ 連結已複製";
+        hint.textContent = S().linkCopied;
         setTimeout(() => { hint.textContent = original; }, 1800);
-      }).catch(() => window.prompt("複製這個連結：", link));
+      }).catch(() => window.prompt("URL:", link));
     } else {
-      window.prompt("複製這個連結：", link);
+      window.prompt("URL:", link);
     }
   });
 
@@ -412,6 +568,7 @@ function openModal(id){
 function closeModal(){
   modalMask.hidden = true;
   document.body.style.overflow = "";
+  currentProductId = null;
   history.replaceState(null, "", location.pathname);
 }
 
