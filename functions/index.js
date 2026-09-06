@@ -15,10 +15,14 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
+const { Storage } = require("@google-cloud/storage");
 const { extractFromHtml } = require("./extract");
 
 initializeApp();
+
+// firebase-admin 的 storage 包裝只提供 bucket()，沒有 createBucket()，
+// 所以建立 bucket 這件事改用底層的 @google-cloud/storage 客戶端直接處理。
+const gcs = new Storage();
 
 // 商品照片存放的 Cloud Storage bucket。
 // 這個專案沒有開通 Firebase Storage，所以改由函式自己建立並維護一個公開讀取的
@@ -39,7 +43,7 @@ function db() {
 }
 
 function bucket() {
-  return getStorage().bucket(PHOTO_BUCKET);
+  return gcs.bucket(PHOTO_BUCKET);
 }
 
 /**
@@ -55,7 +59,7 @@ async function ensurePhotoBucket() {
     bucketReady = true;
     return { created: false, warning: "" };
   }
-  await getStorage().createBucket(PHOTO_BUCKET, {
+  await gcs.createBucket(PHOTO_BUCKET, {
     location: PHOTO_BUCKET_LOCATION,
     iamConfiguration: { uniformBucketLevelAccess: { enabled: true } },
   });
