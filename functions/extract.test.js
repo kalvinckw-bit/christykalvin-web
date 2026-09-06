@@ -139,6 +139,22 @@ test("沒有任何圖片時回傳空陣列（由呼叫端提示改用手動上�
   assert.strictEqual(r.price, null);
 });
 
+console.log("extractFromHtml — specText（給 AI 抽規格用）");
+test("specText 包含顏色/尺寸等規格內文", () => {
+  const html = `<html><head><meta property="og:title" content="頭皮按摩器">
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg"></head>
+    <body>
+      <script>console.log("不應該出現在 specText 裡");</script>
+      <style>.x{color:red}</style>
+      <dl><dt>色</dt><dd>チャコールブラック／さくらピンク／ミストグレー</dd></dl>
+      <dl><dt>商品番号</dt><dd>0002415762-001-1-08</dd></dl>
+    </body></html>`;
+  const r = extractFromHtml(html, "https://www.takashimaya.co.jp/shopping/product.html?p_cd=1");
+  assert.match(r.specText, /チャコールブラック／さくらピンク／ミストグレー/);
+  assert.match(r.specText, /0002415762-001-1-08/);
+  assert.doesNotMatch(r.specText, /console\.log/);
+});
+
 test("重複的圖片網址會去重", () => {
   const html = `<html><head>
     <meta property="og:image" content="https://cdn.example.jp/a.jpg">

@@ -116,9 +116,9 @@ async function downloadImagesToStorage(productId, imageUrls) {
 
 const GEMINI_MODEL = "gemini-3.6-flash";
 
-async function refineWithGemini(apiKey, title, description) {
-  const prompt = `以下是一個日本網店商品頁面抓到的原始標題與描述，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看。請只回傳純 JSON，不要加任何說明文字：
-{"title_zh":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":""}
+async function refineWithGemini(apiKey, title, description, specText) {
+  const prompt = `以下是一個日本網店商品頁面抓到的原始標題、描述、以及頁面上的規格內文，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看，並從規格內文抽出顏色/尺寸/重量等規格資訊。請只回傳純 JSON，不要加任何說明文字：
+{"title_zh":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":"","colors":[],"size":"","weight":"","spec_notes":"","product_code":""}
 
 規則：
 - title_zh：繁體中文標題，保留品牌/型號/顏色/尺寸等關鍵資訊，不超過 40 字
@@ -128,9 +128,16 @@ async function refineWithGemini(apiKey, title, description) {
 - category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、其他」中選一個最接近的
 - condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「未知」
 - notes：給賣家看的提醒，例如資訊不完整、找不到價格、尺寸不明等，沒有就填空字串
+- colors：從規格內文的「色」欄位抽出可選顏色，翻成繁體中文，陣列形式，例如日文「チャコールブラック／さくらピンク」要拆成 ["炭黑色","櫻花粉"]；規格內文沒有顏色選項就回傳空陣列 []
+- size：規格內文的「サイズ／尺寸」欄位原文照抄，找不到就填空字串
+- weight：規格內文的「重さ／重量」欄位原文照抄，找不到就填空字串
+- spec_notes：規格內文裡其他值得買家知道的規格重點（例如電源規格、附屬品），簡短列點，100字內，找不到就填空字串
+- product_code：規格內文的「商品番号」或「品番」欄位原文照抄，找不到就填空字串
 
 原始標題：${title || "(無)"}
-原始描述：${description || "(無)"}`;
+原始描述：${description || "(無)"}
+頁面規格內文（可能包含雜訊，只挑跟商品規格相關的部分）：
+${specText ? specText.slice(0, 4000) : "(無)"}`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -196,12 +203,13 @@ exports.importProduct = onCall(
     let ai = {
       title_zh: "", description_zh: "", title_en: "", description_en: "",
       category: "", condition: "", notes: "",
+      colors: [], size: "", weight: "", spec_notes: "", product_code: "",
     };
     let imported_via_ai = false;
     const apiKey = process.env.GEMINI_API_KEY || "";
     if (apiKey) {
       try {
-        ai = await refineWithGemini(apiKey, extracted.title, extracted.description);
+        ai = await refineWithGemini(apiKey, extracted.title, extracted.description, extracted.specText);
         imported_via_ai = true;
       } catch (err) {
         ai.notes = `AI 潤飾失敗（不影響原始資料匯入，可手動編輯）：${err.message}`;
@@ -223,6 +231,11 @@ exports.importProduct = onCall(
       description_zh: ai.description_zh || "",
       title_en: ai.title_en || "",
       description_en: ai.description_en || "",
+      colors: Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : [],
+      size: ai.size || "",
+      weight: ai.weight || "",
+      spec_notes: ai.spec_notes || "",
+      product_code: ai.product_code || "",
       price_jpy: extracted.currency === "JPY" ? extracted.price : null,
       price_source_currency: extracted.currency,
       price_source_value: extracted.price,

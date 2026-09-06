@@ -85,8 +85,11 @@ function extractFromHtml(html, pageUrl) {
     }
   });
 
+  // 移除 script/style 避免干擾純文字抓取（JSON-LD 已在上面解析完，這裡移除沒關係）
+  $("script, style, noscript, template").remove();
+  const bodyText = $("body").text().replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+
   if (!priceRaw) {
-    const bodyText = $("body").text();
     const m = bodyText.match(/[¥￥]\s?([\d,]{2,10})/) || bodyText.match(/([\d,]{3,10})\s?円/);
     if (m) priceRaw = m[1].replace(/,/g, "");
   }
@@ -97,12 +100,16 @@ function extractFromHtml(html, pageUrl) {
   const priceNum = priceRaw ? Number(String(priceRaw).replace(/[^\d.]/g, "")) : NaN;
   const price = Number.isFinite(priceNum) && priceNum > 0 ? Math.round(priceNum) : null;
 
+  // 給 AI 用來抽取顏色/尺寸/重量/商品編號等規格資訊的原始文字，長度限制避免 prompt 過大
+  const specText = bodyText.slice(0, 6000);
+
   return {
     title: (title || htmlTitle || "").trim(),
     description: (description || "").trim(),
     images,
     price,
     currency,
+    specText,
   };
 }
 
