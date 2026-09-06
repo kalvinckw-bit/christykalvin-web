@@ -89,13 +89,26 @@
   .modalBody .price .fx{font-size:13px;font-weight:400;color:var(--muted);margin-left:6px;}
   .modalBody .desc{font-size:13.5px;line-height:1.8;color:var(--text);white-space:pre-wrap;margin:14px 0 20px;}
   .modalBody .soldNotice{background:#F1EEE4;color:var(--sold);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;}
+  .colorRow{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 16px;}
+  .colorChip{padding:6px 14px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--text);}
+  .colorChip.active{background:var(--petrol);border-color:var(--petrol);color:#fff;font-weight:700;}
+  .specBox{background:#FAF8F3;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;}
+  .specRow{font-size:12.5px;color:var(--text);padding:3px 0;}
+  .specRow b{color:var(--muted);font-weight:700;margin-right:8px;display:inline-block;min-width:64px;}
+  .specNotes{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;white-space:pre-wrap;}
   .waBtn{
     display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;
     border-radius:10px;background:#25D366;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;
   }
   .waBtn:hover{opacity:.9;}
   .waBtn[disabled]{background:#B9B9B9;cursor:not-allowed;}
-  .srcLink{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .emailBtn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--petrol-d);font-size:13.5px;font-weight:700;cursor:pointer;margin-top:8px;
+  }
+  .emailBtn:hover{background:var(--bg);}
+  .srcLink{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:10px;cursor:pointer;text-decoration:none;}
+  .srcLink:hover{text-decoration:underline;}
 
   footer{text-align:center;font-size:11px;color:var(--muted);padding:30px 20px 40px;}
 </style>
@@ -155,6 +168,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const PLATFORM_CONTACT_WA = "601128874818"; // wa.me 格式：去掉開頭0，補上國碼
+const PLATFORM_CONTACT_EMAIL = "kalvin.ckw@gmail.com"; // TODO: 確認收詢問信的信箱是否要換成專用信箱
 
 const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","其他"];
 
@@ -162,12 +176,14 @@ let allProducts = [];
 let activeCat = "全部";
 let fxRate = null;    // 1 JPY = fxRate * localCurrency
 let fxCode = null;    // 例如 "MYR"
+let urlParamHandled = false;
 
 /* ---------------- 讀取商品（即時） ---------------- */
 const q = query(collection(db, "products"), where("status", "==", "published"));
 onSnapshot(q, (snap) => {
   allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   render();
+  if (!urlParamHandled) { urlParamHandled = true; openFromUrlParam(); }
 }, (err) => {
   document.getElementById("grid").innerHTML = "";
   document.getElementById("empty").hidden = false;
@@ -298,9 +314,16 @@ const modalMask = document.getElementById("modalMask");
 document.getElementById("closeModal").addEventListener("click", closeModal);
 modalMask.addEventListener("click", (e) => { if (e.target === modalMask) closeModal(); });
 
+let selectedColor = "";
+
+function productLink(id){
+  return `${location.origin}${location.pathname}?p=${encodeURIComponent(id)}`;
+}
+
 function openModal(id){
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
+  selectedColor = (p.colors && p.colors[0]) || "";
 
   const photos = p.photos && p.photos.length ? p.photos : [""];
   document.getElementById("modalGallery").innerHTML = photos.map(u =>
@@ -311,9 +334,20 @@ function openModal(id){
   const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : "價格洽詢";
   const fx = fxLine(p.price_jpy);
   const desc = p.description_zh || p.description_ja || "(賣家尚未填寫詳細說明，歡迎直接詢問)";
+  const link = productLink(p.id);
 
-  const waText = encodeURIComponent(`您好，我想詢問這件商品：\n${title}\n${price}\n${location.href}`);
-  const waHref = `https://wa.me/${PLATFORM_CONTACT_WA}?text=${waText}`;
+  const specRows = [
+    p.size ? `<div class="specRow"><b>尺寸</b>${esc(p.size)}</div>` : "",
+    p.weight ? `<div class="specRow"><b>重量</b>${esc(p.weight)}</div>` : "",
+    p.product_code ? `<div class="specRow"><b>商品編號</b>${esc(p.product_code)}</div>` : "",
+  ].filter(Boolean).join("");
+  const specNotes = p.spec_notes ? `<div class="specNotes">${esc(p.spec_notes)}</div>` : "";
+
+  const colorsHTML = (p.colors && p.colors.length)
+    ? `<div class="colorRow" id="colorRow">${p.colors.map(c =>
+        `<button class="colorChip${c===selectedColor?" active":""}" data-color="${esc(c)}">${esc(c)}</button>`
+      ).join("")}</div>`
+    : "";
 
   document.getElementById("modalBody").innerHTML = `
     <h2>${esc(title)}</h2>
@@ -322,19 +356,69 @@ function openModal(id){
     <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
     ${p.sold ? `<div class="soldNotice">此商品已售出，若想詢問類似商品歡迎透過 WhatsApp 聯絡</div>` : ""}
     <div class="desc">${esc(desc)}</div>
+    ${colorsHTML}
+    ${specRows ? `<div class="specBox">${specRows}</div>` : ""}
+    ${specNotes}
     <button class="waBtn" id="waBtn">💬 透過 WhatsApp 詢問 / 下單</button>
+    <button class="emailBtn" id="emailBtn">✉️ 透過 Email 詢問 / 下單</button>
+    <a class="srcLink" href="${esc(link)}" id="copyLinkHint">🔗 分享這件商品的連結</a>
   `;
+
+  function inquiryText(){
+    const colorLine = selectedColor ? `\n顏色：${selectedColor}` : "";
+    return `您好，我想詢問這件商品：\n${title}\n${price}${colorLine}\n${link}`;
+  }
+
   document.getElementById("waBtn").addEventListener("click", () => {
-    window.open(waHref, "_blank", "noopener");
+    const waText = encodeURIComponent(inquiryText());
+    window.open(`https://wa.me/${PLATFORM_CONTACT_WA}?text=${waText}`, "_blank", "noopener");
+  });
+  document.getElementById("emailBtn").addEventListener("click", () => {
+    const subject = encodeURIComponent(`商品詢問：${title}`);
+    const body = encodeURIComponent(inquiryText());
+    window.location.href = `mailto:${PLATFORM_CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  });
+  const colorRow = document.getElementById("colorRow");
+  if (colorRow) {
+    colorRow.addEventListener("click", (e) => {
+      const btn = e.target.closest(".colorChip");
+      if (!btn) return;
+      selectedColor = btn.dataset.color;
+      colorRow.querySelectorAll(".colorChip").forEach(b => b.classList.toggle("active", b === btn));
+    });
+  }
+  document.getElementById("copyLinkHint").addEventListener("click", (e) => {
+    e.preventDefault();
+    if (navigator.share) {
+      navigator.share({ title, url: link }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(() => {
+        const hint = document.getElementById("copyLinkHint");
+        const original = hint.textContent;
+        hint.textContent = "✓ 連結已複製";
+        setTimeout(() => { hint.textContent = original; }, 1800);
+      }).catch(() => window.prompt("複製這個連結：", link));
+    } else {
+      window.prompt("複製這個連結：", link);
+    }
   });
 
   modalMask.hidden = false;
   document.body.style.overflow = "hidden";
+  history.replaceState(null, "", `?p=${encodeURIComponent(id)}`);
 }
 
 function closeModal(){
   modalMask.hidden = true;
   document.body.style.overflow = "";
+  history.replaceState(null, "", location.pathname);
+}
+
+// 支援分享連結直接開啟商品詳情：?p=<商品id>
+function openFromUrlParam(){
+  const params = new URLSearchParams(location.search);
+  const pid = params.get("p");
+  if (pid && allProducts.some(x => x.id === pid)) openModal(pid);
 }
 </script>
 </body>
