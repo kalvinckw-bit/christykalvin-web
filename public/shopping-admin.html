@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christy Kalvin Select 後台管理</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%8D%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;
+    --bg:#F4F1EA; --card:#FFFFFF; --line:#DDD6C7; --text:#20302F; --muted:#6B7876;
+    --danger:#B4530A; --ok:#2E7D32; --new:#1565C0; --sold:#8A8A8A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Meiryo","Hiragino Kaku Gothic Pro","Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--petrol);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;}
+  header button{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+  header button:hover{background:rgba(255,255,255,.12);}
+
+  #loginScreen{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px;}
+  #loginScreen h2{margin-top:0;font-size:16px;}
+  #loginScreen input{width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  #loginScreen button{width:100%;padding:10px;background:var(--petrol);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:700;}
+  #loginErr{color:var(--danger);font-size:13px;min-height:18px;margin-top:6px;}
+
+  main{max-width:1200px;margin:0 auto;padding:20px 24px 60px;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tab{padding:10px 16px;background:transparent;border:none;border-bottom:2px solid transparent;font-size:14px;cursor:pointer;color:var(--muted);font-weight:700;}
+  .tab.active{color:var(--petrol);border-bottom-color:var(--petrol);}
+  .tab .badge-count{background:var(--danger);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;margin-left:6px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .toolbar select,.toolbar input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;}
+  .toolbar .stat{font-size:13px;color:var(--muted);margin-left:auto;}
+  .btnNew{background:var(--gold);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btnNew:hover{opacity:.88;}
+
+  .grid{display:flex;flex-direction:column;gap:10px;}
+  .row{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .row-head{display:flex;gap:10px;align-items:center;cursor:pointer;flex-wrap:wrap;}
+  .row-head img.thumb{width:40px;height:40px;object-fit:cover;border-radius:6px;background:#F1EEE4;flex:none;}
+  .row-head .proj{font-weight:700;font-size:15px;flex:1;min-width:160px;}
+  .tag{font-size:11px;padding:2px 8px;border-radius:10px;color:#fff;font-weight:700;}
+  .tag.draft{background:var(--new);}
+  .tag.published{background:var(--ok);}
+  .tag.hidden{background:#777;}
+  .tag.sold{background:var(--sold);}
+  .tag.incomplete{background:var(--danger);}
+  .meta{font-size:12px;color:var(--muted);}
+  .chev{transition:transform .15s;}
+  .row.open .chev{transform:rotate(90deg);}
+
+  .detail{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .row.open .detail{display:block;}
+  .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px;}
+  .field.full{grid-column:1/-1;}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .field input,.field select,.field textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;font-family:inherit;}
+  .field textarea{resize:vertical;min-height:70px;}
+
+  .photoRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .photoRow .ph{position:relative;width:76px;height:76px;border-radius:6px;overflow:hidden;background:#F1EEE4;}
+  .photoRow .ph img{width:100%;height:100%;object-fit:cover;}
+  .photoRow .ph .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;}
+  .photoRow .addPh{width:76px;height:76px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted);cursor:pointer;background:#fff;}
+
+  .raw{background:#FAF8F2;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto;margin-bottom:12px;color:var(--muted);}
+  .srcLink{margin-bottom:8px;font-size:12.5px;}
+  .srcLink a{color:var(--gold-d);text-decoration:underline;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .actions button{padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
+  .actions button.primary{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+  .actions button.warn{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .actions button:hover{opacity:.85;}
+  .savedFlash{font-size:12px;color:var(--ok);margin-left:6px;display:none;}
+  #empty{text-align:center;color:var(--muted);padding:60px 0;}
+
+  .importBox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;max-width:640px;}
+  .importBox p{font-size:13px;color:var(--muted);line-height:1.7;}
+  .importBox .row2{display:flex;gap:10px;}
+  .importBox input{flex:1;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .importBox button{background:var(--petrol);color:#fff;border:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;}
+  .importBox button:disabled{opacity:.5;cursor:not-allowed;}
+  .importStatus{margin-top:14px;font-size:13px;min-height:18px;}
+  .importStatus.err{color:var(--danger);}
+  .importStatus.ok{color:var(--ok);}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <h2>Christy Kalvin Select 後台登入</h2>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="密碼" autocomplete="current-password">
+  <button id="loginBtn">登入</button>
+  <div id="loginErr"></div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1>🛍️ Christy Kalvin Select 後台管理 <span style="font-weight:400;font-size:12px;opacity:.7">Powered by CK Holdings</span></h1>
+    <div class="user">
+      <span id="whoami"></span>
+      <button id="logoutBtn">登出</button>
+    </div>
+  </header>
+  <main>
+    <div class="tabs">
+      <button class="tab active" data-tab="products">商品管理</button>
+      <button class="tab" data-tab="import">貼連結自動匯入 <span class="badge-count" id="draftCount" style="display:none">0</span></button>
+    </div>
+
+    <div class="panel active" id="panel-products">
+      <div class="toolbar">
+        <select id="filterStatus">
+          <option value="all">全部狀態</option>
+          <option value="draft">草稿(待審核)</option>
+          <option value="published">已上架</option>
+          <option value="hidden">已隱藏</option>
+        </select>
+        <select id="filterCat">
+          <option value="all">全部分類</option>
+          <option>包包</option><option>鞋類</option><option>服飾</option><option>配件</option>
+          <option>美妝保養</option><option>家電3C</option><option>生活雜貨</option><option>其他</option>
+        </select>
+        <input id="searchBox" type="text" placeholder="搜尋商品標題...">
+        <button class="btnNew" id="btnNewProduct">+ 手動新增商品</button>
+        <span class="stat" id="statLine"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div id="empty" style="display:none;">沒有符合條件的商品</div>
+    </div>
+
+    <div class="panel" id="panel-import">
+      <div class="importBox">
+        <p>
+          貼上商品來源連結（例如 Takashimaya Online 商品頁，或其他網店的商品詳情頁），
+          系統會自動抓取照片、標題、描述、價格，重新上傳照片到自己的雲端空間，
+          並用 AI 把日文內容翻譯潤飾成繁體中文。<br>
+          匯入結果會先存成「草稿」，請務必到「商品管理」核對內容、確認價格與描述正確後再按「上架發布」。
+        </p>
+        <div class="row2">
+          <input id="importUrl" type="url" placeholder="貼上商品連結網址...">
+          <button id="importBtn">抓取</button>
+        </div>
+        <div class="importStatus" id="importStatus"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+import {
+  getFunctions, httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app, "christykalvin-db");
+const storage = getStorage(app);
+const functions = getFunctions(app, "asia-east1");
+const importProductFn = httpsCallable(functions, "importProduct");
+
+const loginScreen = document.getElementById("loginScreen");
+const appEl = document.getElementById("app");
+const loginErr = document.getElementById("loginErr");
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+function doLogin(){
+  loginErr.textContent = "";
+  const email = document.getElementById("email").value.trim();
+  const pw = document.getElementById("password").value;
+  signInWithEmailAndPassword(auth, email, pw).catch(err => {
+    loginErr.textContent = "登入失敗：" + (err.code === "auth/invalid-credential" ? "帳號或密碼錯誤" : err.message);
+  });
+}
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+let allProducts = [];
+let unsub = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.style.display = "none";
+    appEl.style.display = "block";
+    document.getElementById("whoami").textContent = user.email;
+    startListening();
+  } else {
+    loginScreen.style.display = "block";
+    appEl.style.display = "none";
+    if (unsub) unsub();
+  }
+});
+
+/* ---------------- 分頁切換 ---------------- */
+document.querySelectorAll(".tab").forEach(tabBtn => {
+  tabBtn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tabBtn.classList.add("active");
+    document.getElementById("panel-" + tabBtn.dataset.tab).classList.add("active");
+  });
+});
+
+function esc(s){
+  return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------------- 商品列表 ---------------- */
+function startListening(){
+  const q = query(collection(db, "products"), orderBy("created_at", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const draftN = allProducts.filter(p => p.status === "draft").length;
+    const badge = document.getElementById("draftCount");
+    if (draftN > 0) { badge.style.display = "inline"; badge.textContent = draftN; }
+    else { badge.style.display = "none"; }
+    render();
+  }, (err) => {
+    document.getElementById("statLine").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+const FIELD_DEFS = [
+  ["title_zh", "標題(中文)", "text", true],
+  ["title_ja", "標題(原文)", "text", false],
+  ["price_jpy", "價格 JPY", "number", true],
+  ["category", "分類", "select_cat", true],
+  ["condition", "新舊狀況", "select_cond", true],
+  ["status", "狀態", "select_status", true],
+];
+
+function render(){
+  const status = document.getElementById("filterStatus").value;
+  const cat = document.getElementById("filterCat").value;
+  const search = document.getElementById("searchBox").value.trim().toLowerCase();
+
+  let list = allProducts.filter(p => {
+    if (status !== "all" && (p.status || "draft") !== status) return false;
+    if (cat !== "all" && (p.category || "其他") !== cat) return false;
+    if (search) {
+      const hay = [p.title_zh, p.title_ja].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("statLine").textContent = `共 ${allProducts.length} 件，符合篩選 ${list.length} 件`;
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+
+  if (list.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  grid.innerHTML = list.map(p => rowHTML(p)).join("");
+
+  list.forEach(p => {
+    const rowEl = document.getElementById("row_" + p.id);
+    rowEl.querySelector(".row-head").addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      rowEl.classList.toggle("open");
+    });
+    rowEl.querySelector(".btn-save").addEventListener("click", () => saveRow(p.id));
+    rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(p.id, p.title_zh || p.title_ja));
+    const soldBtn = rowEl.querySelector(".btn-sold");
+    if (soldBtn) soldBtn.addEventListener("click", () => toggleSold(p.id, !p.sold));
+    const addPh = rowEl.querySelector(".addPh");
+    if (addPh) addPh.addEventListener("click", () => addPhotos(p.id));
+    rowEl.querySelectorAll(".ph .rm").forEach(btn => {
+      btn.addEventListener("click", () => removePhoto(p.id, Number(btn.dataset.idx)));
+    });
+  });
+}
+
+function rowHTML(p){
+  const status = p.status || "draft";
+  const tags = [`<span class="tag ${status}">${status === "draft" ? "草稿" : status === "published" ? "已上架" : "已隱藏"}</span>`];
+  if (p.sold) tags.push(`<span class="tag sold">已售出</span>`);
+  if (!p.is_complete) tags.push(`<span class="tag incomplete">⚠️ 資料不完整</span>`);
+
+  const thumb = (p.photos && p.photos[0]) || "";
+  const fieldsHTML = FIELD_DEFS.map(([key, label, type]) => {
+    if (type === "select_cat") {
+      const opts = ["包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","其他"];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(o => `<option ${p[key]===o?"selected":""}>${o}</option>`).join("")}
+      </select></div>`;
+    }
+    if (type === "select_cond") {
+      const opts = ["全新","近新","二手良好","二手一般","未知"];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(o => `<option ${p[key]===o?"selected":""}>${o}</option>`).join("")}
+      </select></div>`;
+    }
+    if (type === "select_status") {
+      const opts = [["draft","草稿"],["published","已上架"],["hidden","已隱藏"]];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(([v,l]) => `<option value="${v}" ${p[key]===v?"selected":""}>${l}</option>`).join("")}
+      </select></div>`;
+    }
+    return `<div class="field"><label>${label}</label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
+  }).join("");
+
+  const photosHTML = (p.photos||[]).map((url, idx) => `
+    <div class="ph"><img src="${esc(url)}"><button class="rm" data-idx="${idx}" title="刪除">✕</button></div>
+  `).join("");
+
+  return `
+  <div class="row" id="row_${p.id}">
+    <div class="row-head">
+      <span class="chev">▶</span>
+      ${thumb ? `<img class="thumb" src="${esc(thumb)}">` : ""}
+      <span class="proj">${esc(p.title_zh || p.title_ja) || "(未命名商品)"}</span>
+      ${tags.join("")}
+      <span class="meta">${esc(p.category)||""} · ${esc(p.source_site)||"手動新增"} · ${p.created_at ? new Date(p.created_at).toLocaleDateString("zh-TW") : ""}</span>
+    </div>
+    <div class="detail">
+      <div class="photoRow">
+        ${photosHTML}
+        <div class="addPh" title="新增照片">＋</div>
+      </div>
+      <div class="fields">
+        ${fieldsHTML}
+        <div class="field full"><label>描述(中文)</label><textarea data-key="description_zh">${esc(p.description_zh)}</textarea></div>
+        <div class="field full"><label>描述(原文)</label><textarea data-key="description_ja">${esc(p.description_ja)}</textarea></div>
+      </div>
+      ${p.source_url ? `<div class="srcLink"><a href="${esc(p.source_url)}" target="_blank" rel="noopener">↗ 查看原始商品連結</a></div>` : ""}
+      ${p.ai_notes ? `<div class="raw">AI備註：${esc(p.ai_notes)}</div>` : ""}
+      <div class="actions">
+        <button class="primary btn-save">儲存</button>
+        <button class="btn-sold">${p.sold ? "標記為未售出" : "標記為已售出"}</button>
+        <button class="warn btn-delete">永久刪除</button>
+        <span class="savedFlash">已儲存 ✓</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveRow(id){
+  const rowEl = document.getElementById("row_" + id);
+  const update = { human_edited: true, updated_at: Date.now() };
+  rowEl.querySelectorAll("[data-key]").forEach(inp => {
+    const key = inp.dataset.key;
+    let val = inp.value.trim ? inp.value.trim() : inp.value;
+    if (key === "price_jpy") {
+      update[key] = val === "" ? null : Number(val);
+    } else {
+      update[key] = val === "" ? null : val;
+    }
+  });
+  update.is_complete = !!(update.title_zh && update.price_jpy && update.description_zh);
+  try {
+    await updateDoc(doc(db, "products", id), update);
+    const flash = rowEl.querySelector(".savedFlash");
+    flash.style.display = "inline";
+    setTimeout(() => flash.style.display = "none", 2000);
+  } catch (err) {
+    alert("儲存失敗：" + err.message);
+  }
+}
+
+async function toggleSold(id, sold){
+  try {
+    await updateDoc(doc(db, "products", id), { sold, updated_at: Date.now() });
+  } catch (err) {
+    alert("操作失敗：" + err.message);
+  }
+}
+
+async function removeRow(id, title){
+  if (!confirm(`確定要永久刪除「${title || "(未命名商品)"}」嗎？此動作無法復原（照片檔案不會自動清除，如需要請手動到 Firebase Storage 清理）。`)) return;
+  try {
+    await deleteDoc(doc(db, "products", id));
+  } catch (err) {
+    alert("刪除失敗：" + err.message);
+  }
+}
+
+async function addPhotos(id){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.onchange = async () => {
+    const p = allProducts.find(x => x.id === id);
+    const existing = (p && p.photos) || [];
+    const urls = [...existing];
+    for (const file of input.files) {
+      try {
+        const path = `products/${id}/manual_${Date.now()}_${file.name}`;
+        const r = ref(storage, path);
+        await uploadBytes(r, file);
+        const url = await getDownloadURL(r);
+        urls.push(url);
+      } catch (err) {
+        alert("照片上傳失敗：" + err.message);
+      }
+    }
+    await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+  };
+  input.click();
+}
+
+async function removePhoto(id, idx){
+  const p = allProducts.find(x => x.id === id);
+  if (!p || !p.photos) return;
+  const urls = p.photos.slice();
+  const [removed] = urls.splice(idx, 1);
+  await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+  if (removed) {
+    try { await deleteObject(ref(storage, removed)); } catch (_) { /* 忽略刪檔失敗，不影響資料庫更新 */ }
+  }
+}
+
+async function createBlankProduct(){
+  const now = Date.now();
+  const blank = {
+    title_zh: "", title_ja: "", description_zh: "", description_ja: "",
+    price_jpy: null, category: "其他", condition: "未知",
+    photos: [], source_url: "", source_site: "手動新增",
+    status: "draft", sold: false, is_complete: false, human_edited: true,
+    created_at: now, updated_at: now, created_by: auth.currentUser?.email || ""
+  };
+  const newDoc = doc(collection(db, "products"));
+  await setDoc(newDoc, blank);
+  document.getElementById("filterStatus").value = "all";
+  document.getElementById("filterCat").value = "all";
+  document.getElementById("searchBox").value = "";
+  setTimeout(() => {
+    const el = document.getElementById("row_" + newDoc.id);
+    if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  }, 300);
+}
+document.getElementById("btnNewProduct").addEventListener("click", createBlankProduct);
+
+document.getElementById("filterStatus").addEventListener("change", render);
+document.getElementById("filterCat").addEventListener("change", render);
+document.getElementById("searchBox").addEventListener("input", render);
+
+/* ---------------- 貼連結自動匯入 ---------------- */
+const importBtn = document.getElementById("importBtn");
+const importStatusEl = document.getElementById("importStatus");
+
+importBtn.addEventListener("click", async () => {
+  const url = document.getElementById("importUrl").value.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    importStatusEl.className = "importStatus err";
+    importStatusEl.textContent = "請輸入有效的網址(需以 http/https 開頭)";
+    return;
+  }
+  importBtn.disabled = true;
+  importStatusEl.className = "importStatus";
+  importStatusEl.textContent = "抓取中，請稍候（含照片下載與 AI 潤飾，可能需要 10~30 秒）...";
+  try {
+    const result = await importProductFn({ url });
+    const product = result.data;
+    importStatusEl.className = "importStatus ok";
+    importStatusEl.textContent = `匯入成功！已建立草稿「${product.title_zh || product.title_ja}」，請到「商品管理」核對後再上架。`;
+    document.getElementById("importUrl").value = "";
+    document.querySelector('.tab[data-tab="products"]').click();
+    document.getElementById("filterStatus").value = "draft";
+    render();
+    setTimeout(() => {
+      const el = document.getElementById("row_" + product.id);
+      if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }, 300);
+  } catch (err) {
+    importStatusEl.className = "importStatus err";
+    importStatusEl.textContent = "匯入失敗：" + (err.message || err);
+  } finally {
+    importBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

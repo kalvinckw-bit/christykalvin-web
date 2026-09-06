@@ -15,5 +15,17 @@
         { "key": "Expires", "value": "0" }
       ]
     }]
-  }
+  },
+  "firestore": {
+    "database": "christykalvin-db",
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [{
+    "source": "functions",
+    "codebase": "default",
+    "runtime": "nodejs20"
+  }]
 }

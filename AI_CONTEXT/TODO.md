@@ -11,6 +11,19 @@
 ## P2: Backlog & Enhancements
 - [ ] Performance optimizations and styling polish.
 
+## ChristyKalvin Select 轉賣商城 (shopping.html) 待辦事項
+- [x] 2026-09-06: 建立前台 `public/shopping.html`、後台 `public/shopping-admin.html`、Cloud Function `functions/importProduct`、`firestore.rules`、`storage.rules`，並更新 `firebase.json`。
+- [ ] **【必須手動執行 - 需要擁有者 Firebase 帳號權限】** 部署到雲端：
+  - `firebase login`（如尚未登入）→ `firebase use voiceout-asia`
+  - `firebase deploy --only firestore:rules,storage:rules,functions,hosting:christykalvin-web`
+  - functions 需要先跑 `cd functions && npm install`
+- [ ] **【必須手動執行 - 需要真人 API 金鑰】** 設定 AI 潤飾用的 Anthropic API Key：
+  - `firebase functions:secrets:set ANTHROPIC_API_KEY`（貼上 Christy 的 Anthropic Console API Key）
+  - 沒有設定的話，「貼連結匯入」功能還是能運作，只是不會自動翻譯成中文，會匯入日文原文草稿讓人工補翻譯
+- [ ] 到 Firebase Console → Authentication 確認/新增管理員登入帳號（跟 `myproperty/admin.html` 共用同一組 Firebase Auth 使用者即可，不需要另外註冊）
+- [ ] 第一次上架商品後，Firestore 若跳出「需要建立複合索引 (composite index)」的錯誤連結，直接點擊該連結建立索引即可（`products` collection 的 `status == published` 查詢）
+- [ ] 之後若要擴充「真正線上購物車 + 金流付款」，目前是刻意先做「WhatsApp 詢問下單」的輕量版本，待確認需求後再評估 Stripe/PayPal 等金流串接
+
 ## CK Holdings 集團雲端基礎設施與網域生命週期維護 (Domain & Cloud Lifecycle TODO)
 - [x] 2026-08-29: 完成 CK Holdings Master Firebase 專案一號通 (One-Auth) 授權網域配置 (`voiceout.asia`, `sougu.online`, `christykalvin.com`)。
 - [x] 2026-08-29: 透過 CLI 建立專屬獨立 Firestore 資料庫實例：`sougu-db`、`christykalvin-db`、`creditcard`、`dead-man-switch`。

@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christy Kalvin Select｜日本代購轉賣選品</title>
+<meta name="description" content="Christy Kalvin 日本代購轉賣選品店，嚴選日本網店商品，WhatsApp 直接詢問下單。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%8D%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;
+    --bg:#FAF8F3; --card:#FFFFFF; --line:#E4DECE; --text:#20302F; --muted:#7A8785;
+    --danger:#B4530A; --ok:#2E7D32; --sold:#8A8A8A;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);}
+  body{font-family:"Meiryo","Hiragino Kaku Gothic Pro","MS PGothic","Segoe UI",sans-serif;}
+  a{color:inherit;}
+  img{max-width:100%;display:block;}
+
+  header.topbar{
+    position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
+    padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;}
+  .brand .mark{font-size:20px;font-weight:700;color:var(--petrol);letter-spacing:.5px;}
+  .brand .sub{font-size:11px;color:var(--muted);}
+  .searchWrap{flex:1;min-width:180px;max-width:360px;}
+  .searchWrap input{
+    width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;
+    background:var(--bg);
+  }
+  .searchWrap input:focus{outline:2px solid var(--gold);}
+
+  main{max-width:1180px;margin:0 auto;padding:18px 20px 80px;}
+
+  .chipRow{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px;-webkit-overflow-scrolling:touch;}
+  .chip{
+    flex:none;padding:7px 16px;border-radius:20px;border:1px solid var(--line);background:#fff;
+    font-size:12.5px;cursor:pointer;white-space:nowrap;color:var(--text);
+  }
+  .chip.active{background:var(--petrol);border-color:var(--petrol);color:#fff;font-weight:700;}
+
+  .toolbar2{display:flex;align-items:center;justify-content:flex-end;margin-bottom:14px;gap:8px;}
+  .toolbar2 select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:#fff;}
+  .toolbar2 .count{font-size:12px;color:var(--muted);margin-right:auto;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(14,75,79,.10);}
+  .card .thumb{position:relative;aspect-ratio:1/1;background:#F1EEE4;overflow:hidden;}
+  .card .thumb img{width:100%;height:100%;object-fit:cover;}
+  .card .thumb .soldBadge{
+    position:absolute;inset:0;background:rgba(255,255,255,.72);display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:700;color:var(--sold);letter-spacing:2px;
+  }
+  .card .badge-cat{position:absolute;left:8px;top:8px;background:rgba(14,75,79,.88);color:#fff;font-size:10.5px;padding:2px 8px;border-radius:10px;}
+  .card .body{padding:10px 11px 12px;}
+  .card .title{font-size:13px;line-height:1.4;height:2.8em;overflow:hidden;margin-bottom:6px;}
+  .card .price{font-size:15px;font-weight:700;color:var(--petrol-d);}
+  .card .price .fx{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:1px;}
+  .card .cond{font-size:11px;color:var(--gold-d);margin-top:4px;}
+
+  #empty{text-align:center;color:var(--muted);padding:70px 0;font-size:14px;}
+
+  .modalMask{
+    position:fixed;inset:0;background:rgba(20,25,24,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;
+  }
+  @media (min-width:720px){ .modalMask{align-items:center;} }
+  .modalBox{
+    background:#fff;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;
+  }
+  @media (min-width:720px){ .modalBox{border-radius:16px;} }
+  .modalBox .closeBtn{
+    position:sticky;top:0;float:right;margin:10px 10px 0 0;background:#fff;border:1px solid var(--line);
+    border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2;
+  }
+  .modalGallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;background:#F1EEE4;}
+  .modalGallery img{flex:none;width:100%;scroll-snap-align:center;aspect-ratio:1/1;object-fit:cover;}
+  .modalBody{padding:18px 20px 26px;}
+  .modalBody h2{font-size:17px;margin:0 0 8px;line-height:1.4;}
+  .modalBody .catTag{display:inline-block;font-size:11px;background:var(--petrol);color:#fff;padding:2px 9px;border-radius:10px;margin-bottom:10px;}
+  .modalBody .condTag{display:inline-block;font-size:11px;background:var(--gold);color:#fff;padding:2px 9px;border-radius:10px;margin-bottom:10px;margin-left:6px;}
+  .modalBody .price{font-size:22px;font-weight:700;color:var(--petrol-d);margin-bottom:2px;}
+  .modalBody .price .fx{font-size:13px;font-weight:400;color:var(--muted);margin-left:6px;}
+  .modalBody .desc{font-size:13.5px;line-height:1.8;color:var(--text);white-space:pre-wrap;margin:14px 0 20px;}
+  .modalBody .soldNotice{background:#F1EEE4;color:var(--sold);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;}
+  .waBtn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border:none;
+    border-radius:10px;background:#25D366;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;
+  }
+  .waBtn:hover{opacity:.9;}
+  .waBtn[disabled]{background:#B9B9B9;cursor:not-allowed;}
+  .srcLink{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:10px;}
+
+  footer{text-align:center;font-size:11px;color:var(--muted);padding:30px 20px 40px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">🛍️ Christy Kalvin Select</span>
+    <span class="sub">日本代購轉賣選品</span>
+  </div>
+  <div class="searchWrap">
+    <input id="searchBox" type="text" placeholder="搜尋商品名稱...">
+  </div>
+</header>
+
+<main>
+  <div class="chipRow" id="chipRow"></div>
+  <div class="toolbar2">
+    <span class="count" id="countLine"></span>
+    <select id="sortSelect">
+      <option value="new">最新上架</option>
+      <option value="priceAsc">價格由低到高</option>
+      <option value="priceDesc">價格由高到低</option>
+    </select>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div id="empty" hidden>目前沒有符合條件的商品，換個分類看看吧</div>
+</main>
+
+<footer>© Christy Kalvin · 商品皆由日本直送/代購轉賣，圖片與說明僅供參考，實際商品狀況以賣家確認為準</footer>
+
+<div class="modalMask" id="modalMask" hidden>
+  <div class="modalBox">
+    <button class="closeBtn" id="closeModal">✕</button>
+    <div class="modalGallery" id="modalGallery"></div>
+    <div class="modalBody" id="modalBody"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, query, where, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "christykalvin-db");
+
+const PLATFORM_CONTACT_WA = "601128874818"; // wa.me 格式：去掉開頭0，補上國碼
+
+const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","其他"];
+
+let allProducts = [];
+let activeCat = "全部";
+let fxRate = null;    // 1 JPY = fxRate * localCurrency
+let fxCode = null;    // 例如 "MYR"
+
+/* ---------------- 讀取商品（即時） ---------------- */
+const q = query(collection(db, "products"), where("status", "==", "published"));
+onSnapshot(q, (snap) => {
+  allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+}, (err) => {
+  document.getElementById("grid").innerHTML = "";
+  document.getElementById("empty").hidden = false;
+  document.getElementById("empty").textContent = "讀取商品失敗：" + err.message;
+});
+
+/* ---------------- 在地貨幣換算（依IP地區，僅供參考） ---------------- */
+const CURRENCY_BY_COUNTRY = {
+  MY:"MYR", SG:"SGD", TW:"TWD", HK:"HKD", CN:"CNY", ID:"IDR", TH:"THB",
+  US:"USD", GB:"GBP", AU:"AUD", KR:"KRW", VN:"VND", PH:"PHP"
+};
+
+async function initFx(){
+  try{
+    const cached = JSON.parse(localStorage.getItem("ck_fx_cache") || "null");
+    if (cached && Date.now() - cached.ts < 12*3600*1000){
+      fxRate = cached.rate; fxCode = cached.code;
+      render();
+      return;
+    }
+  } catch(_){}
+
+  try{
+    const geoResp = await fetch("https://freeipapi.com/api/json");
+    if (!geoResp.ok) return;
+    const geo = await geoResp.json();
+    const code = CURRENCY_BY_COUNTRY[geo.countryCode];
+    if (!code || code === "JPY") return;
+
+    const fxResp = await fetch("https://open.er-api.com/v6/latest/JPY");
+    if (!fxResp.ok) return;
+    const fx = await fxResp.json();
+    const rate = fx?.rates?.[code];
+    if (!rate) return;
+
+    fxRate = rate; fxCode = code;
+    localStorage.setItem("ck_fx_cache", JSON.stringify({ ts: Date.now(), rate, code }));
+    render();
+  } catch(_){ /* 換算僅為輔助功能，失敗就只顯示日圓 */ }
+}
+initFx();
+
+function fxLine(jpy){
+  if (!fxRate || !fxCode || !jpy) return "";
+  const val = jpy * fxRate;
+  return `≈ ${fxCode} ${val.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+}
+
+/* ---------------- 分類 chips ---------------- */
+const chipRow = document.getElementById("chipRow");
+chipRow.innerHTML = CATS.map(c => `<button class="chip ${c==="全部"?"active":""}" data-cat="${c}">${c}</button>`).join("");
+chipRow.querySelectorAll(".chip").forEach(btn => {
+  btn.addEventListener("click", () => {
+    activeCat = btn.dataset.cat;
+    chipRow.querySelectorAll(".chip").forEach(b => b.classList.toggle("active", b === btn));
+    render();
+  });
+});
+
+document.getElementById("searchBox").addEventListener("input", render);
+document.getElementById("sortSelect").addEventListener("change", render);
+
+/* ---------------- 渲染商品列表 ---------------- */
+function esc(s){
+  return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function render(){
+  const search = document.getElementById("searchBox").value.trim().toLowerCase();
+  const sort = document.getElementById("sortSelect").value;
+
+  let list = allProducts.filter(p => {
+    if (activeCat !== "全部" && (p.category || "其他") !== activeCat) return false;
+    if (search){
+      const hay = [p.title_zh, p.title_ja].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  list.sort((a,b) => {
+    if (sort === "priceAsc") return (a.price_jpy||0) - (b.price_jpy||0);
+    if (sort === "priceDesc") return (b.price_jpy||0) - (a.price_jpy||0);
+    // 售完排後面，其餘依上架時間新到舊
+    if (!!a.sold !== !!b.sold) return a.sold ? 1 : -1;
+    return (b.created_at||0) - (a.created_at||0);
+  });
+
+  document.getElementById("countLine").textContent = `共 ${list.length} 件商品`;
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+
+  if (list.length === 0){
+    grid.innerHTML = "";
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  grid.innerHTML = list.map(p => cardHTML(p)).join("");
+  grid.querySelectorAll(".card").forEach(el => {
+    el.addEventListener("click", () => openModal(el.dataset.id));
+  });
+}
+
+function cardHTML(p){
+  const photo = (p.photos && p.photos[0]) || "";
+  const title = p.title_zh || p.title_ja || "(未命名商品)";
+  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : "價格洽詢";
+  const fx = fxLine(p.price_jpy);
+  return `
+  <div class="card" data-id="${p.id}">
+    <div class="thumb">
+      ${photo ? `<img src="${esc(photo)}" loading="lazy" alt="${esc(title)}">` : ""}
+      ${p.category ? `<span class="badge-cat">${esc(p.category)}</span>` : ""}
+      ${p.sold ? `<div class="soldBadge">已售出</div>` : ""}
+    </div>
+    <div class="body">
+      <div class="title">${esc(title)}</div>
+      <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
+      ${p.condition ? `<div class="cond">${esc(p.condition)}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ---------------- 商品詳情 modal ---------------- */
+const modalMask = document.getElementById("modalMask");
+document.getElementById("closeModal").addEventListener("click", closeModal);
+modalMask.addEventListener("click", (e) => { if (e.target === modalMask) closeModal(); });
+
+function openModal(id){
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+
+  const photos = p.photos && p.photos.length ? p.photos : [""];
+  document.getElementById("modalGallery").innerHTML = photos.map(u =>
+    `<img src="${esc(u)}" alt="">`
+  ).join("");
+
+  const title = p.title_zh || p.title_ja || "(未命名商品)";
+  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : "價格洽詢";
+  const fx = fxLine(p.price_jpy);
+  const desc = p.description_zh || p.description_ja || "(賣家尚未填寫詳細說明，歡迎直接詢問)";
+
+  const waText = encodeURIComponent(`您好，我想詢問這件商品：\n${title}\n${price}\n${location.href}`);
+  const waHref = `https://wa.me/${PLATFORM_CONTACT_WA}?text=${waText}`;
+
+  document.getElementById("modalBody").innerHTML = `
+    <h2>${esc(title)}</h2>
+    ${p.category ? `<span class="catTag">${esc(p.category)}</span>` : ""}
+    ${p.condition ? `<span class="condTag">${esc(p.condition)}</span>` : ""}
+    <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
+    ${p.sold ? `<div class="soldNotice">此商品已售出，若想詢問類似商品歡迎透過 WhatsApp 聯絡</div>` : ""}
+    <div class="desc">${esc(desc)}</div>
+    <button class="waBtn" id="waBtn">💬 透過 WhatsApp 詢問 / 下單</button>
+  `;
+  document.getElementById("waBtn").addEventListener("click", () => {
+    window.open(waHref, "_blank", "noopener");
+  });
+
+  modalMask.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal(){
+  modalMask.hidden = true;
+  document.body.style.overflow = "";
+}
+</script>
+</body>
+</html>
