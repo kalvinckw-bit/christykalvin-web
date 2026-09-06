@@ -483,8 +483,12 @@ function openModal(id){
   `;
 
   function inquiryText(){
+    // 問候語+商品名稱固定中英文都附上（方便賣家/買家雙方都看得懂），
+    // 價錢跟連結不分語言，只出現一次
+    const titleZh = p.title_zh || p.title_ja || STR.zh.noTitle;
+    const titleEn = p.title_en || p.title_zh || p.title_ja || STR.en.noTitle;
     const colorLine = selectedColor ? `\n${S().colorLabel}: ${selectedColor}` : "";
-    return `${S().inquiryGreeting}\n${title}\n${price}${colorLine}\n${link}`;
+    return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}\n${price}\n${link}`;
   }
 
   document.getElementById("waBtn").addEventListener("click", () => {
