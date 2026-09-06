@@ -249,6 +249,7 @@ function startListening(){
 
 const FIELD_DEFS = [
   ["title_zh", "標題(中文)", "text", true],
+  ["title_en", "標題(英文)", "text", false],
   ["title_ja", "標題(原文)", "text", false],
   ["price_jpy", "價格 JPY", "number", true],
   ["category", "分類", "select_cat", true],
@@ -352,6 +353,7 @@ function rowHTML(p){
       <div class="fields">
         ${fieldsHTML}
         <div class="field full"><label>描述(中文)</label><textarea data-key="description_zh">${esc(p.description_zh)}</textarea></div>
+        <div class="field full"><label>描述(英文)</label><textarea data-key="description_en">${esc(p.description_en)}</textarea></div>
         <div class="field full"><label>描述(原文)</label><textarea data-key="description_ja">${esc(p.description_ja)}</textarea></div>
       </div>
       ${p.source_url ? `<div class="srcLink"><a href="${esc(p.source_url)}" target="_blank" rel="noopener">↗ 查看原始商品連結</a></div>` : ""}
@@ -454,7 +456,7 @@ async function removePhoto(id, idx){
 async function createBlankProduct(){
   const now = Date.now();
   const blank = {
-    title_zh: "", title_ja: "", description_zh: "", description_ja: "",
+    title_zh: "", title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
     price_jpy: null, category: "其他", condition: "未知",
     photos: [], source_url: "", source_site: "手動新增",
     status: "draft", sold: false, is_complete: false, human_edited: true,
