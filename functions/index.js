@@ -125,8 +125,8 @@ async function refineWithGemini(apiKey, title, description, specText) {
 - description_zh：繁體中文商品描述，語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
 - title_en：英文標題，跟 title_zh 意思一致，保留品牌/型號等專有名詞不要亂翻
 - description_en：英文商品描述，語氣自然像認真的小賣家，跟 description_zh 意思一致，100~200字
-- category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、其他」中選一個最接近的
-- condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「未知」
+- category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、吃的、其他」中選一個最接近的
+- condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「全新」（本店商品多為全新代購，除非原文明確提到二手/使用痕跡才選其他）
 - notes：給賣家看的提醒，例如資訊不完整、找不到價格、尺寸不明等，沒有就填空字串
 - colors：從規格內文的「色」欄位抽出可選顏色，翻成繁體中文，陣列形式，例如日文「チャコールブラック／さくらピンク」要拆成 ["炭黑色","櫻花粉"]；規格內文沒有顏色選項就回傳空陣列 []
 - size：規格內文的「サイズ／尺寸」欄位原文照抄，找不到就填空字串
@@ -240,7 +240,7 @@ exports.importProduct = onCall(
       price_source_currency: extracted.currency,
       price_source_value: extracted.price,
       category: ai.category || "",
-      condition: ai.condition || "未知",
+      condition: ai.condition || "全新",
       photos: uploadedUrls,
       source_url: url,
       source_site: hostname,

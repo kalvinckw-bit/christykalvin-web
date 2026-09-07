@@ -135,7 +135,7 @@
         <select id="filterCat">
           <option value="all">全部分類</option>
           <option>包包</option><option>鞋類</option><option>服飾</option><option>配件</option>
-          <option>美妝保養</option><option>家電3C</option><option>生活雜貨</option><option>其他</option>
+          <option>美妝保養</option><option>家電3C</option><option>生活雜貨</option><option>吃的</option><option>其他</option>
         </select>
         <input id="searchBox" type="text" placeholder="搜尋商品標題...">
         <button class="btnNew" id="btnNewProduct">+ 手動新增商品</button>
@@ -401,7 +401,7 @@ function rowHTML(p){
   const thumb = (p.photos && p.photos[0]) || "";
   const fieldsHTML = FIELD_DEFS.map(([key, label, type]) => {
     if (type === "select_cat") {
-      const opts = ["包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","其他"];
+      const opts = ["包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","吃的","其他"];
       return `<div class="field"><label>${label}</label><select data-key="${key}">
         ${opts.map(o => `<option ${p[key]===o?"selected":""}>${o}</option>`).join("")}
       </select></div>`;
@@ -554,9 +554,9 @@ async function createBlankProduct(){
   const blank = {
     title_zh: "", title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
     colors: [], size: "", weight: "", spec_notes: "", product_code: "",
-    price_jpy: null, category: "其他", condition: "未知",
+    price_jpy: null, category: "其他", condition: "全新",
     photos: [], source_url: "", source_site: "手動新增",
-    status: "draft", sold: false, is_complete: false, human_edited: true,
+    status: "published", sold: false, is_complete: false, human_edited: true,
     created_at: now, updated_at: now, created_by: auth.currentUser?.email || ""
   };
   const newDoc = doc(collection(db, "products"));
