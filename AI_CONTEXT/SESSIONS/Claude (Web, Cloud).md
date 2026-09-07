@@ -113,3 +113,39 @@
 - Functions region：`asia-east1`
 - 靜態網頁仍由 `voiceout-asia` 專案的 `christykalvin-web` 站台服務 `christykalvin.com`
 - Google Drive 專案備份：Projects / ChristyKalvin Select 轉賣商城
+
+---
+
+## Session 2026-09-07 — Claude (Web, Cloud)
+
+### Done（已驗證完成）
+- **WhatsApp 號碼**改為 `+81-80-3609-8818`；詢問訊息（WhatsApp／站內表單）固定中英雙語問候語＋商品名稱，價格與連結只出現一次
+- **站內留言詢問表單**取代 Email 流程 → Firestore `inquiries`，後台新增「買家詢問」分頁
+- **前台中英文切換**（localStorage 記憶）
+- **商品規格欄位**（顏色／尺寸／重量／商品編號／規格備註）＋ Gemini 從頁面規格內文抽取
+- **彈窗 bug 修復**：`.modalMask{display:flex}` 與 UA 預設 `[hidden]{display:none}` 同權重相撞 → 加 `.modalMask[hidden]{display:none;}`
+- **分類新增「吃的」**；新舊狀況預設「全新」；後台手動新增商品預設「已上架」
+- **品牌名不硬翻中文**（PRESS BUTTER SAND 這類專有名詞保留原文），`title_en` 絕不留空
+- **GitHub Actions 自動部署上線**：`.github/workflows/deploy-shopping.yml`，憑證存在 repo secret `FIREBASE_TOKEN`
+- **Google Drive 備份資料夾**改名為「日本代購 CK Japan Product」並搬到 `ChristyKalvinWeb` 底下；本機 OneDrive 由 Antigravity 同步完成
+
+### 這次最重要的發現：正式站為什麼一直是舊版
+`firebase deploy` 把 hosting 和 functions 寫在同一個指令時，**hosting 的 release 是在整包 deploy 的最後才執行**。
+functions 那邊只要報錯（先是「其他站台 functions 會被刪除」的確認提示，後是 artifact cleanup policy），
+指令就 exit 1 → hosting 檔案已上傳但**從未 release** → 線上內容卡在舊版本（當時停在 2026-09-06 14:16）。
+使用者連續回報「還是沒有吃的」，程式碼其實一直是對的。
+
+**修正**：hosting 拆成獨立 step 且排第一、加 `--force`；functions 另一個 step 也加 `--force`。
+另外加了「部署後直接 curl 正式站 grep 關鍵字，還是舊版就讓 CI 失敗」的驗證關卡。
+已驗證：`christykalvin.com/shopping-admin.html` 回傳 `last-modified: Mon, 07 Sep 2026 14:50:38 GMT`，內容含「吃的」。
+
+### ⚠️ 給下一位 AI 的地雷提醒
+- **`voiceout-asia` 是共用專案**，裡面有其他站台的 functions（`emailAdminNotification`、`generatePostTitles`、`parseStatement`…）。
+  **永遠不可以用 `--only functions`**，只能指名 `--only functions:importProduct,functions:uploadPhoto,functions:deletePhoto`。
+- **不要再靠雲端 session 的 `FIREBASE_TOKEN` 手動部署**，容器一重啟就沒了。直接 push 到 branch 讓 GitHub Actions 部署。
+- **Claude 雲端 sandbox 連不到 `christykalvin.com`**（egress proxy 擋掉，連 curl 都 403）。
+  要驗證正式站內容，就在 GitHub Actions 裡 curl（CI 網路沒限制）——這次就是這樣抓到真相的。
+
+### Next Actions
+1. **新增 3 個後台帳號**：`kalvin.ckw@hotmail.com`、`kalvin.ckw@gmail.com`、`pysum1025@hotmail.com`（共用密碼），等使用者提供密碼
+2. 現有 `PRESS BUTTER SAND` 草稿的「標題(英文)」是空的，需手動補；之後新匯入不會再有此問題

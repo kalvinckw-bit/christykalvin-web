@@ -1,22 +1,34 @@
 # Live Project Status (Single Source of Truth)
 
+最後更新：2026-09-07（Claude Web Cloud session）
+
 ## 1. Current Phase
-- **Active Milestone**: Phase 1 - Architecture Setup & Core Implementation
-- **Current Objective**: Initializing project features and validating build pipeline.
+- **Active Milestone**：ChristyKalvin Select 轉賣商城 — 正式上線後的功能調整與部署自動化
+- **Current Objective**：CI/CD 自動部署已建立，持續依使用者回饋調整前後台欄位與 AI 匯入邏輯
 
 ## 2. Functional Verification Matrix
 | Module / Feature | Status | Verified with Live Logs? | Notes |
 | :--- | :--- | :--- | :--- |
-| Project Foundation | Completed | Yes | Master AI Context framework integrated |
-| Core Feature A | In Progress | Inferred | Implementation underway |
-| ChristyKalvin Select — Firestore rules (`christykalvin` 專案) | Deployed | Yes | `firebase deploy --only firestore:rules` 回報 released 成功 |
-| ChristyKalvin Select — Cloud Functions `importProduct` / `uploadPhoto` / `deletePhoto` | Deployed | Yes | `firebase functions:list` 確認三個 callable 皆在 asia-east1 上線 |
-| ChristyKalvin Select — 商品頁解析器 (`functions/extract.js`) | Verified | Yes | `node extract.test.js` 12 項測試全數通過（og:meta / JSON-LD / 相對路徑 / 價格容錯） |
-| ChristyKalvin Select — 前後台網頁（預覽站台） | Deployed | Yes | hosting channel `shop-preview` 部署成功，14 個檔案上傳完成 |
-| ChristyKalvin Select — 端對端實測（登入 → 匯入 → 上架 → 前台顯示） | NOT VERIFIED | No | 雲端 session 的網路政策擋掉 `*.web.app` 與 `cloudfunctions.net`，AI 無法自行開頁面或呼叫函式測試；且後台密碼未知。需由使用者實際操作驗證 |
-| ChristyKalvin Select — AI 翻譯潤飾 | Not Configured | No | `ANTHROPIC_API_KEY` 尚未設定，目前匯入的是日文原文草稿 |
+| Firestore rules（`christykalvin` 專案） | Deployed | Yes | `products` 公開讀已上架商品；`inquiries` 訪客可 create、僅登入者可讀 |
+| Cloud Functions `importProduct` / `uploadPhoto` / `deletePhoto` | Deployed | Yes | asia-east1，2026-09-07 CI 部署 log 顯示三支皆 "Successful update operation" |
+| 商品頁解析器 `functions/extract.js` | Verified | Yes | `node extract.test.js` 13 項測試全數通過 |
+| AI 翻譯潤飾（Gemini） | Deployed | Yes | `gemini-3.6-flash`，key 放在 `functions/.env`（未進 git），deploy log 有 "Loaded environment variables from functions/.env" |
+| 前台 `shopping.html`（含中英切換、顏色選擇、留言詢問表單） | Deployed | Yes | hosting site `christykalvin-web`（`voiceout-asia` 專案） |
+| 後台 `shopping-admin.html`（商品管理／貼連結匯入／買家詢問） | Deployed | Yes | 同上 |
+| GitHub Actions 自動部署 | Deployed | Yes | `.github/workflows/deploy-shopping.yml`，push 到 branch 即自動部署並驗證正式站內容 |
+| 端對端實測（登入 → 匯入 → 上架 → 前台顯示） | Verified by user | Yes | 使用者已實際匯入商品成功（例：PRESS BUTTER SAND） |
 
-## 3. Active Blockers & Critical Notes
-- **正式網址尚未上線**：`christykalvin.com/shopping.html` 需要部署到 `voiceout-asia` 專案的 hosting，該指令在 Claude 的雲端 session 會被安全機制擋下（該專案同時服務多個品牌網站）。使用者本機執行 `firebase deploy --only hosting --project voiceout-asia` 即可。
-- **不可覆蓋 `christykalvin.web.app` 的 live 內容**（使用者 2026-09-06 明確指示），因此該站台只使用預覽頻道（preview channel）。
-- **端對端功能尚未實測**：所有元件都已部署且個別驗證過，但完整流程（登入後台 → 貼連結匯入 → 照片 bucket 自動建立 → 前台顯示）尚未有人實際跑過一次。
+## 3. 重要架構事實（不要再重新推論）
+- **Hosting**：正式站 `christykalvin.com` = `voiceout-asia` 專案裡的 **`christykalvin-web`** site。已用 CI 抓取驗證過（`christykalvin-web.web.app` 回傳同一份檔案）。
+- **後端**（Firestore / Auth / Functions / 照片 bucket）：獨立的 **`christykalvin`** 專案。
+- **照片儲存**：該專案沒開通 Firebase Storage，改用自建的公開 GCS bucket `christykalvin-shop-photos`（ASIA-NORTHEAST1），由 function 首次使用時自動建立。
+- **`voiceout-asia` 是共用專案**：裡面還有其他站台的 functions（`emailAdminNotification`、`generatePostTitles`、`parseStatement` 等）。
+  **絕對不可以用 `--only functions` 部署**，會把本 repo 沒有的其他站台 functions 判定成要刪除。只能指名 `--only functions:importProduct,functions:uploadPhoto,functions:deletePhoto`。
+- **不可覆蓋 `christykalvin.web.app` 的 live 內容**（使用者 2026-09-06 明確指示）。
+
+## 4. 2026-09-07 解決的重大問題
+- **正式站一直停在舊版本**：原因是 hosting 與 functions 寫在同一個 `firebase deploy` 指令裡，functions 端一報錯（先是「其他站台 functions 要被刪除」的確認提示，後是 artifact cleanup policy）整包指令就 exit 1，**hosting 檔案雖然已上傳，但從未完成 release**，所以線上內容停在 2026-09-06 14:16。
+  修正方式：hosting 獨立成單獨一個 step 且排在最前面、加 `--force`，並在部署後自動抓正式站驗證內容，若仍是舊版就讓 CI 失敗。
+
+## 5. Active Blockers
+- **新增 3 個後台管理帳號**（`kalvin.ckw@hotmail.com`、`kalvin.ckw@gmail.com`、`pysum1025@hotmail.com`）尚未建立，等使用者提供共用密碼。
