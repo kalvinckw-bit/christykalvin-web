@@ -37,3 +37,29 @@ jobs:
             --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto,hosting:christykalvin-web \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --non-interactive
+
+      - name: Verify what production actually serves
+        # 部署後直接抓正式站回來檢查，確認使用者實際打開的網址拿到的是新版檔案。
+        # （開發用的 sandbox 連不到 christykalvin.com，只能在 CI 這邊驗證。）
+        if: always()
+        run: |
+          for url in \
+            "https://christykalvin.com/shopping-admin.html" \
+            "https://www.christykalvin.com/shopping-admin.html" \
+            "https://christykalvin-web.web.app/shopping-admin.html" \
+            "https://christykalvin.web.app/shopping-admin.html" ; do
+            echo "=============================================="
+            echo "URL: $url"
+            code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$url" || echo "000")
+            echo "HTTP: $code   SIZE: $(wc -c < /tmp/page.html 2>/dev/null || echo 0)"
+            if grep -q "吃的" /tmp/page.html 2>/dev/null; then
+              echo "RESULT: ✅ 有『吃的』（新版）"
+            else
+              echo "RESULT: ❌ 沒有『吃的』（舊版或抓不到）"
+            fi
+            echo "--- 分類選項那一行 ---"
+            grep -o '生活雜貨.\{0,40\}' /tmp/page.html 2>/dev/null | head -2 || echo "(找不到分類選項)"
+            echo "--- 回應標頭 ---"
+            curl -s -I --max-time 20 "$url" 2>/dev/null | grep -iE "^(HTTP/|cache-control|last-modified|etag|x-served|location)" || true
+          done
+          echo "=============================================="
