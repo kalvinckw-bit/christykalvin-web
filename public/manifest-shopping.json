@@ -1,0 +1,16 @@
+{
+  "name": "CK代購 Japan",
+  "short_name": "CK代購",
+  "start_url": "/shopping.html",
+  "scope": "/shopping.html",
+  "display": "standalone",
+  "background_color": "#FAF8F3",
+  "theme_color": "#0E4B4F",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
