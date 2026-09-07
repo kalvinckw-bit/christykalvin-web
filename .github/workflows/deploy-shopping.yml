@@ -54,33 +54,38 @@ jobs:
 
       # 部署後直接抓正式站回來檢查，確認使用者實際打開的網址拿到的是新版檔案。
       # （開發用的 sandbox 連不到 christykalvin.com，只能在 CI 這邊驗證。）
-      # 同時抓「原網址」跟「加上 cache-buster 的網址」，用來分辨是 CDN 快取還是來源檔案舊。
+      #
+      # 比對方式是「本機檔案的 sha256」對「正式站回傳內容的 sha256」，
+      # 不是去找某個關鍵字——關鍵字會隨著改版失效（改過一次分類名稱就誤判過），
+      # 雜湊值比對則永遠不會過時，而且能精準抓到「部署宣稱成功但沒真的生效」。
+      # 同時抓「原網址」與「加 cache-buster 的網址」，用來分辨 CDN 快取與來源檔案。
       - name: Verify what production actually serves
         if: always()
         run: |
           fail=0
-          for url in \
-            "https://christykalvin.com/shopping-admin.html" \
-            "https://christykalvin-web.web.app/shopping-admin.html" ; do
-            for variant in "$url" "$url?cb=$(date +%s)$RANDOM" ; do
-              echo "=============================================="
-              echo "URL: $variant"
-              code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$variant" || echo "000")
-              echo "HTTP: $code   SIZE: $(wc -c < /tmp/page.html 2>/dev/null || echo 0)"
-              if grep -q "吃的" /tmp/page.html 2>/dev/null; then
-                echo "RESULT: ✅ 有『吃的』（新版）"
-              else
-                echo "RESULT: ❌ 沒有『吃的』（舊版）"
-                fail=1
-              fi
-              grep -o '生活雜貨.\{0,40\}' /tmp/page.html 2>/dev/null | head -2 || true
-              curl -s -I --max-time 20 "$variant" 2>/dev/null \
-                | grep -iE "^(HTTP/|cache-control|last-modified|etag|x-served)" || true
+          for page in shopping.html shopping-admin.html ; do
+            expected=$(sha256sum "public/$page" | cut -d' ' -f1)
+            echo "=============================================="
+            echo "檔案: $page"
+            echo "本機 sha256: $expected"
+            for host in "https://christykalvin.com" "https://christykalvin-web.web.app" ; do
+              for variant in "$host/$page" "$host/$page?cb=$(date +%s)$RANDOM" ; do
+                code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$variant" || echo "000")
+                actual=$(sha256sum /tmp/page.html | cut -d' ' -f1)
+                if [ "$code" = "200" ] && [ "$actual" = "$expected" ]; then
+                  echo "  ✅ $variant (HTTP $code) 內容與本機完全一致"
+                else
+                  echo "  ❌ $variant (HTTP $code) 內容不符，線上 sha256: $actual"
+                  curl -s -I --max-time 20 "$variant" 2>/dev/null \
+                    | grep -iE "^(last-modified|etag|x-served)" || true
+                  fail=1
+                fi
+              done
             done
           done
           echo "=============================================="
           if [ "$fail" = "1" ]; then
-            echo "正式站仍然是舊版，部署沒有真正生效。"
+            echo "正式站內容與這次要部署的版本不一致，部署沒有真正生效。"
             exit 1
           fi
           echo "正式站已確認是新版。"
