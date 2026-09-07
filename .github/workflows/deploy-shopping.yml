@@ -1,0 +1,36 @@
+name: Deploy Shopping Mall to Firebase
+
+on:
+  push:
+    branches:
+      - claude/ec-resale-platform-ku6xau
+      - main
+    paths:
+      - "public/**"
+      - "functions/**"
+      - "firebase.json"
+      - "firestore.rules"
+      - ".github/workflows/deploy-shopping.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Deploy to Firebase (Hosting + Functions)
+        run: |
+          npx firebase-tools deploy \
+            --project voiceout-asia \
+            --only functions,hosting:christykalvin-web \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --non-interactive
