@@ -121,9 +121,9 @@ async function refineWithGemini(apiKey, title, description, specText) {
 {"title_zh":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":"","colors":[],"size":"","weight":"","spec_notes":"","product_code":""}
 
 規則：
-- title_zh：繁體中文標題，保留品牌/型號/顏色/尺寸等關鍵資訊，不超過 40 字
+- title_zh：繁體中文標題，保留品牌/型號/顏色/尺寸等關鍵資訊，不超過 40 字。品牌名/商品名如果原文本來就是英文或羅馬字（例如「PRESS BUTTER SAND」這種本身就是名字的專有名詞），不要硬翻成中文，直接保留原文名稱，其餘描述性文字（例如品項類型、口味等）才用中文
 - description_zh：繁體中文商品描述，語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
-- title_en：英文標題，跟 title_zh 意思一致，保留品牌/型號等專有名詞不要亂翻
+- title_en：英文標題，跟 title_zh 意思一致，保留品牌/型號等專有名詞不要亂翻。這個欄位絕對不能留空：如果原文標題本來就已經是英文/羅馬字（品牌名常見這樣），直接沿用同一個名稱即可，不需要另外想一個英文版本
 - description_en：英文商品描述，語氣自然像認真的小賣家，跟 description_zh 意思一致，100~200字
 - category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、吃的、其他」中選一個最接近的
 - condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「全新」（本店商品多為全新代購，除非原文明確提到二手/使用痕跡才選其他）
@@ -229,7 +229,7 @@ exports.importProduct = onCall(
       title_zh: ai.title_zh || extracted.title,
       description_ja: extracted.description,
       description_zh: ai.description_zh || "",
-      title_en: ai.title_en || "",
+      title_en: ai.title_en || ai.title_zh || extracted.title || "",
       description_en: ai.description_en || "",
       colors: Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : [],
       size: ai.size || "",
