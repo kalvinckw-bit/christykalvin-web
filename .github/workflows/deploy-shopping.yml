@@ -27,39 +27,60 @@ jobs:
         working-directory: functions
         run: npm ci
 
-      - name: Deploy to Firebase (Hosting + Functions)
-        # voiceout-asia 是共用 Firebase 專案，裡面還有其他站台的 functions，
-        # 絕不能用 --only functions（會把本 repo 沒有的其他站台 functions 判定成要刪除）。
-        # 只精準部署這個購物網站用到的 3 個 function。
+      # Hosting 一定要獨立部署，而且排在最前面。
+      # 之前把 hosting 跟 functions 包在同一個 deploy 指令，functions 那邊一報錯
+      # （例如 artifact cleanup policy）整包就中斷，hosting 檔案雖然上傳了卻沒有
+      # 完成 release，導致線上永遠是舊版。分開部署可以徹底避免這件事。
+      - name: Deploy Hosting
         run: |
           npx firebase-tools deploy \
             --project voiceout-asia \
-            --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto,hosting:christykalvin-web \
+            --only hosting:christykalvin-web \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
-            --non-interactive
+            --non-interactive \
+            --force
 
+      # voiceout-asia 是共用 Firebase 專案，裡面還有其他站台的 functions，
+      # 絕不能用 --only functions（會把本 repo 沒有的其他站台 functions 判定成要刪除）。
+      # 只精準部署這個購物網站用到的 3 個 function。
+      - name: Deploy Functions
+        run: |
+          npx firebase-tools deploy \
+            --project voiceout-asia \
+            --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --non-interactive \
+            --force
+
+      # 部署後直接抓正式站回來檢查，確認使用者實際打開的網址拿到的是新版檔案。
+      # （開發用的 sandbox 連不到 christykalvin.com，只能在 CI 這邊驗證。）
+      # 同時抓「原網址」跟「加上 cache-buster 的網址」，用來分辨是 CDN 快取還是來源檔案舊。
       - name: Verify what production actually serves
-        # 部署後直接抓正式站回來檢查，確認使用者實際打開的網址拿到的是新版檔案。
-        # （開發用的 sandbox 連不到 christykalvin.com，只能在 CI 這邊驗證。）
         if: always()
         run: |
+          fail=0
           for url in \
             "https://christykalvin.com/shopping-admin.html" \
-            "https://www.christykalvin.com/shopping-admin.html" \
-            "https://christykalvin-web.web.app/shopping-admin.html" \
-            "https://christykalvin.web.app/shopping-admin.html" ; do
-            echo "=============================================="
-            echo "URL: $url"
-            code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$url" || echo "000")
-            echo "HTTP: $code   SIZE: $(wc -c < /tmp/page.html 2>/dev/null || echo 0)"
-            if grep -q "吃的" /tmp/page.html 2>/dev/null; then
-              echo "RESULT: ✅ 有『吃的』（新版）"
-            else
-              echo "RESULT: ❌ 沒有『吃的』（舊版或抓不到）"
-            fi
-            echo "--- 分類選項那一行 ---"
-            grep -o '生活雜貨.\{0,40\}' /tmp/page.html 2>/dev/null | head -2 || echo "(找不到分類選項)"
-            echo "--- 回應標頭 ---"
-            curl -s -I --max-time 20 "$url" 2>/dev/null | grep -iE "^(HTTP/|cache-control|last-modified|etag|x-served|location)" || true
+            "https://christykalvin-web.web.app/shopping-admin.html" ; do
+            for variant in "$url" "$url?cb=$(date +%s)$RANDOM" ; do
+              echo "=============================================="
+              echo "URL: $variant"
+              code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$variant" || echo "000")
+              echo "HTTP: $code   SIZE: $(wc -c < /tmp/page.html 2>/dev/null || echo 0)"
+              if grep -q "吃的" /tmp/page.html 2>/dev/null; then
+                echo "RESULT: ✅ 有『吃的』（新版）"
+              else
+                echo "RESULT: ❌ 沒有『吃的』（舊版）"
+                fail=1
+              fi
+              grep -o '生活雜貨.\{0,40\}' /tmp/page.html 2>/dev/null | head -2 || true
+              curl -s -I --max-time 20 "$variant" 2>/dev/null \
+                | grep -iE "^(HTTP/|cache-control|last-modified|etag|x-served)" || true
+            done
           done
           echo "=============================================="
+          if [ "$fail" = "1" ]; then
+            echo "正式站仍然是舊版，部署沒有真正生效。"
+            exit 1
+          fi
+          echo "正式站已確認是新版。"
