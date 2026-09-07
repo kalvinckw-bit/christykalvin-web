@@ -31,8 +31,10 @@
     position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
     padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   }
-  .brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;}
-  .brand .mark{font-size:20px;font-weight:700;color:var(--petrol);letter-spacing:.5px;}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;}
+  .brand .logo{width:38px;height:38px;border-radius:9px;flex:none;object-fit:cover;border:1px solid var(--line);}
+  .brand .names{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .brand .mark{font-size:18px;font-weight:700;color:var(--petrol);letter-spacing:.5px;line-height:1.2;}
   .brand .sub{font-size:11px;color:var(--muted);}
   .searchWrap{flex:1;min-width:180px;max-width:360px;}
   .searchWrap input{
@@ -145,8 +147,11 @@
 
 <header class="topbar">
   <div class="brand">
-    <span class="mark">🛍️ Christy Kalvin Select</span>
-    <span class="sub">日本代購轉賣選品</span>
+    <img class="logo" src="/icons/icon-192.png" alt="CK Japan" width="38" height="38">
+    <span class="names">
+      <span class="mark">Christy Kalvin Select</span>
+      <span class="sub">日本代購轉賣選品</span>
+    </span>
   </div>
   <div class="searchWrap">
     <input id="searchBox" type="text" placeholder="搜尋商品名稱...">
@@ -201,8 +206,8 @@ const db = getFirestore(app);
 
 const PLATFORM_CONTACT_WA = "818036098818"; // +81-80-3609-8818 的 wa.me 格式：去掉開頭0，補上國碼
 
-const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","吃的","其他"];
-const CATS_EN = ["All","Bags","Shoes","Fashion","Accessories","Beauty & Care","Appliances & Electronics","Lifestyle","Food","Other"];
+const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","食品零食","其他"];
+const CATS_EN = ["All","Bags","Shoes","Fashion","Accessories","Beauty & Care","Appliances & Electronics","Lifestyle","Food & Snacks","Other"];
 const COND_EN = {"全新":"New","近新":"Like New","二手良好":"Used - Good","二手一般":"Used - Fair","未知":"Unknown"};
 
 const STR = {

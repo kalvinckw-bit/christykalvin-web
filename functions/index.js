@@ -114,7 +114,37 @@ async function downloadImagesToStorage(productId, imageUrls) {
   return uploaded;
 }
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+// 主要模型 + 備援模型。Gemini 偶爾會回 503「high demand」，
+// 之前只呼叫一次就放棄，導致匯入的商品標題/描述整個空白（實際發生過三筆）。
+// 現在會依序重試，同一個模型先退避重試，仍失敗才換下一個模型。
+const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const GEMINI_ATTEMPTS_PER_MODEL = 3;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function callGemini(apiKey, model, prompt) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
+    }
+  );
+  const json = await res.json();
+  if (!res.ok) {
+    const err = new Error(json?.error?.message || `Gemini API 回應 HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("AI 回應格式異常");
+  return JSON.parse(match[0]);
+}
 
 async function refineWithGemini(apiKey, title, description, specText) {
   const prompt = `以下是一個日本網店商品頁面抓到的原始標題、描述、以及頁面上的規格內文，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看，並從規格內文抽出顏色/尺寸/重量等規格資訊。請只回傳純 JSON，不要加任何說明文字：
@@ -125,7 +155,7 @@ async function refineWithGemini(apiKey, title, description, specText) {
 - description_zh：繁體中文商品描述，語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
 - title_en：英文標題，跟 title_zh 意思一致，保留品牌/型號等專有名詞不要亂翻。這個欄位絕對不能留空：如果原文標題本來就已經是英文/羅馬字（品牌名常見這樣），直接沿用同一個名稱即可，不需要另外想一個英文版本
 - description_en：英文商品描述，語氣自然像認真的小賣家，跟 description_zh 意思一致，100~200字
-- category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、吃的、其他」中選一個最接近的
+- category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、食品零食、其他」中選一個最接近的（餅乾、和菓子、伴手禮、飲料、調味料等入口的東西一律選「食品零食」）
 - condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「全新」（本店商品多為全新代購，除非原文明確提到二手/使用痕跡才選其他）
 - notes：給賣家看的提醒，例如資訊不完整、找不到價格、尺寸不明等，沒有就填空字串
 - colors：從規格內文的「色」欄位抽出可選顏色，翻成繁體中文，陣列形式，例如日文「チャコールブラック／さくらピンク」要拆成 ["炭黑色","櫻花粉"]；規格內文沒有顏色選項就回傳空陣列 []
@@ -139,25 +169,22 @@ async function refineWithGemini(apiKey, title, description, specText) {
 頁面規格內文（可能包含雜訊，只挑跟商品規格相關的部分）：
 ${specText ? specText.slice(0, 4000) : "(無)"}`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json" },
-      }),
+  // 依序嘗試每個模型；遇到 429/503（額度或模型過載）先退避重試，
+  // 該模型重試用完才換下一個模型。非暫時性錯誤（例如 400）直接換模型不浪費時間。
+  let lastErr;
+  for (const model of GEMINI_MODELS) {
+    for (let attempt = 1; attempt <= GEMINI_ATTEMPTS_PER_MODEL; attempt++) {
+      try {
+        return await callGemini(apiKey, model, prompt);
+      } catch (err) {
+        lastErr = err;
+        const transient = err.status === 429 || err.status === 503 || err.status >= 500;
+        if (!transient || attempt === GEMINI_ATTEMPTS_PER_MODEL) break;
+        await sleep(attempt * 1500);
+      }
     }
-  );
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.error?.message || `Gemini API 回應 HTTP ${res.status}`);
   }
-  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("AI 回應格式異常");
-  return JSON.parse(match[0]);
+  throw new Error(`所有模型都失敗，最後錯誤：${lastErr ? lastErr.message : "未知"}`);
 }
 
 exports.importProduct = onCall(
