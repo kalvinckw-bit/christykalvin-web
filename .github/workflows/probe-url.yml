@@ -1,0 +1,27 @@
+name: Probe Product URL
+
+# 手動觸發：抓一個商品網址回來，report 它的資料結構。
+# 用途是在為新網站（Uniqlo、GU、樂天…）寫解析規則之前，
+# 先看清楚對方頁面的真實格式，而不是憑猜測改 extract.js。
+# （開發用的雲端 sandbox 連不到大部分外部網站，CI 沒有這個限制。）
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "要偵測的商品網址"
+        required: true
+        type: string
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm ci
+      - name: Probe
+        run: node scripts/probe.js "${{ github.event.inputs.url }}"
