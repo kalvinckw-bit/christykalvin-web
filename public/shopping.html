@@ -106,6 +106,34 @@
   .colorRow{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 16px;}
   .colorChip{padding:6px 14px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--text);}
   .colorChip.active{background:var(--petrol);border-color:var(--petrol);color:#fff;font-weight:700;}
+
+  /* 限時特價：原價刪除線 + 省多少 + 倒數提示 */
+  .wasPrice{font-size:.62em;font-weight:400;color:var(--muted);text-decoration:line-through;margin-right:7px;}
+  .saveTag{
+    display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;
+    background:var(--danger);color:#fff;font-size:11px;font-weight:700;vertical-align:middle;
+  }
+  .price.onSale{color:var(--danger);}
+  .card .badge-sale{
+    position:absolute;right:8px;top:8px;background:var(--danger);color:#fff;
+    font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.5px;
+  }
+  .saleBanner{
+    background:#FDF1E7;border:1px solid #F0C9A5;color:var(--danger);
+    padding:8px 12px;border-radius:8px;font-size:12.5px;font-weight:700;margin:8px 0 4px;
+  }
+
+  /* 服飾尺寸選擇（缺貨的不給選） */
+  .pickLabel{font-size:12px;color:var(--muted);margin:2px 0 6px;font-weight:700;}
+  .sizeRow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;}
+  .sizeChip{
+    min-width:46px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+    background:#fff;font-size:13px;cursor:pointer;color:var(--text);font-weight:700;
+  }
+  .sizeChip.active{background:var(--petrol);border-color:var(--petrol);color:#fff;}
+  .sizeChip.out{
+    color:#C3C3C3;background:#F7F5F0;cursor:not-allowed;text-decoration:line-through;border-style:dashed;
+  }
   .specBox{background:#FAF8F3;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;}
   .specRow{font-size:12.5px;color:var(--text);padding:3px 0;}
   .specRow b{color:var(--muted);font-weight:700;margin-right:8px;display:inline-block;min-width:64px;}
@@ -219,6 +247,10 @@ const STR = {
     waBtn: "💬 透過 WhatsApp 詢問 / 下單", inquiryBtn: "📩 留言詢問 / 下單",
     shareLink: "🔗 分享這件商品的連結", linkCopied: "✓ 連結已複製",
     specSize: "尺寸", specWeight: "重量", specCode: "商品編號", colorLabel: "顏色",
+    sizeLabel: "尺寸", pickSize: "請選擇尺寸", soldOutSize: "缺貨",
+    saveAmount: (n) => `省 ¥${n.toLocaleString()}`,
+    saleEndsIn: (d) => (d > 0 ? `限時特價 · 剩 ${d} 天` : "限時特價 · 今天最後一天"),
+    saleUntil: (s) => `特價至 ${s}`,
     inquiryGreeting: "您好，我想詢問這件商品：",
     noTitle: "(未命名商品)", noDesc: "(賣家尚未填寫詳細說明，歡迎直接詢問)",
     footer: "© Christy Kalvin · 商品皆由日本直送/代購轉賣，圖片與說明僅供參考，實際商品狀況以賣家確認為準",
@@ -235,6 +267,10 @@ const STR = {
     waBtn: "💬 Ask on WhatsApp", inquiryBtn: "📩 Send an Inquiry",
     shareLink: "🔗 Share this item's link", linkCopied: "✓ Link copied",
     specSize: "Size", specWeight: "Weight", specCode: "Item Code", colorLabel: "Color",
+    sizeLabel: "Size", pickSize: "Please select a size", soldOutSize: "Sold out",
+    saveAmount: (n) => `Save ¥${n.toLocaleString()}`,
+    saleEndsIn: (d) => (d > 0 ? `Limited-time price · ${d} day(s) left` : "Limited-time price · last day"),
+    saleUntil: (s) => `On sale until ${s}`,
     inquiryGreeting: "Hi, I'd like to ask about this item:",
     noTitle: "(Untitled item)", noDesc: "(No description yet — feel free to ask)",
     footer: "© Christy Kalvin · All items are shipped/resold directly from Japan. Photos and descriptions are for reference only — please confirm the actual condition with the seller.",
@@ -372,6 +408,66 @@ function esc(s){
   return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+/**
+ * 算出這件商品現在該顯示的價格。
+ *
+ * 重點是「特價會過期」：Uniqlo/GU 的期間限定價格有明確截止時間，
+ * 一旦過期就必須自動改回原價，不然客人看到過期特價來問，賣家很難做人。
+ * 所以這裡每次都用當下時間重新判斷，不是匯入當下算好就寫死。
+ */
+function priceInfo(p){
+  const now = Date.now();
+  const sale = Number(p.price_jpy) || null;
+  const original = Number(p.price_original_jpy) || null;
+  const endAt = Number(p.sale_end_at) || null;
+  const expired = !!(endAt && endAt < now);
+
+  // 特價還在期間內，而且原價確實比較高，才算「特價中」
+  const onSale = !!(original && sale && original > sale && !expired);
+  const current = onSale ? sale : (original || sale);
+
+  let daysLeft = null;
+  if (onSale && endAt) daysLeft = Math.floor((endAt - now) / 86400000);
+
+  return {
+    current,
+    original: onSale ? original : null,
+    onSale,
+    expired,
+    daysLeft,
+    saveAmount: onSale ? original - sale : 0,
+    endAt,
+  };
+}
+
+function priceHTML(p, big){
+  const pi = priceInfo(p);
+  if (!pi.current) return `<div class="price">${esc(S().priceInquire)}</div>`;
+  const fx = fxLine(pi.current);
+  const cls = big ? "price" : "price";
+  const original = pi.onSale
+    ? `<span class="wasPrice">¥${pi.original.toLocaleString()}</span>`
+    : "";
+  const save = pi.onSale
+    ? `<span class="saveTag">${esc(S().saveAmount(pi.saveAmount))}</span>`
+    : "";
+  return `<div class="${cls}${pi.onSale ? " onSale" : ""}">
+    ${original}¥${pi.current.toLocaleString()}${save}
+    ${fx ? `<span class="fx">${esc(fx)}</span>` : ""}
+  </div>`;
+}
+
+/** 限時特價的倒數提示；過期就不顯示（等於自動下架這個訊息） */
+function saleBannerHTML(p){
+  const pi = priceInfo(p);
+  if (!pi.onSale) return "";
+  const when = pi.endAt
+    ? new Date(pi.endAt).toLocaleDateString(lang === "en" ? "en-US" : "zh-TW", { month: "numeric", day: "numeric" })
+    : "";
+  const line = pi.daysLeft != null ? S().saleEndsIn(pi.daysLeft) : S().saleUntil(when);
+  return `<div class="saleBanner">⏳ ${esc(line)}${when ? `（${esc(when)}）` : ""}</div>`;
+}
+
 function render(){
   const search = document.getElementById("searchBox").value.trim().toLowerCase();
   const sort = document.getElementById("sortSelect").value;
@@ -414,18 +510,18 @@ function render(){
 function cardHTML(p){
   const photo = (p.photos && p.photos[0]) || "";
   const title = productTitle(p);
-  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : S().priceInquire;
-  const fx = fxLine(p.price_jpy);
+  const pi = priceInfo(p);
   return `
   <div class="card" data-id="${p.id}">
     <div class="thumb">
       ${photo ? `<img src="${esc(photo)}" loading="lazy" alt="${esc(title)}">` : ""}
       ${p.category ? `<span class="badge-cat">${esc(categoryLabel(p.category))}</span>` : ""}
+      ${pi.onSale ? `<span class="badge-sale">SALE</span>` : ""}
       ${p.sold ? `<div class="soldBadge">${esc(S().sold)}</div>` : ""}
     </div>
     <div class="body">
       <div class="title">${esc(title)}</div>
-      <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
+      ${priceHTML(p)}
       ${p.condition ? `<div class="cond">${esc(conditionLabel(p.condition))}</div>` : ""}
     </div>
   </div>`;
@@ -437,6 +533,7 @@ document.getElementById("closeModal").addEventListener("click", closeModal);
 modalMask.addEventListener("click", (e) => { if (e.target === modalMask) closeModal(); });
 
 let selectedColor = "";
+let selectedSize = "";
 
 function productLink(id){
   return `${location.origin}${location.pathname}?p=${encodeURIComponent(id)}`;
@@ -447,6 +544,7 @@ function openModal(id){
   if (!p) return;
   currentProductId = id;
   selectedColor = (p.colors && p.colors[0]) || "";
+  selectedSize = "";
 
   const photos = p.photos && p.photos.length ? p.photos : [""];
   document.getElementById("modalGallery").innerHTML = photos.map(u =>
@@ -454,10 +552,31 @@ function openModal(id){
   ).join("");
 
   const title = productTitle(p);
-  const price = p.price_jpy ? `¥${Number(p.price_jpy).toLocaleString()}` : S().priceInquire;
-  const fx = fxLine(p.price_jpy);
+  const pi = priceInfo(p);
+  // 詢問訊息裡帶的價格：特價中就帶特價，過期就帶原價，跟畫面顯示一致
+  const price = pi.current ? `¥${pi.current.toLocaleString()}` : S().priceInquire;
   const desc = productDesc(p);
   const link = productLink(p.id);
+
+  // 服飾的尺寸選擇：哪個尺寸缺貨要看 variants（同一個尺寸不同顏色庫存不一樣）
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+  function sizeAvailable(size, color){
+    if (!variants.length) return true;
+    const rows = variants.filter(v => v.size === size && (!color || v.color === color));
+    if (!rows.length) return true;
+    return rows.some(v => v.in_stock);
+  }
+  const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+  function sizesHTML(){
+    if (!sizes.length) return "";
+    return `<div class="pickLabel">${esc(S().sizeLabel)}</div>
+      <div class="sizeRow" id="sizeRow">${sizes.map(s => {
+        const ok = sizeAvailable(s, selectedColor);
+        return `<button class="sizeChip${s===selectedSize?" active":""}${ok?"":" out"}"
+          data-size="${esc(s)}" ${ok?"":"disabled"}
+          title="${ok?"":esc(S().soldOutSize)}">${esc(s)}</button>`;
+      }).join("")}</div>`;
+  }
 
   const specRows = [
     p.size ? `<div class="specRow"><b>${esc(S().specSize)}</b>${esc(p.size)}</div>` : "",
@@ -476,10 +595,12 @@ function openModal(id){
     <h2>${esc(title)}</h2>
     ${p.category ? `<span class="catTag">${esc(categoryLabel(p.category))}</span>` : ""}
     ${p.condition ? `<span class="condTag">${esc(conditionLabel(p.condition))}</span>` : ""}
-    <div class="price">${price}${fx ? `<span class="fx">${esc(fx)}</span>` : ""}</div>
+    ${priceHTML(p, true)}
+    ${saleBannerHTML(p)}
     ${p.sold ? `<div class="soldNotice">${esc(S().soldNotice)}</div>` : ""}
     <div class="desc">${esc(desc)}</div>
     ${colorsHTML}
+    ${sizesHTML()}
     ${specRows ? `<div class="specBox">${specRows}</div>` : ""}
     ${specNotes}
     <button class="waBtn" id="waBtn">${esc(S().waBtn)}</button>
@@ -501,7 +622,8 @@ function openModal(id){
     const titleZh = p.title_zh || p.title_ja || STR.zh.noTitle;
     const titleEn = p.title_en || p.title_zh || p.title_ja || STR.en.noTitle;
     const colorLine = selectedColor ? `\n${S().colorLabel}: ${selectedColor}` : "";
-    return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}\n${price}\n${link}`;
+    const sizeLine = selectedSize ? `\n${S().sizeLabel}: ${selectedSize}` : "";
+    return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}${sizeLine}\n${price}\n${link}`;
   }
 
   document.getElementById("waBtn").addEventListener("click", () => {
@@ -552,6 +674,16 @@ function openModal(id){
     }
   });
 
+  const sizeRow = document.getElementById("sizeRow");
+  if (sizeRow) {
+    sizeRow.addEventListener("click", (e) => {
+      const btn = e.target.closest(".sizeChip");
+      if (!btn || btn.disabled) return;
+      selectedSize = btn.dataset.size;
+      sizeRow.querySelectorAll(".sizeChip").forEach(b => b.classList.toggle("active", b === btn));
+    });
+  }
+
   const colorRow = document.getElementById("colorRow");
   if (colorRow) {
     colorRow.addEventListener("click", (e) => {
@@ -559,6 +691,19 @@ function openModal(id){
       if (!btn) return;
       selectedColor = btn.dataset.color;
       colorRow.querySelectorAll(".colorChip").forEach(b => b.classList.toggle("active", b === btn));
+      // 不同顏色的庫存不一樣，換色後要重算哪些尺寸不能選
+      if (sizeRow) {
+        sizeRow.querySelectorAll(".sizeChip").forEach(b => {
+          const ok = sizeAvailable(b.dataset.size, selectedColor);
+          b.disabled = !ok;
+          b.classList.toggle("out", !ok);
+          b.title = ok ? "" : S().soldOutSize;
+          if (!ok && b.classList.contains("active")) {
+            b.classList.remove("active");
+            selectedSize = "";
+          }
+        });
+      }
     });
   }
   document.getElementById("copyLinkHint").addEventListener("click", (e) => {

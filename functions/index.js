@@ -13,10 +13,12 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { Storage } = require("@google-cloud/storage");
 const { extractFromHtml } = require("./extract");
+const { fetchFastRetailingProduct } = require("./fastretailing");
 
 initializeApp();
 
@@ -198,6 +200,17 @@ exports.importProduct = onCall(
       throw new HttpsError("invalid-argument", "請提供有效的商品連結網址 (需以 http/https 開頭)");
     }
 
+    // Uniqlo / GU 的價格不在 HTML 裡（是 JS 打 API 拿的），
+    // 所以這兩家先走專用解析器，拿得到原價、期間限定價、截止時間、尺寸與庫存。
+    // 失敗的話不擋流程，退回下面的通用解析器至少把標題圖片抓進來。
+    let apparel = null;
+    let apparelError = "";
+    try {
+      apparel = await fetchFastRetailingProduct(url);
+    } catch (err) {
+      apparelError = `Uniqlo/GU 專用解析失敗，改用一般解析：${err.message}`;
+    }
+
     let html;
     try {
       html = await fetchSourceHtml(url);
@@ -206,6 +219,16 @@ exports.importProduct = onCall(
     }
 
     const extracted = extractFromHtml(html, url);
+    if (apparel) {
+      // 專用解析器拿到的資料比較準，優先採用；沒拿到的欄位再用通用解析器補
+      if (apparel.title) extracted.title = apparel.title;
+      if (apparel.description) extracted.description = apparel.description;
+      if (apparel.images.length) extracted.images = [...apparel.images, ...extracted.images];
+      if (apparel.price_jpy != null) {
+        extracted.price = apparel.price_jpy;
+        extracted.currency = "JPY";
+      }
+    }
     if (extracted.images.length === 0) {
       throw new HttpsError(
         "not-found",
@@ -258,20 +281,30 @@ exports.importProduct = onCall(
       description_zh: ai.description_zh || "",
       title_en: ai.title_en || ai.title_zh || extracted.title || "",
       description_en: ai.description_en || "",
-      colors: Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : [],
+      // 顏色以專用解析器抓到的實際顏色為準（AI 是用猜的），沒有才用 AI 的
+      colors: (apparel && apparel.colors.length)
+        ? apparel.colors
+        : (Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : []),
+      // 服飾用的尺寸清單（S/M/L…）；家電那種單一尺寸描述仍走 size 欄位
+      sizes: (apparel && apparel.sizes) || [],
+      variants: (apparel && apparel.variants) || [],
       size: ai.size || "",
       weight: ai.weight || "",
       spec_notes: ai.spec_notes || "",
-      product_code: ai.product_code || "",
+      product_code: (apparel && apparel.product_code) || ai.product_code || "",
       price_jpy: extracted.currency === "JPY" ? extracted.price : null,
+      // 期間限定價／折扣：原價、折扣標籤、折扣截止時間（毫秒）
+      price_original_jpy: (apparel && apparel.price_original_jpy) || null,
+      sale_label: (apparel && apparel.sale_label) || "",
+      sale_end_at: (apparel && apparel.sale_end_at) || null,
       price_source_currency: extracted.currency,
       price_source_value: extracted.price,
       category: ai.category || "",
       condition: ai.condition || "全新",
       photos: uploadedUrls,
       source_url: url,
-      source_site: hostname,
-      ai_notes: [ai.notes, bucketWarning].filter(Boolean).join(" / "),
+      source_site: (apparel && apparel.source_site) || hostname,
+      ai_notes: [ai.notes, apparelError, bucketWarning].filter(Boolean).join(" / "),
       imported_via_ai,
       status: "draft",
       sold: false,
@@ -341,5 +374,80 @@ exports.deletePhoto = onCall(
     } catch (_) {
       return { deleted: false };
     }
+  }
+);
+
+/**
+ * 每天回查一次來源網站的價格（目前支援 Uniqlo / GU）。
+ *
+ * 賣代購最怕兩件事：來源悄悄漲價、限時特價結束了但自己網站還掛著舊特價。
+ * 客人看到便宜價格來問，賣家才發現要漲價，非常難收場。
+ * 這支排程就是在客人開口之前先把差異抓出來，寫進商品的 price_alert 欄位，
+ * 後台會直接顯示紅字提示。
+ *
+ * 只更新提示欄位，不會自動改售價 —— 要賣多少錢是老闆的決定，不是程式的。
+ */
+exports.watchSourcePrices = onSchedule(
+  { schedule: "every day 09:00", timeZone: "Asia/Tokyo", region: "asia-east1", timeoutSeconds: 540 },
+  async () => {
+    const snap = await db()
+      .collection("products")
+      .where("status", "==", "published")
+      .get();
+
+    let checked = 0;
+    let alerted = 0;
+
+    for (const doc of snap.docs) {
+      const p = doc.data();
+      if (p.sold || !p.source_url) continue;
+
+      const alerts = [];
+      const now = Date.now();
+
+      // 1) 特價已經過期，網站上還掛著特價
+      if (p.sale_end_at && p.sale_end_at < now && p.price_original_jpy) {
+        alerts.push(`限時特價已於 ${new Date(p.sale_end_at).toLocaleDateString("zh-TW")} 結束，前台已自動改回原價 ¥${Number(p.price_original_jpy).toLocaleString()}，請確認是否要調整售價`);
+      }
+
+      // 2) 來源網站的價格變了
+      try {
+        const fresh = await fetchFastRetailingProduct(p.source_url);
+        if (fresh && fresh.price_jpy != null) {
+          checked++;
+          const oldPrice = Number(p.price_jpy);
+          if (oldPrice && fresh.price_jpy !== oldPrice) {
+            const diff = fresh.price_jpy - oldPrice;
+            alerts.push(
+              `來源網站價格從 ¥${oldPrice.toLocaleString()} 變成 ¥${fresh.price_jpy.toLocaleString()}` +
+              `（${diff > 0 ? "漲" : "降"} ¥${Math.abs(diff).toLocaleString()}）`
+            );
+          }
+          // 順便更新庫存，缺貨的尺寸前台才擋得住
+          if (fresh.variants && fresh.variants.length) {
+            await doc.ref.update({ variants: fresh.variants, stock_checked_at: now });
+          }
+          const allOut = fresh.variants && fresh.variants.length &&
+            fresh.variants.every((v) => !v.in_stock);
+          if (allOut) alerts.push("來源網站所有尺寸都已缺貨");
+        }
+      } catch (err) {
+        // 來源網站抓不到不算錯誤（可能商品已下架），記下來讓人工判斷
+        alerts.push(`來源網站查價失敗：${err.message}`);
+      }
+
+      if (alerts.length) {
+        alerted++;
+        await doc.ref.update({
+          price_alert: alerts.join(" / "),
+          price_alert_at: now,
+        });
+      } else if (p.price_alert) {
+        // 問題已經解決就把提示清掉
+        await doc.ref.update({ price_alert: "", price_alert_at: null });
+      }
+    }
+
+    console.log(`查價完成：檢查 ${checked} 筆，${alerted} 筆有異常`);
   }
 );

@@ -60,6 +60,10 @@
   .tag.hidden{background:#777;}
   .tag.sold{background:var(--sold);}
   .tag.incomplete{background:var(--danger);}
+  .tag.onsale{background:#D2691E;}
+  .alertBox{background:#FDF1E7;border:1px solid #E8A87C;color:#8B4000;padding:10px 12px;border-radius:6px;font-size:12.5px;margin-bottom:12px;font-weight:700;}
+  .alertBox .alertTime{font-weight:400;color:var(--muted);margin-left:6px;}
+  .tag.expired{background:#8B0000;}
   .meta{font-size:12px;color:var(--muted);}
   .chev{transition:transform .15s;}
   .row.open .chev{transform:rotate(90deg);}
@@ -344,11 +348,15 @@ const FIELD_DEFS = [
   ["title_zh", "標題(中文)", "text", true],
   ["title_en", "標題(英文)", "text", false],
   ["title_ja", "標題(原文)", "text", false],
-  ["price_jpy", "價格 JPY", "number", true],
+  ["price_jpy", "售價 JPY（特價中就填特價）", "number", true],
+  ["price_original_jpy", "原價 JPY（有折扣才填，前台會畫刪除線）", "number", false],
+  ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
+  ["sale_label", "特價標籤", "text", false],
   ["category", "分類", "select_cat", true],
   ["condition", "新舊狀況", "select_cond", true],
   ["status", "狀態", "select_status", true],
   ["colors", "顏色選項(逗號分隔)", "colors_text", false],
+  ["sizes", "尺寸選項(逗號分隔，服飾用)", "colors_text", false],
   ["size", "尺寸", "text", false],
   ["weight", "重量", "text", false],
   ["product_code", "商品編號", "text", false],
@@ -406,6 +414,17 @@ function rowHTML(p){
   if (p.sold) tags.push(`<span class="tag sold">已售出</span>`);
   if (!p.is_complete) tags.push(`<span class="tag incomplete">⚠️ 資料不完整</span>`);
 
+  // 特價狀態：過期的要醒目提示，不然會一直掛著死掉的特價
+  const saleEnd = Number(p.sale_end_at) || 0;
+  const hasDiscount = Number(p.price_original_jpy) > Number(p.price_jpy);
+  if (p.price_alert) tags.push(`<span class="tag incomplete">⚠️ 查價提醒</span>`);
+  if (saleEnd && saleEnd < Date.now()) {
+    tags.push(`<span class="tag expired">⌛ 特價已過期</span>`);
+  } else if (hasDiscount) {
+    const until = saleEnd ? new Date(saleEnd).toLocaleDateString("zh-TW", {month:"numeric", day:"numeric"}) : "";
+    tags.push(`<span class="tag onsale">🔥 特價中${until ? ` 至${until}` : ""}</span>`);
+  }
+
   const thumb = (p.photos && p.photos[0]) || "";
   const fieldsHTML = FIELD_DEFS.map(([key, label, type]) => {
     if (type === "select_cat") {
@@ -425,6 +444,16 @@ function rowHTML(p){
       return `<div class="field"><label>${label}</label><select data-key="${key}">
         ${opts.map(([v,l]) => `<option value="${v}" ${p[key]===v?"selected":""}>${l}</option>`).join("")}
       </select></div>`;
+    }
+    if (type === "datetime") {
+      // Firestore 存毫秒時間戳，輸入框用 datetime-local
+      const ms = Number(p[key]) || 0;
+      let val = "";
+      if (ms) {
+        const d = new Date(ms - new Date().getTimezoneOffset() * 60000);
+        val = d.toISOString().slice(0, 16);
+      }
+      return `<div class="field"><label>${label}</label><input data-key="${key}" data-type="datetime" type="datetime-local" value="${val}"></div>`;
     }
     if (type === "colors_text") {
       const val = Array.isArray(p[key]) ? p[key].join("、") : (p[key] || "");
@@ -458,6 +487,15 @@ function rowHTML(p){
         <div class="field full"><label>描述(原文)</label><textarea data-key="description_ja">${esc(p.description_ja)}</textarea></div>
         <div class="field full"><label>其他規格備註</label><textarea data-key="spec_notes">${esc(p.spec_notes)}</textarea></div>
       </div>
+      ${p.price_alert ? `<div class="alertBox">⚠️ 查價提醒：${esc(p.price_alert)}${
+        p.price_alert_at ? `<span class="alertTime">（${new Date(p.price_alert_at).toLocaleString("zh-TW")} 檢查）</span>` : ""
+      }</div>` : ""}
+      ${(Array.isArray(p.variants) && p.variants.length) ? `
+        <div class="raw"><b>來源網站的尺寸/顏色庫存（自動抓取）</b><br>${
+          p.variants.map(v => `${esc(v.color||"-")} / ${esc(v.size||"-")}：${
+            v.in_stock ? `有貨${v.quantity!=null?`(${v.quantity})`:""}` : "缺貨"
+          }`).join("　·　")
+        }</div>` : ""}
       ${p.source_url ? `<div class="srcLink"><a href="${esc(p.source_url)}" target="_blank" rel="noopener">↗ 查看原始商品連結</a></div>` : ""}
       ${p.ai_notes ? `<div class="raw">AI備註：${esc(p.ai_notes)}</div>` : ""}
       <div class="actions">
@@ -476,9 +514,11 @@ async function saveRow(id){
   rowEl.querySelectorAll("[data-key]").forEach(inp => {
     const key = inp.dataset.key;
     let val = inp.value.trim ? inp.value.trim() : inp.value;
-    if (inp.dataset.type === "colors_text") {
+    if (inp.dataset.type === "datetime") {
+      update[key] = val === "" ? null : new Date(val).getTime();
+    } else if (inp.dataset.type === "colors_text") {
       update[key] = val === "" ? [] : val.split(/[、,，]/).map(s => s.trim()).filter(Boolean);
-    } else if (key === "price_jpy") {
+    } else if (key === "price_jpy" || key === "price_original_jpy") {
       update[key] = val === "" ? null : Number(val);
     } else {
       update[key] = val === "" ? null : val;
@@ -561,7 +601,8 @@ async function createBlankProduct(){
   const now = Date.now();
   const blank = {
     title_zh: "", title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
-    colors: [], size: "", weight: "", spec_notes: "", product_code: "",
+    colors: [], sizes: [], variants: [], size: "", weight: "", spec_notes: "", product_code: "",
+    price_original_jpy: null, sale_end_at: null, sale_label: "",
     price_jpy: null, category: "其他", condition: "全新",
     photos: [], source_url: "", source_site: "手動新增",
     status: "published", sold: false, is_complete: false, human_edited: true,
