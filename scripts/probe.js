@@ -108,7 +108,7 @@ function fastRetailingApi(url) {
     productId,
     priceGroup,
     detail: `${base}/products/${productId}?includeModelSize=true&httpFailure=true`,
-    l2s: `${base}/products/${productId}/price-groups/${priceGroup}/l2s?withPrices=true&withStocks=true&includePreviousPrice=false&httpFailure=true`,
+    l2s: `${base}/products/${productId}/price-groups/${priceGroup}/l2s?withPrices=true&withStocks=true&includePreviousPrice=true&httpFailure=true`,
   };
 }
 
@@ -136,7 +136,8 @@ async function probeFastRetailing(url) {
       console.log("     頂層欄位:", Object.keys(result).join(", "));
 
       // 商品主資料：名稱、價格、促銷文字
-      for (const key of ["name", "productId", "representative", "prices", "promotion", "genderName"]) {
+      for (const key of ["name", "productId", "representative", "prices", "promotion", "genderName",
+                         "images", "colors", "sizes", "longDescription", "designDetail", "curationIds"]) {
         if (result[key] !== undefined) {
           console.log(`     ${key}:`, truncate(JSON.stringify(result[key]), 400));
         }
