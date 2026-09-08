@@ -85,16 +85,33 @@
   }
   .modalMask[hidden]{display:none;}
   @media (min-width:720px){ .modalMask{align-items:center;} }
+  /* 外框只負責定位與圓角，捲動交給裡面的 .modalScroll。
+     這樣關閉按鈕才能用絕對定位「浮」在最上層，不佔版面寬度，
+     商品照片就能吃滿整個寬度（之前按鈕用 float:right，會把圖片右邊擠掉一塊）。*/
   .modalBox{
-    background:#fff;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;
+    position:relative;background:#fff;width:100%;max-width:640px;
+    border-radius:16px 16px 0 0;overflow:hidden;
   }
   @media (min-width:720px){ .modalBox{border-radius:16px;} }
+  .modalScroll{max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modalBox .closeBtn{
-    position:sticky;top:0;float:right;margin:10px 10px 0 0;background:#fff;border:1px solid var(--line);
-    border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2;
+    position:absolute;top:10px;right:10px;
+    background:rgba(255,255,255,.92);border:1px solid var(--line);
+    border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;z-index:5;
+    display:flex;align-items:center;justify-content:center;padding:0;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
   }
   .modalGallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;background:#F1EEE4;}
-  .modalGallery img{flex:none;width:100%;scroll-snap-align:center;aspect-ratio:1/1;object-fit:cover;}
+  /* 依照片原始比例自動伸縮，不強制裁成正方形——
+     服飾是直式照片，硬裁 1:1 會把模特兒的頭跟腳切掉。
+     max-height 只是避免超長圖把整個彈窗撐爆。*/
+  .modalGallery img{
+    flex:none;width:100%;scroll-snap-align:center;
+    height:auto;max-height:78vh;object-fit:contain;
+    /* 圖片還沒載進來時先撐住高度，避免版面塌成一條線再突然跳開；
+       載入後 height:auto 會接手，改用照片自己的比例 */
+    min-height:min(78vw, 60vh);
+  }
   .modalBody{padding:18px 20px 26px;}
   .modalBody h2{font-size:17px;margin:0 0 8px;line-height:1.4;}
   .modalBody .catTag{display:inline-block;font-size:11px;background:var(--petrol);color:#fff;padding:2px 9px;border-radius:10px;margin-bottom:10px;}
@@ -208,9 +225,11 @@
 
 <div class="modalMask" id="modalMask" hidden>
   <div class="modalBox">
-    <button class="closeBtn" id="closeModal">✕</button>
-    <div class="modalGallery" id="modalGallery"></div>
-    <div class="modalBody" id="modalBody"></div>
+    <button class="closeBtn" id="closeModal" aria-label="關閉">✕</button>
+    <div class="modalScroll">
+      <div class="modalGallery" id="modalGallery"></div>
+      <div class="modalBody" id="modalBody"></div>
+    </div>
   </div>
 </div>
 
