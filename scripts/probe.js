@@ -87,6 +87,78 @@ function embeddedApiHints(html) {
   return { apis: [...apis], hasPriceJson };
 }
 
+/**
+ * Uniqlo 與 GU 是同一個母公司（Fast Retailing）的同一套電商系統，
+ * 商品頁是 React SPA，價格不在 HTML 裡，要打他們的 commerce API 才拿得到。
+ * 網址長這樣：https://www.uniqlo.com/jp/ja/products/E483535-000/00?...
+ */
+function fastRetailingApi(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  if (!/(uniqlo\.com|gu-global\.com)$/i.test(u.hostname)) return null;
+  const m = u.pathname.match(/^\/([a-z]{2})\/([a-z]{2})\/products\/([A-Z0-9-]+)(?:\/(\d+))?/i);
+  if (!m) return null;
+  const [, region, lang, productId, priceGroup = "00"] = m;
+  const base = `${u.origin}/${region}/api/commerce/v5/${lang}`;
+  return {
+    productId,
+    priceGroup,
+    detail: `${base}/products/${productId}?includeModelSize=true&httpFailure=true`,
+    l2s: `${base}/products/${productId}/price-groups/${priceGroup}/l2s?withPrices=true&withStocks=true&includePreviousPrice=false&httpFailure=true`,
+  };
+}
+
+async function probeFastRetailing(url) {
+  const api = fastRetailingApi(url);
+  if (!api) return;
+
+  section("Uniqlo / GU 專用 API（Fast Retailing 平台）");
+  console.log("  商品編號:", api.productId, " 價格群組:", api.priceGroup);
+
+  for (const [label, endpoint] of [["商品主資料", api.detail], ["尺寸/顏色/價格/庫存", api.l2s]]) {
+    console.log(`\n  ── ${label}\n     ${endpoint}`);
+    try {
+      const res = await fetch(endpoint, {
+        headers: { "User-Agent": UA, Accept: "application/json" },
+      });
+      const text = await res.text();
+      console.log(`     HTTP ${res.status}, ${text.length.toLocaleString()} 字元`);
+      if (!res.ok) {
+        console.log("     ", truncate(text, 300));
+        continue;
+      }
+      const json = JSON.parse(text);
+      const result = json.result || json;
+      console.log("     頂層欄位:", Object.keys(result).join(", "));
+
+      // 商品主資料：名稱、價格、促銷文字
+      for (const key of ["name", "productId", "representative", "prices", "promotion", "genderName"]) {
+        if (result[key] !== undefined) {
+          console.log(`     ${key}:`, truncate(JSON.stringify(result[key]), 400));
+        }
+      }
+      // l2s：每個尺寸/顏色組合的價格與庫存
+      for (const key of ["l2s", "prices", "stocks", "summary"]) {
+        const v = result[key];
+        if (v === undefined) continue;
+        if (Array.isArray(v)) {
+          console.log(`     ${key}: 陣列 ${v.length} 筆，第一筆 =`, truncate(JSON.stringify(v[0]), 500));
+        } else if (v && typeof v === "object") {
+          const ks = Object.keys(v);
+          console.log(`     ${key}: 物件 ${ks.length} 個 key，第一筆 =`,
+            truncate(JSON.stringify({ [ks[0]]: v[ks[0]] }), 500));
+        }
+      }
+    } catch (e) {
+      console.log("     失敗：", e.message);
+    }
+  }
+}
+
 async function main() {
   const url = process.argv[2];
   if (!url) {
@@ -135,6 +207,8 @@ async function main() {
   console.log("  HTML 內含 price JSON:", hasPriceJson ? "有" : "沒有");
   console.log("  可能的 API 路徑:");
   apis.forEach((a) => console.log("   ", a));
+
+  await probeFastRetailing(finalUrl);
 }
 
 main().catch((e) => {
