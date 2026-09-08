@@ -150,12 +150,12 @@ async function callGemini(apiKey, model, prompt) {
 
 async function refineWithGemini(apiKey, title, description, specText) {
   const prompt = `以下是一個日本網店商品頁面抓到的原始標題、描述、以及頁面上的規格內文，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看，並從規格內文抽出顏色/尺寸/重量等規格資訊。請只回傳純 JSON，不要加任何說明文字：
-{"title_zh":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":"","colors":[],"size":"","weight":"","spec_notes":"","product_code":""}
+{"title_ja":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":"","colors":[],"size":"","weight":"","spec_notes":"","product_code":""}
 
 規則：
-- title_zh：繁體中文標題，保留品牌/型號/顏色/尺寸等關鍵資訊，不超過 40 字。品牌名/商品名如果原文本來就是英文或羅馬字（例如「PRESS BUTTER SAND」這種本身就是名字的專有名詞），不要硬翻成中文，直接保留原文名稱，其餘描述性文字（例如品項類型、口味等）才用中文
-- description_zh：繁體中文商品描述，語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
-- title_en：英文標題，跟 title_zh 意思一致，保留品牌/型號等專有名詞不要亂翻。這個欄位絕對不能留空：如果原文標題本來就已經是英文/羅馬字（品牌名常見這樣），直接沿用同一個名稱即可，不需要另外想一個英文版本
+- title_ja：把原始標題整理成乾淨的商品名稱。**絕對不要翻成中文**，商品名稱維持原文（日文/英文/羅馬字都照原樣保留）。只做清理：去掉「ユニクロ公式 |」「GU公式 |」「楽天市場」這類網站名稱雜訊、去掉「送料無料」「ポイント10倍」這類促銷字眼，保留品牌、商品名、型號、規格。不超過 50 字
+- description_zh：繁體中文商品描述（描述用中文，但裡面出現的品牌名/商品名一樣保留原文不要翻），語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
+- title_en：英文商品名稱，給看英文的客人。品牌名/型號保留原樣不要亂翻，只把日文的品項說明部分翻成英文（例如「バターサンド」→「Butter Sandwich Cookies」）。這個欄位絕對不能留空：原文本來就是英文/羅馬字的話，直接沿用同一個名稱即可
 - description_en：英文商品描述，語氣自然像認真的小賣家，跟 description_zh 意思一致，100~200字
 - category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、食品零食、其他」中選一個最接近的（餅乾、和菓子、伴手禮、飲料、調味料等入口的東西一律選「食品零食」）
 - condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「全新」（本店商品多為全新代購，除非原文明確提到二手/使用痕跡才選其他）
@@ -251,7 +251,7 @@ exports.importProduct = onCall(
     }
 
     let ai = {
-      title_zh: "", description_zh: "", title_en: "", description_en: "",
+      title_ja: "", description_zh: "", title_en: "", description_en: "",
       category: "", condition: "", notes: "",
       colors: [], size: "", weight: "", spec_notes: "", product_code: "",
     };
@@ -275,11 +275,11 @@ exports.importProduct = onCall(
 
     const now = Date.now();
     const product = {
-      title_ja: extracted.title,
-      title_zh: ai.title_zh || extracted.title,
+      // 商品名稱不翻中文：中文介面顯示 title_ja、英文介面顯示 title_en
+      title_ja: ai.title_ja || extracted.title,
       description_ja: extracted.description,
       description_zh: ai.description_zh || "",
-      title_en: ai.title_en || ai.title_zh || extracted.title || "",
+      title_en: ai.title_en || ai.title_ja || extracted.title || "",
       description_en: ai.description_en || "",
       // 顏色以專用解析器抓到的實際顏色為準（AI 是用猜的），沒有才用 AI 的
       colors: (apparel && apparel.colors.length)
@@ -308,7 +308,7 @@ exports.importProduct = onCall(
       imported_via_ai,
       status: "draft",
       sold: false,
-      is_complete: !!(ai.title_zh && ai.description_zh && extracted.price && uploadedUrls.length),
+      is_complete: !!((ai.title_ja || extracted.title) && ai.description_zh && extracted.price && uploadedUrls.length),
       human_edited: false,
       created_at: now,
       updated_at: now,

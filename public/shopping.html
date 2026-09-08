@@ -292,9 +292,14 @@ function conditionLabel(cond){
   if (!cond) return "";
   return lang === "en" ? (COND_EN[cond] || cond) : cond;
 }
+/**
+ * 商品名稱不做中文翻譯：中文介面顯示日文原名，英文介面顯示英文名。
+ * 品牌與商品名是專有名詞，翻成中文反而讓客人對不上日本官網在賣的東西，
+ * 中文只用在描述文案（description_zh）。
+ */
 function productTitle(p){
-  if (lang === "en") return p.title_en || p.title_zh || p.title_ja || S().noTitle;
-  return p.title_zh || p.title_ja || S().noTitle;
+  if (lang === "en") return p.title_en || p.title_ja || p.title_zh || S().noTitle;
+  return p.title_ja || p.title_zh || p.title_en || S().noTitle;
 }
 function productDesc(p){
   if (lang === "en") return p.description_en || p.description_zh || p.description_ja || S().noDesc;
@@ -619,8 +624,9 @@ function openModal(id){
   function inquiryText(){
     // 問候語+商品名稱固定中英文都附上（方便賣家/買家雙方都看得懂），
     // 價錢跟連結不分語言，只出現一次
-    const titleZh = p.title_zh || p.title_ja || STR.zh.noTitle;
-    const titleEn = p.title_en || p.title_zh || p.title_ja || STR.en.noTitle;
+    // 跟畫面一致：中文那行帶日文原名，英文那行帶英文名
+    const titleZh = p.title_ja || p.title_zh || STR.zh.noTitle;
+    const titleEn = p.title_en || p.title_ja || STR.en.noTitle;
     const colorLine = selectedColor ? `\n${S().colorLabel}: ${selectedColor}` : "";
     const sizeLine = selectedSize ? `\n${S().sizeLabel}: ${selectedSize}` : "";
     return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}${sizeLine}\n${price}\n${link}`;

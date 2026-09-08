@@ -185,7 +185,19 @@ test("回傳品牌名稱與商品編號，方便後台辨識來源", () => {
   const p = buildProduct(info, detailJson, l2sJson);
   assert.strictEqual(p.source_site, "UNIQLO");
   assert.strictEqual(p.product_code, "E483535-000");
-  assert.strictEqual(p.title, "ミニT");
+});
+
+console.log("商品名稱");
+test("API 只給商品名時自動補上品牌，前台才看得出是哪一家", () => {
+  const p = buildProduct(info, detailJson, l2sJson);
+  assert.strictEqual(p.title, "UNIQLO ミニT");
+});
+
+test("商品名本來就含品牌時不會重複補一次", () => {
+  const withBrand = JSON.parse(JSON.stringify(detailJson));
+  withBrand.result.name = "UNIQLO ミニT";
+  const p = buildProduct(info, withBrand, l2sJson);
+  assert.strictEqual(p.title, "UNIQLO ミニT");
 });
 
 console.log(`\n${passed} 項測試通過${process.exitCode ? "，有測試失敗" : ""}`);

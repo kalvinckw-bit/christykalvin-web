@@ -185,8 +185,15 @@ function buildProduct(info, detailJson, l2sJson) {
     .replace(/<[^>]+>/g, "")
     .trim();
 
+  // 他們的 API 只給商品名不含品牌（例如「ナイロンコンビネーションスニーカー」），
+  // 前台看不出是哪一家的，所以品牌名不在名稱裡時自動補上去
+  const rawName = String(detail.name || "").trim();
+  const title = rawName && !new RegExp(info.brand, "i").test(rawName)
+    ? `${info.brand} ${rawName}`
+    : rawName;
+
   return {
-    title: detail.name || "",
+    title,
     description,
     images: imagesFromDetail(detail, info),
     price_jpy: minPromo,

@@ -345,9 +345,10 @@ async function deleteInquiry(id){
 }
 
 const FIELD_DEFS = [
-  ["title_zh", "標題(中文)", "text", true],
-  ["title_en", "標題(英文)", "text", false],
-  ["title_ja", "標題(原文)", "text", false],
+  // 商品名稱不做中文翻譯：中文介面顯示日文原名、英文介面顯示英文名，
+  // 所以後台不再提供「標題(中文)」欄位（品牌/商品名是專有名詞，翻中文反而對不上日本官網）
+  ["title_ja", "商品名稱（日文原名，中文介面顯示這個）", "text", true],
+  ["title_en", "商品名稱（英文，英文介面顯示這個）", "text", false],
   ["price_jpy", "售價 JPY（特價中就填特價）", "number", true],
   ["price_original_jpy", "原價 JPY（有折扣才填，前台會畫刪除線）", "number", false],
   ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
@@ -371,7 +372,7 @@ function render(){
     if (status !== "all" && (p.status || "draft") !== status) return false;
     if (cat !== "all" && (p.category || "其他") !== cat) return false;
     if (search) {
-      const hay = [p.title_zh, p.title_ja].filter(Boolean).join(" ").toLowerCase();
+      const hay = [p.title_ja, p.title_en, p.title_zh].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(search)) return false;
     }
     return true;
@@ -397,7 +398,7 @@ function render(){
       rowEl.classList.toggle("open");
     });
     rowEl.querySelector(".btn-save").addEventListener("click", () => saveRow(p.id));
-    rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(p.id, p.title_zh || p.title_ja));
+    rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(p.id, p.title_ja || p.title_zh));
     const soldBtn = rowEl.querySelector(".btn-sold");
     if (soldBtn) soldBtn.addEventListener("click", () => toggleSold(p.id, !p.sold));
     const addPh = rowEl.querySelector(".addPh");
@@ -471,7 +472,7 @@ function rowHTML(p){
     <div class="row-head">
       <span class="chev">▶</span>
       ${thumb ? `<img class="thumb" src="${esc(thumb)}">` : ""}
-      <span class="proj">${esc(p.title_zh || p.title_ja) || "(未命名商品)"}</span>
+      <span class="proj">${esc(p.title_ja || p.title_zh) || "(未命名商品)"}</span>
       ${tags.join("")}
       <span class="meta">${esc(p.category)||""} · ${esc(p.source_site)||"手動新增"} · ${p.created_at ? new Date(p.created_at).toLocaleDateString("zh-TW") : ""}</span>
     </div>
@@ -524,7 +525,7 @@ async function saveRow(id){
       update[key] = val === "" ? null : val;
     }
   });
-  update.is_complete = !!(update.title_zh && update.price_jpy && update.description_zh);
+  update.is_complete = !!(update.title_ja && update.price_jpy && update.description_zh);
   try {
     await updateDoc(doc(db, "products", id), update);
     const flash = rowEl.querySelector(".savedFlash");
@@ -600,7 +601,7 @@ async function removePhoto(id, idx){
 async function createBlankProduct(){
   const now = Date.now();
   const blank = {
-    title_zh: "", title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
+    title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
     colors: [], sizes: [], variants: [], size: "", weight: "", spec_notes: "", product_code: "",
     price_original_jpy: null, sale_end_at: null, sale_label: "",
     price_jpy: null, category: "其他", condition: "全新",
@@ -642,7 +643,7 @@ importBtn.addEventListener("click", async () => {
     const result = await importProductFn({ url });
     const product = result.data;
     importStatusEl.className = "importStatus ok";
-    importStatusEl.textContent = `匯入成功！已建立草稿「${product.title_zh || product.title_ja}」，請到「商品管理」核對後再上架。`;
+    importStatusEl.textContent = `匯入成功！已建立草稿「${product.title_ja || product.title_en}」，請到「商品管理」核對後再上架。`;
     document.getElementById("importUrl").value = "";
     document.querySelector('.tab[data-tab="products"]').click();
     document.getElementById("filterStatus").value = "draft";
