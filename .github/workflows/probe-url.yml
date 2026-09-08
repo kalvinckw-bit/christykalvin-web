@@ -11,9 +11,17 @@ on:
         description: "要偵測的商品網址"
         required: true
         type: string
+  # GitHub 要這個 workflow 先跑過一次才會把它註冊成可手動觸發，
+  # 所以掛一個只針對自己檔案的 push 觸發；實際偵測工作由下面的 if 擋住，
+  # push 進來時整個 job 會直接 skip，不會亂抓網站。
+  push:
+    paths:
+      - ".github/workflows/probe-url.yml"
+      - "scripts/probe.js"
 
 jobs:
   probe:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
