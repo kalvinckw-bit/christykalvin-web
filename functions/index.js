@@ -19,6 +19,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { Storage } = require("@google-cloud/storage");
 const { extractFromHtml } = require("./extract");
 const { fetchFastRetailingProduct } = require("./fastretailing");
+const { DEFAULT_PRICING, computePrices } = require("./pricing");
 
 initializeApp();
 
@@ -39,6 +40,20 @@ const BROWSER_UA =
 
 function db() {
   return getFirestore();
+}
+
+/** 讀後台設定的加價規則；沒設定過就用預設值。 */
+async function loadPricingSettings() {
+  try {
+    const doc = await db().collection("settings").doc("pricing").get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data && data.rules) return data;
+    }
+  } catch (_) {
+    // 設定讀不到就用預設，不能因此讓匯入整個失敗
+  }
+  return DEFAULT_PRICING;
 }
 
 function bucket() {
@@ -273,6 +288,16 @@ exports.importProduct = onCall(
       hostname = new URL(url).hostname;
     } catch (_) {}
 
+    // 套用加價規則：來源價是成本，實際售價由設定決定
+    const sourceSite = (apparel && apparel.source_site) || hostname;
+    const costJpy = extracted.currency === "JPY" ? extracted.price : null;
+    const costOriginalJpy = (apparel && apparel.price_original_jpy) || null;
+    const pricing = await loadPricingSettings();
+    const pricedFor = computePrices(
+      { cost_jpy: costJpy, cost_original_jpy: costOriginalJpy, source_site: sourceSite },
+      pricing
+    );
+
     const now = Date.now();
     const product = {
       // 商品名稱不翻中文：中文介面顯示 title_ja、英文介面顯示 title_en
@@ -292,9 +317,11 @@ exports.importProduct = onCall(
       weight: ai.weight || "",
       spec_notes: ai.spec_notes || "",
       product_code: (apparel && apparel.product_code) || ai.product_code || "",
-      price_jpy: extracted.currency === "JPY" ? extracted.price : null,
-      // 期間限定價／折扣：原價、折扣標籤、折扣截止時間（毫秒）
-      price_original_jpy: (apparel && apparel.price_original_jpy) || null,
+      // 只存賣給客人的價格。進貨成本與加價％數是營業機密，
+      // 另外存在 product_costs（僅管理員可讀），因為 products 的已上架商品是公開可讀的。
+      price_jpy: pricedFor.price_jpy,
+      // 期間限定價／折扣：原價（已含加價）、折扣標籤、折扣截止時間（毫秒）
+      price_original_jpy: pricedFor.price_original_jpy,
       sale_label: (apparel && apparel.sale_label) || "",
       sale_end_at: (apparel && apparel.sale_end_at) || null,
       price_source_currency: extracted.currency,
@@ -303,12 +330,12 @@ exports.importProduct = onCall(
       condition: ai.condition || "全新",
       photos: uploadedUrls,
       source_url: url,
-      source_site: (apparel && apparel.source_site) || hostname,
+      source_site: sourceSite,
       ai_notes: [ai.notes, apparelError, bucketWarning].filter(Boolean).join(" / "),
       imported_via_ai,
       status: "draft",
       sold: false,
-      is_complete: !!((ai.title_ja || extracted.title) && ai.description_zh && extracted.price && uploadedUrls.length),
+      is_complete: !!((ai.title_ja || extracted.title) && ai.description_zh && pricedFor.price_jpy && uploadedUrls.length),
       human_edited: false,
       created_at: now,
       updated_at: now,
@@ -316,6 +343,18 @@ exports.importProduct = onCall(
     };
 
     await db().collection("products").doc(productId).set(product);
+
+    // 成本與加價設定另外存，避免隨著公開商品資料外流
+    await db().collection("product_costs").doc(productId).set({
+      cost_jpy: costJpy,
+      cost_original_jpy: costOriginalJpy,
+      markup_type: "",
+      markup_value: null,
+      source_site: sourceSite,
+      applied_rule: pricedFor.markup_applied,
+      updated_at: now,
+    });
+
     return { id: productId, ...product };
   }
 );
@@ -390,6 +429,7 @@ exports.deletePhoto = onCall(
 exports.watchSourcePrices = onSchedule(
   { schedule: "every day 09:00", timeZone: "Asia/Tokyo", region: "asia-east1", timeoutSeconds: 540 },
   async () => {
+    const pricing = await loadPricingSettings();
     const snap = await db()
       .collection("products")
       .where("status", "==", "published")
@@ -410,23 +450,42 @@ exports.watchSourcePrices = onSchedule(
         alerts.push(`限時特價已於 ${new Date(p.sale_end_at).toLocaleDateString("zh-TW")} 結束，前台已自動改回原價 ¥${Number(p.price_original_jpy).toLocaleString()}，請確認是否要調整售價`);
       }
 
-      // 2) 來源網站的價格變了
+      // 2) 來源網站的「成本價」變了
       try {
         const fresh = await fetchFastRetailingProduct(p.source_url);
         if (fresh && fresh.price_jpy != null) {
           checked++;
-          const oldPrice = Number(p.price_jpy);
-          if (oldPrice && fresh.price_jpy !== oldPrice) {
-            const diff = fresh.price_jpy - oldPrice;
+          const costDoc = await db().collection("product_costs").doc(doc.id).get();
+      const costData = costDoc.exists ? costDoc.data() : {};
+      const oldCost = Number(costData.cost_jpy) || Number(p.price_jpy);
+          if (oldCost && fresh.price_jpy !== oldCost) {
+            const diff = fresh.price_jpy - oldCost;
+            // 依目前的加價規則換算成新的建議售價，老闆一眼就知道該賣多少
+            const suggested = computePrices(
+              {
+                cost_jpy: fresh.price_jpy,
+                cost_original_jpy: fresh.price_original_jpy,
+                source_site: p.source_site,
+                markup_type: costData.markup_type,
+                markup_value: costData.markup_value,
+              },
+              pricing
+            );
             alerts.push(
-              `來源網站價格從 ¥${oldPrice.toLocaleString()} 變成 ¥${fresh.price_jpy.toLocaleString()}` +
-              `（${diff > 0 ? "漲" : "降"} ¥${Math.abs(diff).toLocaleString()}）`
+              `來源成本從 ¥${oldCost.toLocaleString()} 變成 ¥${fresh.price_jpy.toLocaleString()}` +
+              `（${diff > 0 ? "漲" : "降"} ¥${Math.abs(diff).toLocaleString()}）` +
+              `，依目前加價規則建議售價 ¥${Number(suggested.price_jpy).toLocaleString()}` +
+              `（目前掛 ¥${Number(p.price_jpy).toLocaleString()}）`
             );
           }
           // 順便更新庫存，缺貨的尺寸前台才擋得住
           if (fresh.variants && fresh.variants.length) {
             await doc.ref.update({ variants: fresh.variants, stock_checked_at: now });
           }
+          await db().collection("product_costs").doc(doc.id).set(
+            { cost_jpy: fresh.price_jpy, cost_original_jpy: fresh.price_original_jpy, updated_at: now },
+            { merge: true }
+          );
           const allOut = fresh.variants && fresh.variants.length &&
             fresh.variants.every((v) => !v.in_stock);
           if (allOut) alerts.push("來源網站所有尺寸都已缺貨");

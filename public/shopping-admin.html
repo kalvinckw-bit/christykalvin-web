@@ -61,6 +61,9 @@
   .tag.sold{background:var(--sold);}
   .tag.incomplete{background:var(--danger);}
   .tag.onsale{background:#D2691E;}
+  .tag.profit{background:#2E7D32;}
+  .tag.loss{background:#B4530A;}
+  .calcBox{background:#F0F6F0;border:1px solid #C7DCC7;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;}
   .alertBox{background:#FDF1E7;border:1px solid #E8A87C;color:#8B4000;padding:10px 12px;border-radius:6px;font-size:12.5px;margin-bottom:12px;font-weight:700;}
   .alertBox .alertTime{font-weight:400;color:var(--muted);margin-left:6px;}
   .tag.expired{background:#8B0000;}
@@ -134,6 +137,7 @@
       <button class="tab active" data-tab="products">商品管理</button>
       <button class="tab" data-tab="import">貼連結自動匯入 <span class="badge-count" id="draftCount" style="display:none">0</span></button>
       <button class="tab" data-tab="inquiries">買家詢問 <span class="badge-count" id="inquiryCount" style="display:none">0</span></button>
+      <button class="tab" data-tab="pricing">加價設定</button>
     </div>
 
     <div class="panel active" id="panel-products">
@@ -173,6 +177,31 @@
       </div>
     </div>
 
+    <div class="panel" id="panel-pricing">
+      <div class="importBox" style="max-width:760px;">
+        <p>
+          <b>為什麼要加價：</b>高島屋這類通路有給回饋，直接用他們的標價賣就有利潤，所以設「不加價」。
+          Uniqlo、GU 沒有回饋，照抄他們的價格等於做白工，必須自己加價。<br>
+          這裡設定的是<b>各來源的預設規則</b>，貼連結匯入時會自動套用；個別商品要調整可以到「商品管理」單獨改。
+        </p>
+        <div id="pricingRules"></div>
+        <div class="field" style="max-width:260px;margin-top:14px;">
+          <label>標價進位方式</label>
+          <select id="roundingSelect">
+            <option value="10">進位到 10 元（¥1,237 → ¥1,240）</option>
+            <option value="100">進位到 100 元（¥1,237 → ¥1,300）</option>
+            <option value="none">不進位（¥1,237）</option>
+          </select>
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <button class="primary" id="savePricingBtn">儲存加價設定</button>
+          <button id="recalcAllBtn">依新規則重算所有商品售價</button>
+          <span class="savedFlash" id="pricingFlash">已儲存 ✓</span>
+        </div>
+        <div class="importStatus" id="pricingStatus"></div>
+      </div>
+    </div>
+
     <div class="panel" id="panel-inquiries">
       <div class="grid" id="inquiryGrid"></div>
       <div id="inquiryEmpty" style="display:none;">目前沒有買家詢問</div>
@@ -186,7 +215,7 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy, limit
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -239,6 +268,8 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById("whoami").textContent = user.email;
     startListening();
     startListeningInquiries();
+    startListeningCosts();
+    loadPricingSettings();
   } else {
     loginScreen.style.display = "block";
     appEl.style.display = "none";
@@ -277,6 +308,21 @@ function startListening(){
 }
 
 /* ---------------- 買家詢問 ---------------- */
+/* 成本與加價設定存在 product_costs（僅管理員可讀），
+   跟公開的 products 分開，才不會讓客人看到我們的進價與利潤。 */
+let costMap = {};
+function startListeningCosts(){
+  onSnapshot(collection(db, "product_costs"), (snap) => {
+    costMap = {};
+    snap.docs.forEach(d => { costMap[d.id] = d.data(); });
+    render();
+  }, (err) => console.warn("讀取成本資料失敗", err));
+}
+/** 把商品跟它的成本資料合起來給畫面用 */
+function withCost(p){
+  return { ...p, ...(costMap[p.id] || {}) };
+}
+
 function startListeningInquiries(){
   const q = query(collection(db, "inquiries"), orderBy("created_at", "desc"), limit(200));
   unsubInquiries = onSnapshot(q, (snap) => {
@@ -349,7 +395,10 @@ const FIELD_DEFS = [
   // 所以後台不再提供「標題(中文)」欄位（品牌/商品名是專有名詞，翻中文反而對不上日本官網）
   ["title_ja", "商品名稱（日文原名，中文介面顯示這個）", "text", true],
   ["title_en", "商品名稱（英文，英文介面顯示這個）", "text", false],
-  ["price_jpy", "售價 JPY（特價中就填特價）", "number", true],
+  ["cost_jpy", "來源成本 JPY（自動抓的，我們的進貨價）", "number", false],
+  ["markup_type", "加價方式", "select_markup", false],
+  ["markup_value", "加價數值（% 或 元）", "number", false],
+  ["price_jpy", "售價 JPY（賣給客人的價格）", "number", true],
   ["price_original_jpy", "原價 JPY（有折扣才填，前台會畫刪除線）", "number", false],
   ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
   ["sale_label", "特價標籤", "text", false],
@@ -389,7 +438,7 @@ function render(){
   }
   empty.style.display = "none";
 
-  grid.innerHTML = list.map(p => rowHTML(p)).join("");
+  grid.innerHTML = list.map(p => rowHTML(withCost(p))).join("");
 
   list.forEach(p => {
     const rowEl = document.getElementById("row_" + p.id);
@@ -398,6 +447,14 @@ function render(){
       rowEl.classList.toggle("open");
     });
     rowEl.querySelector(".btn-save").addEventListener("click", () => saveRow(p.id));
+    const recalcBtn = rowEl.querySelector(".btn-recalc");
+    if (recalcBtn) recalcBtn.addEventListener("click", async () => {
+      const r = computePrices(withCost(p));
+      if (r.price_jpy == null) { alert("沒有來源成本，無法重算"); return; }
+      await updateDoc(doc(db, "products", p.id), {
+        price_jpy: r.price_jpy, price_original_jpy: r.price_original_jpy, updated_at: Date.now(),
+      });
+    });
     rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(p.id, p.title_ja || p.title_zh));
     const soldBtn = rowEl.querySelector(".btn-sold");
     if (soldBtn) soldBtn.addEventListener("click", () => toggleSold(p.id, !p.sold));
@@ -407,6 +464,16 @@ function render(){
       btn.addEventListener("click", () => removePhoto(p.id, Number(btn.dataset.idx)));
     });
   });
+}
+
+/** 這筆賺多少：後台一眼看出利潤，沒有成本資料就不顯示 */
+function profitBadge(p){
+  const cost = Number(p.cost_jpy), price = Number(p.price_jpy);
+  if (!cost || !price) return "";
+  const amount = price - cost;
+  const pct = Math.round((amount / cost) * 1000) / 10;
+  const cls = amount > 0 ? "profit" : "loss";
+  return `<span class="tag ${cls}">${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）</span>`;
 }
 
 function rowHTML(p){
@@ -446,6 +513,12 @@ function rowHTML(p){
         ${opts.map(([v,l]) => `<option value="${v}" ${p[key]===v?"selected":""}>${l}</option>`).join("")}
       </select></div>`;
     }
+    if (type === "select_markup") {
+      const opts = [["", "（用來源預設規則）"], ["none", "不加價"], ["percent", "加百分比 %"], ["fixed", "加固定金額 ¥"]];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(([v, l]) => `<option value="${v}" ${(p[key]||"")===v?"selected":""}>${l}</option>`).join("")}
+      </select></div>`;
+    }
     if (type === "datetime") {
       // Firestore 存毫秒時間戳，輸入框用 datetime-local
       const ms = Number(p[key]) || 0;
@@ -474,6 +547,7 @@ function rowHTML(p){
       ${thumb ? `<img class="thumb" src="${esc(thumb)}">` : ""}
       <span class="proj">${esc(p.title_ja || p.title_zh) || "(未命名商品)"}</span>
       ${tags.join("")}
+      ${profitBadge(p)}
       <span class="meta">${esc(p.category)||""} · ${esc(p.source_site)||"手動新增"} · ${p.created_at ? new Date(p.created_at).toLocaleDateString("zh-TW") : ""}</span>
     </div>
     <div class="detail">
@@ -488,6 +562,12 @@ function rowHTML(p){
         <div class="field full"><label>描述(原文)</label><textarea data-key="description_ja">${esc(p.description_ja)}</textarea></div>
         <div class="field full"><label>其他規格備註</label><textarea data-key="spec_notes">${esc(p.spec_notes)}</textarea></div>
       </div>
+      ${p.cost_jpy ? `<div class="calcBox">
+        來源成本 <b>¥${Number(p.cost_jpy).toLocaleString()}</b>
+        →（${p.markup_type ? "此商品自訂加價" : `${esc(p.source_site||"")} 的預設規則`}）
+        → 目前售價 <b>¥${Number(p.price_jpy||0).toLocaleString()}</b>
+        <button class="btn-recalc" data-id="${p.id}" style="margin-left:10px;padding:3px 10px;font-size:12px;">依規則重算售價</button>
+      </div>` : ""}
       ${p.price_alert ? `<div class="alertBox">⚠️ 查價提醒：${esc(p.price_alert)}${
         p.price_alert_at ? `<span class="alertTime">（${new Date(p.price_alert_at).toLocaleString("zh-TW")} 檢查）</span>` : ""
       }</div>` : ""}
@@ -519,15 +599,27 @@ async function saveRow(id){
       update[key] = val === "" ? null : new Date(val).getTime();
     } else if (inp.dataset.type === "colors_text") {
       update[key] = val === "" ? [] : val.split(/[、,，]/).map(s => s.trim()).filter(Boolean);
-    } else if (key === "price_jpy" || key === "price_original_jpy") {
+    } else if (key === "price_jpy" || key === "price_original_jpy" || key === "cost_jpy" || key === "markup_value") {
       update[key] = val === "" ? null : Number(val);
     } else {
       update[key] = val === "" ? null : val;
     }
   });
   update.is_complete = !!(update.title_ja && update.price_jpy && update.description_zh);
+
+  // 成本與加價是機密欄位，要分流寫到 product_costs，不能混進公開的 products
+  const COST_FIELDS = ["cost_jpy", "cost_original_jpy", "markup_type", "markup_value"];
+  const costUpdate = {};
+  for (const f of COST_FIELDS) {
+    if (f in update) { costUpdate[f] = update[f]; delete update[f]; }
+  }
+
   try {
     await updateDoc(doc(db, "products", id), update);
+    if (Object.keys(costUpdate).length) {
+      costUpdate.updated_at = Date.now();
+      await setDoc(doc(db, "product_costs", id), costUpdate, { merge: true });
+    }
     const flash = rowEl.querySelector(".savedFlash");
     flash.style.display = "inline";
     setTimeout(() => flash.style.display = "none", 2000);
@@ -624,6 +716,159 @@ document.getElementById("btnNewProduct").addEventListener("click", createBlankPr
 document.getElementById("filterStatus").addEventListener("change", render);
 document.getElementById("filterCat").addEventListener("change", render);
 document.getElementById("searchBox").addEventListener("input", render);
+
+/* ---------------- 加價設定 ---------------- */
+// 高島屋有回饋 → 不加價；Uniqlo/GU 沒回饋 → 必須自己加價才有利潤
+const DEFAULT_PRICING = {
+  rules: {
+    UNIQLO: { type: "percent", value: 25 },
+    GU: { type: "percent", value: 25 },
+    "takashimaya.co.jp": { type: "none", value: 0 },
+    default: { type: "percent", value: 25 },
+  },
+  rounding: "10",
+};
+const RULE_LABELS = {
+  UNIQLO: "Uniqlo",
+  GU: "GU",
+  "takashimaya.co.jp": "高島屋（有回饋）",
+  default: "其他所有來源",
+};
+let pricingSettings = JSON.parse(JSON.stringify(DEFAULT_PRICING));
+
+function ruleFor(sourceSite, cfg){
+  const rules = (cfg || pricingSettings).rules || {};
+  const site = String(sourceSite || "").trim();
+  if (site && rules[site]) return rules[site];
+  const key = Object.keys(rules).find(k => k !== "default" && site && site.toLowerCase().includes(k.toLowerCase()));
+  return key ? rules[key] : (rules.default || { type: "none", value: 0 });
+}
+function roundPrice(v, mode){
+  if (v == null || !isFinite(v)) return null;
+  const n = Math.max(0, v);
+  if (mode === "100") return Math.ceil(n / 100) * 100;
+  if (mode === "10") return Math.ceil(n / 10) * 10;
+  return Math.round(n);
+}
+function applyMarkup(cost, rule, rounding){
+  if (cost == null || !isFinite(cost)) return null;
+  const value = Number(rule.value) || 0;
+  let out = cost;
+  if (rule.type === "percent") out = cost * (1 + value / 100);
+  else if (rule.type === "fixed") out = cost + value;
+  return roundPrice(out, rounding);
+}
+function computePrices(p, cfg){
+  const conf = cfg || pricingSettings;
+  const cost = Number(p.cost_jpy);
+  const costOriginal = Number(p.cost_original_jpy) || null;
+  const rule = p.markup_type
+    ? { type: p.markup_type, value: Number(p.markup_value) || 0 }
+    : ruleFor(p.source_site, conf);
+  return {
+    price_jpy: applyMarkup(cost, rule, conf.rounding),
+    price_original_jpy: costOriginal ? applyMarkup(costOriginal, rule, conf.rounding) : null,
+    rule,
+  };
+}
+
+async function loadPricingSettings(){
+  try {
+    const d = await getDoc(doc(db, "settings", "pricing"));
+    if (d.exists() && d.data() && d.data().rules) pricingSettings = d.data();
+  } catch (err) {
+    console.warn("讀取加價設定失敗，先用預設值", err);
+  }
+  renderPricingPanel();
+}
+
+function renderPricingPanel(){
+  const wrap = document.getElementById("pricingRules");
+  const rules = pricingSettings.rules || {};
+  wrap.innerHTML = Object.keys(RULE_LABELS).map(key => {
+    const r = rules[key] || { type: "none", value: 0 };
+    return `<div class="fields" style="margin-bottom:6px;" data-rule="${key}">
+      <div class="field"><label>來源</label>
+        <input type="text" value="${esc(RULE_LABELS[key])}" disabled></div>
+      <div class="field"><label>加價方式</label>
+        <select data-rule-type="${key}">
+          <option value="none" ${r.type==="none"?"selected":""}>不加價（照抓）</option>
+          <option value="percent" ${r.type==="percent"?"selected":""}>加百分比 %</option>
+          <option value="fixed" ${r.type==="fixed"?"selected":""}>加固定金額 ¥</option>
+        </select></div>
+      <div class="field"><label>數值</label>
+        <input type="number" data-rule-value="${key}" value="${r.value ?? 0}"></div>
+      <div class="field"><label>試算：來源 ¥1,000 →</label>
+        <input type="text" data-rule-preview="${key}" disabled></div>
+    </div>`;
+  }).join("");
+  document.getElementById("roundingSelect").value = pricingSettings.rounding || "10";
+  wrap.querySelectorAll("[data-rule-type],[data-rule-value]").forEach(el => {
+    el.addEventListener("input", updatePricingPreview);
+  });
+  document.getElementById("roundingSelect").addEventListener("change", updatePricingPreview);
+  updatePricingPreview();
+}
+
+function readPricingForm(){
+  const rules = {};
+  document.querySelectorAll("[data-rule-type]").forEach(sel => {
+    const key = sel.dataset.ruleType;
+    const valEl = document.querySelector(`[data-rule-value="${key}"]`);
+    rules[key] = { type: sel.value, value: Number(valEl.value) || 0 };
+  });
+  return { rules, rounding: document.getElementById("roundingSelect").value };
+}
+
+function updatePricingPreview(){
+  const cfg = readPricingForm();
+  document.querySelectorAll("[data-rule-preview]").forEach(el => {
+    const rule = cfg.rules[el.dataset.rulePreview];
+    const v = applyMarkup(1000, rule, cfg.rounding);
+    el.value = v == null ? "-" : `¥${v.toLocaleString()}（賺 ¥${(v - 1000).toLocaleString()}）`;
+  });
+}
+
+document.getElementById("savePricingBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("pricingStatus");
+  try {
+    pricingSettings = readPricingForm();
+    await setDoc(doc(db, "settings", "pricing"), pricingSettings);
+    const flash = document.getElementById("pricingFlash");
+    flash.style.display = "inline";
+    setTimeout(() => flash.style.display = "none", 2000);
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = "已儲存。之後匯入的商品會自動套用這個規則。";
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "儲存失敗：" + err.message;
+  }
+});
+
+// 改了規則之後，把既有商品的售價一次重算（只動沒有手動指定加價的商品）
+document.getElementById("recalcAllBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("pricingStatus");
+  const targets = allProducts.map(withCost).filter(p => p.cost_jpy && !p.markup_type);
+  if (!targets.length) {
+    statusEl.className = "importStatus";
+    statusEl.textContent = "沒有需要重算的商品（只會重算有來源成本、且沒有單獨設定加價的商品）。";
+    return;
+  }
+  if (!confirm(`會依目前規則重算 ${targets.length} 件商品的售價，確定嗎？`)) return;
+  let done = 0;
+  for (const p of targets) {
+    const r = computePrices(p, readPricingForm());
+    if (r.price_jpy == null) continue;
+    await updateDoc(doc(db, "products", p.id), {
+      price_jpy: r.price_jpy,
+      price_original_jpy: r.price_original_jpy,
+      updated_at: Date.now(),
+    });
+    done++;
+  }
+  statusEl.className = "importStatus ok";
+  statusEl.textContent = `已重算 ${done} 件商品的售價。`;
+});
 
 /* ---------------- 貼連結自動匯入 ---------------- */
 const importBtn = document.getElementById("importBtn");

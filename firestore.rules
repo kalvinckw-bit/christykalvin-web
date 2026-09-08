@@ -10,6 +10,19 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 加價規則等後台設定：只有登入的管理員可以讀寫。
+    // 這裡放的是成本加成％數，屬於營業機密，絕對不能讓前台訪客讀到。
+    match /settings/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 商品的進貨成本與加價設定：**一定要跟 products 分開存**。
+    // products 的已上架商品是公開可讀的，成本若放在裡面，
+    // 任何客人打開開發者工具就會看到我們的進價與利潤率。
+    match /product_costs/{productId} {
+      allow read, write: if request.auth != null;
+    }
+
     // 前台留言詢問表單：訪客可以新增(create)詢問，但不能讀取/修改/刪除既有詢問
     // (避免陌生人看到其他買家的聯絡方式)；後台登入帳號才能讀取/標記/刪除。
     match /inquiries/{inquiryId} {
