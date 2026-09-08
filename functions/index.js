@@ -42,6 +42,28 @@ function db() {
   return getFirestore();
 }
 
+/**
+ * 取得 Gemini API 金鑰。
+ *
+ * 優先讀環境變數（functions/.env，本機部署時會帶上去）；
+ * 但 .env 沒有進 git，CI 部署時看不到它，一部署就會把線上金鑰洗掉、AI 直接停擺。
+ * 所以改成環境變數沒有時，退而從 Firestore 的 settings/ai 讀取
+ * （該集合只有登入的管理員讀得到，前台訪客讀不到）。
+ */
+let cachedGeminiKey = null;
+async function loadGeminiKey() {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  if (cachedGeminiKey) return cachedGeminiKey;
+  try {
+    const doc = await db().collection("settings").doc("ai").get();
+    const key = doc.exists ? doc.data().gemini_api_key : "";
+    if (key) cachedGeminiKey = key;
+    return key || "";
+  } catch (_) {
+    return "";
+  }
+}
+
 /** 讀後台設定的加價規則；沒設定過就用預設值。 */
 async function loadPricingSettings() {
   try {
@@ -271,7 +293,7 @@ exports.importProduct = onCall(
       colors: [], size: "", weight: "", spec_notes: "", product_code: "",
     };
     let imported_via_ai = false;
-    const apiKey = process.env.GEMINI_API_KEY || "";
+    const apiKey = await loadGeminiKey();
     if (apiKey) {
       try {
         ai = await refineWithGemini(apiKey, extracted.title, extracted.description, extracted.specText);
@@ -280,7 +302,7 @@ exports.importProduct = onCall(
         ai.notes = `AI 潤飾失敗（不影響原始資料匯入，可手動編輯）：${err.message}`;
       }
     } else {
-      ai.notes = "尚未設定 GEMINI_API_KEY，此筆為原文直接匯入，請人工翻譯/潤飾後再發布";
+      ai.notes = "尚未設定 Gemini 金鑰（環境變數與 settings/ai 都沒有），此筆為原文直接匯入，請人工潤飾後再發布";
     }
 
     let hostname = "";
@@ -510,3 +532,25 @@ exports.watchSourcePrices = onSchedule(
     console.log(`查價完成：檢查 ${checked} 筆，${alerted} 筆有異常`);
   }
 );
+
+/**
+ * 版本回報端點（公開，只回傳 git commit SHA，沒有任何機密）。
+ *
+ * 為什麼需要：部署流程原本只驗證 HTML 檔案，functions 那半邊完全沒檢查，
+ * 結果 functions 被誤部署到另一個專案（voiceout-asia）長達好幾輪都沒被發現——
+ * 每次都顯示「部署成功」，實際上線上跑的是舊程式碼。
+ * 有了這個端點，CI 部署後可以直接比對「線上函式的版本」與「這次要部署的版本」，
+ * 不一致就讓部署失敗，不會再有靜默的假成功。
+ */
+const { onRequest } = require("firebase-functions/v2/https");
+let deployedVersion = null;
+exports.version = onRequest({ region: "asia-east1", cors: true }, (req, res) => {
+  if (!deployedVersion) {
+    try {
+      deployedVersion = require("./version.json");
+    } catch (_) {
+      deployedVersion = { sha: "unknown", note: "版本檔不存在（可能是本機手動部署）" };
+    }
+  }
+  res.json(deployedVersion);
+});

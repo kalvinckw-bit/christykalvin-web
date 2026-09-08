@@ -3,3 +3,6 @@ node_modules/
 *.log
 .env
 .env.*
+
+# 版本檔由 CI 在部署前產生，不進 git
+version.json

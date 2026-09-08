@@ -52,14 +52,27 @@ jobs:
             --non-interactive \
             --force
 
-      # voiceout-asia 是共用 Firebase 專案，裡面還有其他站台的 functions，
-      # 絕不能用 --only functions（會把本 repo 沒有的其他站台 functions 判定成要刪除）。
-      # 只精準部署這個購物網站用到的 function。
+      # ⚠️ Functions 必須部署到 christykalvin，不是 voiceout-asia。
+      # 前後台網頁的 firebaseConfig 是 projectId:"christykalvin"，
+      # 所以 httpsCallable 打的是 christykalvin 的函式。
+      # 曾經誤設成 voiceout-asia，結果新版程式碼全部部署到沒人呼叫的專案，
+      # 線上一直跑舊版函式（Uniqlo 解析器、Gemini 重試都沒生效）卻毫無錯誤訊息。
+      #
+      # 另外保留 --only functions:<名稱> 的精準指定：不可用 --only functions，
+      # 否則會把該專案裡本 repo 沒有的其他 functions 判定成要刪除。
+
+      # 把這次的 commit SHA 寫進函式包裡，部署後才能驗證線上跑的是哪一版
+      - name: Stamp function version
+        run: |
+          printf '{"sha":"%s","deployedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > functions/version.json
+          cat functions/version.json
+
       - name: Deploy Functions
         run: |
           npx firebase-tools deploy \
-            --project voiceout-asia \
-            --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto,functions:watchSourcePrices \
+            --project christykalvin \
+            --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto,functions:watchSourcePrices,functions:version \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --non-interactive \
             --force
@@ -95,6 +108,21 @@ jobs:
               done
             done
           done
+          echo "=============================================="
+          echo "Cloud Functions 版本"
+          echo "本次 commit : $GITHUB_SHA"
+          fn_url="https://asia-east1-christykalvin.cloudfunctions.net/version"
+          live_sha=$(curl -s --max-time 25 "$fn_url" | node -e "
+            let d='';process.stdin.on('data',c=>d+=c);
+            process.stdin.on('end',()=>{try{console.log(JSON.parse(d).sha||'')}catch(e){console.log('')}})" )
+          echo "線上函式版本: ${live_sha:-（抓不到）}"
+          if [ "$live_sha" = "$GITHUB_SHA" ]; then
+            echo "  ✅ 線上函式確實是這次部署的程式碼"
+          else
+            echo "  ❌ 線上函式不是這次的版本——函式可能部署到錯誤的專案，或部署沒生效"
+            fail=1
+          fi
+
           echo "=============================================="
           if [ "$fail" = "1" ]; then
             echo "正式站內容與這次要部署的版本不一致，部署沒有真正生效。"
