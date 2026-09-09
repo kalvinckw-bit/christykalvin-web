@@ -1,4 +1,9 @@
 > [!CAUTION]
+> ### ⚡ 嚴禁狹隘單點修改原則（Anti-Silo & Cross-AI Realignment Mandate）
+> **任何 AI 新增或修訂任何規則時，嚴禁只改自己專屬的檔案（例如 Claude 嚴禁只改 `CLAUDE.md`）！**
+> **必須同時同步更新全套入口公文：`AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`DECISIONS.md` 與對應的 `START_SESSION.md` / `END_SESSION.md`！誰發明或修訂規則，誰就必須負全責同步傳達給全體 AI 入口！**
+
+> [!CAUTION]
 > ### ⚡ 鋼鐵憲法：開局必 Pull，收工必 Push（Mandatory Git Cloud Sync）
 > **1. 任何 AI 執行 `start` 時，第一動作必須自動執行 `git pull --rebase` 拉取 GitHub 雲端最新代碼！**
 > **2. 任何 AI 執行 `end` 時，必須自動執行 `git add`、`git commit` 並立即 `git push` 推上 GitHub 雲端！**
