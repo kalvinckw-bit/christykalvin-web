@@ -103,11 +103,13 @@ This document records permanent architectural, design, and policy decisions appr
 
 ---
 
-### Decision: Mandatory Google Drive Mirror Sync on End (ChristyKalvinWeb 鏡像同步強制規範)
+### Decision: Universal Dual-Cloud Mirror Parity for All Group Projects (全集團專案 OneDrive ⟷ Google Drive ⟷ GitHub 三位一體同步憲法)
 - **Status**: APPROVED & MANDATORY
 - **Date**: 2026-09-09
-- **Context**: 鑑於 Google Drive 鏡像無排程/Webhook 自動化機制，曾發生多次 AI 長期未同步且未主動提醒之模式性疏漏。為杜絕依賴 AI 記憶之弊端，此同步流程正式定性為集團鋼鐵憲法級決策。
+- **Context**: 全集團旗下所有專案（不僅限於 ChristyKalvinWeb，而是涵蓋 `Projects` 底下所有子專案：`CK Holdings` 旗下所有子專案、`Facebook Auto Post`、`Laundry + Cafe`、`Python` 工具群、`00 Master AI Context Template` 等），在 Google Drive 均有對應之實體鏡像目錄（`G:\マイドライブ\Projects\<專案名稱>`）。為落實跨 AI、跨裝置、跨微軟/谷歌雲端生態的絕對對齊，全集團專案必須遵循三位一體同步規範。
 - **Constitutional Rules (憲法級硬性準則)**:
-  1. **收工必核對（Mandatory on `end`）**：每次 session 執行 `end` 時，AI 必須主動執行 `git diff --name-only <上次同步commit>..HEAD` 找出本次異動檔案，並同步更新至 Google Drive `ChristyKalvinWeb` 根目錄鏡像。
-  2. **收工報告透明化**：交接報告中必須逐項明確列出本次同步之檔案清單與對應 Drive 檔案 ID，嚴禁僅以「已同步」三字含糊帶過。
-  3. **嚴禁假設與跳過**：嚴禁假設「應該最新」或以非關鍵為由略過此步驟，違者視為違反集團鋼鐵憲法。
+  1. **全集團一體適用（Universal Group Scope）**：所有位於 `Projects` 目錄下之專案，一律強制適用本同步規範，絕無例外，嚴禁誤判為特定單一專案獨有！
+  2. **收工手動鏡像（Mandatory End Handoff Parity）**：Google Drive 鏡像無自動雲端排程或 Webhook 機制，任何 AI（Claude、Antigravity、ChatGPT、Codex 等）在執行 `end` 時，**必須主動找出本次 session 異動之檔案，並同步更新複製至 Google Drive 該專案根目錄鏡像對應路徑**（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`，若在純雲端無本地磁碟掛載之環境如 Web Claude，則必須調用 Google Drive API 上傳）。
+  3. **交接報告具體透明（Transparent Audit Trail）**：收工報告中必須具體列出同步檔案名稱與目標路徑/ID，嚴禁僅以「已同步」含糊帶過，嚴禁省略。
+  4. **嚴禁跳過與假設**：嚴禁跳過此步驟、嚴禁假設「應該還是最新的」——忘記檢查即代表雲端鏡像停擺！
+  5. **嚴禁狹隘單點修改（Anti-Silo Mandate）**：規則修訂必須同時更新 `AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`AI_CONTEXT/END_SESSION.md`、`AI_CONTEXT/DECISIONS.md`，誰改動誰負責對齊全體 AI。

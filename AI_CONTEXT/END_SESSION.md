@@ -37,11 +37,11 @@ Triggered whenever the user says `end` or requests to finish/hand off the sessio
    - Execute: `git push origin <current-branch>`
    - *Conflict Safety*: If push is rejected due to remote updates, retry rebase once. If conflict occurs in source code, report conflict to user immediately.
 
-5. **Google Drive Mirror Sync (Mandatory for ChristyKalvinWeb)**:
-   - Google Drive 鏡像同步無任何排程或 webhook 機制，必須由 AI 在收工時執行：
-     1. 執行 `git diff --name-only <上次同步commit>..HEAD` 找出本次 session 異動檔案。
-     2. 將異動檔案同步更新至 Google Drive `ChristyKalvinWeb` 根目錄鏡像對應路徑。
-     3. 嚴禁跳過，嚴禁假設「應該最新」。
+5. **Google Drive Mirror Sync (全集團專案 Google Drive 鏡像同步)**:
+   - 全集團專案在 Google Drive 皆有對應實體鏡像（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb`），無任何自動 webhook 或排程機制，必須由 AI 在收工時執行：
+     1. 執行 `git diff --name-only <上次同步commit>..HEAD` 或實體檢查找出本次 session 異動檔案清單。
+     2. 將異動檔案同步更新/複製至 Google Drive 該專案根目錄鏡像對應路徑（若在無本機掛載之環境如 Web Claude，則調用 Google Drive API 上傳）。
+     3. 嚴禁跳過這一步，嚴禁假設「應該最新」。
 
 6. **Output Standard Handoff Report**:
    - Output the exact summary format below:
