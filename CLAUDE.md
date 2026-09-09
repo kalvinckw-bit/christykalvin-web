@@ -3,6 +3,11 @@
 > **1. 任何 AI 執行 `start` 時，第一動作必須自動執行 `git pull --rebase` 拉取 GitHub 雲端最新代碼！**
 > **2. 任何 AI 執行 `end` 時，必須自動執行 `git add`、`git commit` 並立即 `git push` 推上 GitHub 雲端！**
 > **3. 嚴禁任何 AI 宣稱『不需要 push 到 GitHub』或將 push/pull 留給使用者手動！自動同步雲端是 AI 的基本職責！**
+> **4. Google Drive 鏡像同步（`ChristyKalvinWeb` 這個 Drive 資料夾）不是自動的，沒有 webhook／排程機制，完全靠 AI 每次手動執行。所以任何 AI 執行 `end` 時，必須：**
+>    - **用 `git diff --name-only <上次同步的 commit>..HEAD` 找出這次 session 改動過的檔案**
+>    - **把每一個改動過的檔案同步上傳/更新到 Drive `ChristyKalvinWeb` 對應路徑（不是自己以為的子資料夾，是使用者實際在看的那個根目錄鏡像）**
+>    - **在收工報告裡明確列出「這次同步了哪些檔案、對應到 Drive 哪個檔案 id」，不能只說「已同步」三個字**
+>    - **嚴禁跳過這一步、嚴禁假設「應該還是最新的」——沒有機制保證這件事會自動發生，忘記檢查=同步會停擺**
 
 > [!CAUTION]
 > ### ⚡ AI 嚴禁怠惰與推卸責任原則（Zero Lazy Delegation & Strict Self-Execution）
