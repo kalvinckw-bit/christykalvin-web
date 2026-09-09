@@ -149,3 +149,53 @@ functions 那邊只要報錯（先是「其他站台 functions 會被刪除」�
 ### Next Actions
 1. **新增 3 個後台帳號**：`kalvin.ckw@hotmail.com`、`kalvin.ckw@gmail.com`、`pysum1025@hotmail.com`（共用密碼），等使用者提供密碼
 2. 現有 `PRESS BUTTER SAND` 草稿的「標題(英文)」是空的，需手動補；之後新匯入不會再有此問題
+
+---
+
+## Session 2026-09-08 ~ 2026-09-09 — Claude (Web, Cloud)
+
+### Status: Completed & Deployed to Branch
+- **Branch**: `claude/ec-resale-platform-ku6xau`
+- **Latest Commits**:
+  - `7d6f53f`: docs: CLAUDE.md 補上 Google Drive 同步的強制步驟
+  - `514eef6`: fix: functions 部署到錯誤的專案，線上一直跑舊版程式碼
+  - `abcac8b`: fix: 商品照片吃滿彈窗寬度，關閉鈕改為浮在照片上不佔版面
+  - `0230b84`: feat: 加價（markup）機制，Uniqlo/GU 這類沒有回饋的來源可以自己定價
+  - `0c264e6`: feat: 商品名稱不翻中文，中文介面顯示日文原名、英文介面顯示英文名
+  - `4f50e4f`: feat: 支援 Uniqlo/GU 服飾（期間限定價、尺寸庫存、自動查價）
+
+### Work Completed（做過的事情）
+1. **Uniqlo / GU 服飾深度支援** (`functions/fastretailing.js`, `fastretailing.test.js`):
+   - Fast Retailing 內部 Commerce API 逆向解析，支援期間限定特價、原價劃線、特價倒數。
+   - 多尺寸與顏色矩陣庫存同步，前台依顏色聯動尺寸缺貨狀態。
+   - 每日自動查價排程 `watchSourcePrices`，來源價格波動自動記錄提醒。
+2. **商品命名標準重構** (`public/shopping.html`, `public/shopping-admin.html`):
+   - 商品名不翻中文，中文介面顯示日文原名 (`title_ja`)、英文介面顯示英文名 (`title_en`)。
+   - Gemini 只清理標題網站雜訊（如「ユニクロ公式 |」等），不再硬翻專有名詞。
+3. **自定義利潤加價機制 (Markup System)** (`functions/pricing.js`, `pricing.test.js`):
+   - 解決無回饋來源（Uniqlo/GU）無利潤問題，支援百分比 (%) 與固定金額加價。
+   - 後台新增「加價設定」分頁，可獨立覆寫單品加價規則並即時試算。
+   - 成本與加價資料獨立存於 `product_costs` 集合（僅限管理員讀取，防止訪客透過 DevTools 查看進貨底價）。
+4. **前端彈窗 UI 與響應式體驗優化** (`public/shopping.html`):
+   - 關閉按鈕改為絕對定位浮動於右上角，解決 float 擠壓導致照片被裁切問題。
+   - 商品照片滿版顯示，適應直式服飾 (3:4) 與正方食品 (1:1) 原圖比例。
+5. **Functions 部署重大修正與版本自動校驗**:
+   - 發現 CI 原本將 functions 部署至 `voiceout-asia`，而前端連線 `christykalvin`，導致一直跑舊程式碼。
+   - 修正為部署至 `christykalvin`，並在 CI 流程加入 `version` 端點即時比對 Commit SHA。
+   - Gemini 金鑰改為從 Firestore `settings/ai` 讀取，避免 CI 未帶 `.env` 沖刷線上金鑰。
+6. **收工鏡像同步規範確認**:
+   - 確立法定義務，收工時必須落實全集團 Google Drive 鏡像實體同步。
+
+### Files Modified
+- `public/shopping.html`, `public/shopping-admin.html`
+- `functions/fastretailing.js`, `functions/fastretailing.test.js`
+- `functions/pricing.js`, `functions/pricing.test.js`
+- `functions/index.js`, `functions/extract.js`, `functions/extract.test.js`
+- `firestore.rules`, `firebase.json`
+- `.github/workflows/deploy-shopping.yml`
+- `CLAUDE.md`, `AGENTS.md`, `CHATGPT.md`, `AI_CONTEXT/DECISIONS.md`, `AI_CONTEXT/END_SESSION.md`
+
+### Next Actions / Must-Do
+1. 實測後台貼上 Uniqlo / GU 連結，確認規格、尺寸、照片及加價公式運作正常。
+2. 檢查 GitHub Actions CI 自動部署狀態。
+
