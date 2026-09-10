@@ -331,6 +331,15 @@ async function main() {
   console.log("  可能的 API 路徑:");
   apis.forEach((a) => console.log("   ", a));
 
+  // extract.js 目前只認 og:image / twitter:image / itemprop=image 這幾種 meta 來源，
+  // 有些活動頁（例如 premico 這類預購 LP 頁）真正的商品圖是內文裡的 <img> 標籤，
+  // 沒有走 meta，所以現有解析抓不到——先列出來看看有沒有漏掉的圖，再決定要不要
+  // 針對這個網站加專用規則，而不是憑猜測改。
+  section("頁面內所有 <img> 標籤（找 og:image 之外、藏在內文裡的商品圖）");
+  const imgs = body.match(/<img[^>]+>/gi) || [];
+  if (!imgs.length) console.log("（沒有找到）");
+  imgs.slice(0, 30).forEach((t) => console.log(" ", truncate(t, 220)));
+
   await probeFastRetailing(finalUrl);
 }
 
