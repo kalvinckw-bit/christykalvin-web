@@ -23,7 +23,8 @@
 
         .mc-box { background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fab1a0; }
         .mc-amount-hint { font-size: var(--font-size); color: #e74c3c; margin-top: 4px; font-weight: bold; }
-        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; white-space: nowrap; }
+        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; }
+        .mc-mid-rate-value { display: block; font-weight: bold; margin-top: 2px; }
 
         .wise-box { background: #eef5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #74b9ff; }
 
@@ -71,7 +72,8 @@
             </div>
         </div>
         <div class="mc-mid-rate">
-            ⚖️ Money Changer 的中間匯率: <span id="mcMidRateDisplay" style="font-weight:bold;">0.00000</span>
+            ⚖️ Money Changer 的中間匯率:
+            <span id="mcMidRateDisplay" class="mc-mid-rate-value">0.00000</span>
         </div>
     </div>
 
@@ -119,13 +121,13 @@ function calcAll() {
     const mcSell = parseFloat(document.getElementById('mcSell').value) || 0;
     const mcBuy = parseFloat(document.getElementById('mcBuy').value) || 0;
 
-    document.getElementById('mcSellAmt').innerText = "總額: RM " + (amount * mcSell).toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('mcBuyAmt').innerText = "總額: RM " + (amount * mcBuy).toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('mcSellAmt').innerHTML = "總額:<br>RM " + Math.round(amount * mcSell).toLocaleString();
+    document.getElementById('mcBuyAmt').innerHTML = "總額:<br>RM " + Math.round(amount * mcBuy).toLocaleString();
 
     if (mcSell > 0 && mcBuy > 0) {
         const midRate = (mcSell + mcBuy) / 2;
         const midAmount = amount * midRate;
-        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + midAmount.toLocaleString(undefined, {maximumFractionDigits: 0});
+        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + Math.round(midAmount).toLocaleString();
     } else {
         document.getElementById('mcMidRateDisplay').innerText = "0.00000";
     }
@@ -159,6 +161,13 @@ function showResult() {
         
         body.innerHTML += `<tr><td class="tag-profit">RM ${profit}</td><td class="tag-price">RM ${targetPrice.toFixed(0)}</td></tr>`;
     }
+
+    if (body.innerHTML === "") {
+        alert(`⚠️ 無法生成利潤表！\n\nMoney Changer 賣出總額只有 RM ${costMC.toFixed(0)}，\n但 Wise 成本已經是 RM ${costWise.toFixed(0)}，\n已經沒有安全的加價空間（連 RM10 都賺不到）。\n\n請檢查賣出價或 Wise 馬幣金額是否正確。`);
+        document.getElementById('result').style.display = 'none';
+        return;
+    }
+
     document.getElementById('result').style.display = 'block';
 }
 
