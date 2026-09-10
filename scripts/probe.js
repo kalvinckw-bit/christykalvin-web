@@ -31,6 +31,42 @@ async function fetchText(url) {
   return { status: res.status, url: res.url, body: await res.text() };
 }
 
+/**
+ * 手動追蹤 redirect 鏈路（不讓 fetch 自動跟隨），把每一跳的狀態碼、
+ * Location、Set-Cookie 都印出來——用來判斷「導去選地區頁」到底是
+ * 3xx Location 導向（可能靠 GeoIP，換不了 IP 就繞不過去），
+ * 還是純粹靠 cookie 判斷（那補一個 cookie 就能繞過去，不用整個機房 IP 都換掉）。
+ */
+async function probeRedirectChain(url, maxHops = 6) {
+  const jar = [];
+  let current = url;
+  for (let hop = 0; hop < maxHops; hop++) {
+    const res = await fetch(current, {
+      redirect: "manual",
+      headers: {
+        "User-Agent": UA,
+        "Accept-Language": "ja,zh-TW;q=0.8,en;q=0.5",
+        ...(jar.length ? { Cookie: jar.join("; ") } : {}),
+      },
+    });
+    const setCookie =
+      typeof res.headers.getSetCookie === "function"
+        ? res.headers.getSetCookie()
+        : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")] : []);
+    setCookie.forEach((c) => jar.push(c.split(";")[0]));
+    const location = res.headers.get("location");
+    console.log(`  [hop ${hop}] ${current}`);
+    console.log(`            HTTP ${res.status}${location ? `  → Location: ${location}` : ""}`);
+    if (setCookie.length) setCookie.forEach((c) => console.log(`            Set-Cookie: ${truncate(c, 160)}`));
+    if (res.status >= 300 && res.status < 400 && location) {
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return { finalUrl: current, finalStatus: res.status, cookies: jar, body: await res.text() };
+  }
+  return { finalUrl: current, finalStatus: null, cookies: jar, body: "" };
+}
+
 /** 找出頁面裡所有 JSON-LD 區塊 */
 function jsonLdBlocks(html) {
   const out = [];
@@ -172,6 +208,22 @@ async function main() {
   console.log(`HTTP ${status}`);
   console.log(`最終網址 ${finalUrl}`);
   console.log(`HTML 長度 ${body.length.toLocaleString()} 字元`);
+
+  if (finalUrl !== url) {
+    section("Redirect 鏈路追蹤（判斷導向是靠 GeoIP 還是 Cookie）");
+    const chain = await probeRedirectChain(url);
+    if (chain.cookies.length) {
+      console.log("  → 過程中有 Set-Cookie，值得試試看帶著這些 cookie 直接打原始網址一次。");
+    } else {
+      console.log("  → 全程沒有 Set-Cookie，導向很可能是純 GeoIP／IP 位置判斷，換 cookie 沒用。");
+    }
+    // 找看看落地頁裡有沒有「選日本／JP」的連結，供人工確認導向機制
+    const jpLinkMatches = chain.body.match(/<a[^>]+href=["']([^"']*)["'][^>]*>[^<]{0,40}(日本|JP|Japan)[^<]{0,10}<\/a>/gi);
+    if (jpLinkMatches) {
+      console.log("  落地頁裡疑似「選日本」的連結：");
+      jpLinkMatches.slice(0, 5).forEach((m) => console.log("   ", truncate(m, 200)));
+    }
+  }
 
   section("og: meta 標籤");
   const ogs = body.match(/<meta[^>]+(property|name)=["'](og:|twitter:|product:)[^>]*>/gi) || [];
