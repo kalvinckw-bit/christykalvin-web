@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="CK ForEX">
     <meta name="theme-color" content="#2c3e50">
     <style>
-        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; --font-size: 24px; }
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; --font-size: 16px; }
         * { font-family: "Meiryo", "メイリオ", sans-serif; }
         body { background: var(--bg); padding: 10px; margin: 0; font-size: var(--font-size); }
         .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -23,13 +23,13 @@
 
         .mc-box { background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fab1a0; }
         .mc-amount-hint { font-size: var(--font-size); color: #e74c3c; margin-top: 4px; font-weight: bold; }
-        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; }
+        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; white-space: nowrap; }
 
         .wise-box { background: #eef5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #74b9ff; }
 
         .flex-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .flex-row div { flex: 1; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: var(--font-size); color: #555; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: var(--font-size); color: #555; white-space: nowrap; }
         input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: var(--font-size); box-sizing: border-box; }
 
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
