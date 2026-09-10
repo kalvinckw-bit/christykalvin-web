@@ -36,6 +36,8 @@
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
         .btn { flex: 2; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
         .btn-reset { flex: 1; padding: 15px; background: var(--reset-color); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
+        .btn-fetch { width: 100%; padding: 10px; margin-top: 10px; background: var(--wise-color); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; box-sizing: border-box; }
+        .wise-fetch-status { font-size: var(--font-size); color: #888; margin-top: 6px; }
 
         .result { margin-top: 20px; display: none; }
         .profit-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -92,6 +94,8 @@
         <div class="mc-mid-rate" style="color: var(--wise-color); border-top-color: #74b9ff;">
             💹 Wise 匯率: <span id="wiseRateDisplay" style="font-weight:bold;">0.00000</span>
         </div>
+        <button type="button" class="btn-fetch" onclick="fetchWiseRate()">🔄 自動抓取 Wise 官方匯率</button>
+        <div id="wiseFetchStatus" class="wise-fetch-status"></div>
     </div>
 
     <div class="btn-group">
@@ -180,6 +184,33 @@ function showResult() {
     }
 
     document.getElementById('result').style.display = 'block';
+}
+
+async function fetchWiseRate() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const statusEl = document.getElementById('wiseFetchStatus');
+    statusEl.innerText = "抓取中...";
+
+    try {
+        const res = await fetch('https://api.wise.com/v1/rates?source=JPY&target=MYR');
+        if (!res.ok) {
+            throw new Error(`伺服器回應 HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (!Array.isArray(data) || !data[0] || !data[0].rate) {
+            throw new Error('回傳格式異常，找不到匯率數值');
+        }
+        const rate = data[0].rate;
+        const updatedAt = data[0].time ? new Date(data[0].time).toLocaleString() : '未知';
+        statusEl.innerText = `✅ 已抓取 Wise 官方參考匯率: ${rate}（更新時間: ${updatedAt}）`;
+
+        if (amount > 0) {
+            document.getElementById('wiseMYR').value = (amount * rate).toFixed(2);
+            calcAll();
+        }
+    } catch (err) {
+        statusEl.innerText = `❌ 自動抓取失敗：${err.message}（可能是瀏覽器跨網域 CORS 限制，或 Wise 未開放此端點給外部網站使用，請手動輸入 Wise 顯示的 MYR）`;
+    }
 }
 
 function resetAll() {
