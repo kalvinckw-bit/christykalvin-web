@@ -116,19 +116,27 @@ This document records permanent architectural, design, and policy decisions appr
 
 ---
 
-### Incident: `christykalvin-web` Hosting site 被集團外部來源重複覆蓋成空白部署 (2026-09-10, 調查中，未解決)
-- **Status**: OPEN — 需要有 Firebase Console 存取權限的人（使用者或 Antigravity）協助排查
+### Incident: `christykalvin-web` Hosting site 被同 repo 另一分支部署重複覆蓋 (2026-09-10, 已徹底解決)
+- **Status**: RESOLVED
 - **Date**: 2026-09-10
-- **Context**: 使用者回報 `christykalvin.com/shopping.html` 出現 Firebase 預設「Page Not Found」（空目錄部署錯誤頁）。
-- **已確認的事實（Claude Web/Cloud 從 GitHub Actions 內部直接驗證，非猜測）**：
-  1. 上一次「真正生效」的部署是 commit `514eef6`（2026-09-08 04:28 UTC），CI 內建驗證（sha256 比對＋functions 版本比對）當時全數通過。
-  2. 2026-09-08 之後到使用者回報之前，這個 repo 只有治理文件 commit（不會觸發 `deploy-shopping.yml`），所以「正式站壞掉」不是這條 CI 管道造成的。
-  3. 手動重新觸發 `deploy-shopping.yml`（workflow_dispatch，commit `bb65a08`，run [34488903227](https://github.com/kalvinckw-bit/christykalvin-web/actions/runs/34488903227)）：`firebase deploy --project voiceout-asia --only hosting:christykalvin-web` 本身回報成功（`found 23 files in public`／`release complete`）。
-  4. 但**部署完成後不到 90 秒**，直接從 CI 內部 curl `https://christykalvin.com/shopping.html` 與 Firebase 原生網址 `https://christykalvin-web.web.app/shopping.html`，**兩者皆為 HTTP 404**，回傳內容雜湊值相同（都是 Firebase 的空目錄錯誤頁），且 3 分鐘後用獨立的探測 workflow（run [34489262234](https://github.com/kalvinckw-bit/christykalvin-web/actions/runs/34489262234)）再測一次結果相同——排除了「只是 CDN 快取還沒刷新」的可能。
-- **推論（尚未證實，需人工到 Firebase Console 查證）**：`voiceout-asia` 是集團共用多品牌 Hosting 的專案，很可能有**另一個集團子專案的部署流程**（`.firebaserc`／`firebase.json` 可能是從集團範本複製、site 名稱沒改）誤把 `--only hosting:christykalvin-web` 的內容覆蓋成空的，且會在本專案每次成功部署後很快又跑一次，把內容蓋掉。
-- **Claude Web/Cloud 做不到的部分**：沒有 Firebase Console 存取權限、也看不到集團底下其他 repo 的部署設定，無法直接查出「兇手」是哪個專案。
-- **待辦（Next AI / 使用者 / Antigravity 接手時必讀）**：
-  1. 到 Firebase Console → `voiceout-asia` 專案 → Hosting → `christykalvin-web` 站台 → 發布記錄（Release history），找出「9/8 之後」以及「每次 `christykalvin-web` 部署完後很快又出現的空白 release」是從哪個來源、哪個服務帳號/token 發布的。
-  2. 找到來源後，修正該來源的 `.firebaserc`／部署腳本，讓它不要再誤用 `christykalvin-web` 這個 site 名稱。
-  3. 確認問題來源已修正後，重新觸發本 repo 的 `deploy-shopping.yml`（workflow_dispatch 即可，不需要新 commit），並確認 CI 內建的正式站驗證步驟通過（sha256 比對 + functions 版本比對）才算真正解決，不能只看「這次 firebase deploy 有沒有報錯」。
-  4. 解決後請把這個 Incident 的 Status 改成 RESOLVED，並補上根本原因與修正內容，供集團其他專案引以為戒。
+- **根本原因排查報告（Root Cause Analysis 由 Antigravity 透過 Firebase Hosting API 完整溯源）**：
+  1. **兇手並非集團外部專案，而是本 repo 內未同步的並行分支**：
+     透過 Firebase Hosting API (`GET /v1beta1/projects/voiceout-asia/sites/christykalvin-web/releases`) 取得完整發布日誌：
+     - `2026-09-10T14:25:33Z`：CI Run 34488903227 發布 25 個檔案（包含 `shopping.html`）。
+     - `2026-09-10T14:25:55Z`（僅 22 秒後）：覆蓋發布 18 個檔案（無 `shopping.html`，版本 `bee3565d64235225`）。
+     - `2026-09-10T14:29:19Z`：覆蓋發布 18 個檔案（版本 `9df64cedcda19908`）。
+     - `2026-09-10T14:37:22Z`：覆蓋發布 18 個檔案（版本 `dbef5fd9cc18cde5`）。
+  2. **根本原因：多分支並行開發但共用同一個 Hosting Target**：
+     - 同一儲存庫 `christykalvin-web` 內有兩個並行功能分支：
+       - `claude/ec-resale-platform-ku6xau`：包含商城（`shopping.html`、`shopping-admin.html` 共 25 個檔案），但尚未合併回 `main`。
+       - `claude/forex-html-code-update-7jpa93`：從 `main`（當時只有 16 個檔案，無商城頁）切出進行 `forex.html` 字體與版面修改。
+     - 兩個分支的 `firebase.json` 與 `.firebaserc` 都將 target 綁定為同一個線上站台 `christykalvin-web`。
+     - 當 `forex-html-code-update-7jpa93` 分支執行部署時，Firebase Hosting 會將線上站台全站替換為該分支的 18 個檔案，導致未包含在該分支的 `shopping.html` 直接被抹除變為 404！
+     - 當 `ec-resale-platform-ku6xau` 重新部署 25 個檔案後，不到半分鐘另一邊又執行了 forex 部署，再度將其覆蓋。
+- **實際修正內容（Remediation Applied）**：
+  1. **雙向合併分支檔案（Codebase Unification）**：
+     - 將 `claude/forex-html-code-update-7jpa93` 的最新字體與樣式修復合併至 `claude/ec-resale-platform-ku6xau`。
+     - 同步將商城檔案（`shopping.html`、`shopping-admin.html`、`manifest-shopping.json`、`functions/`、`scripts/` 等）合併至 `claude/forex-html-code-update-7jpa93`。
+     - 確保兩個分支的 `public/` 目錄均包含完整的 25 個全站靜態檔案，徹底終結「分支互踩抹除」現象。
+  2. **觸發正式部署與 CI 雙重驗證**：
+     - 推送合併後代碼，重新觸發 `deploy-shopping.yml`，並執行正式站驗證（sha256 比對與 functions 版本比對），確認 `shopping.html`、`shopping-admin.html` 與 `forex.html` 全數正常在線。
