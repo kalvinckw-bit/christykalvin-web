@@ -78,6 +78,27 @@ async function loadPricingSettings() {
   return DEFAULT_PRICING;
 }
 
+// 分類清單的預設值（賣家還沒在後台自訂過分類時使用，也是第一次寫入 settings/categories 時的種子資料）
+const DEFAULT_CATEGORIES = ["包包", "鞋類", "服飾", "配件", "美妝保養", "家電3C", "生活雜貨", "食品零食", "其他"];
+
+/**
+ * 讀後台自訂的商品分類清單，讓 AI 分類時用賣家自己定義的分類，
+ * 而不是寫死在程式碼裡——賣家在後台新增分類後，匯入商品時 AI 就該挑得到那個新分類。
+ */
+async function loadCategories() {
+  try {
+    const doc = await db().collection("settings").doc("categories").get();
+    if (doc.exists) {
+      const list = doc.data() && doc.data().list;
+      const zhNames = (Array.isArray(list) ? list : []).map((c) => c && c.zh).filter(Boolean);
+      if (zhNames.length) return zhNames;
+    }
+  } catch (_) {
+    // 讀不到就用預設，不能因此讓匯入整個失敗
+  }
+  return DEFAULT_CATEGORIES;
+}
+
 function bucket() {
   return gcs.bucket(PHOTO_BUCKET);
 }
@@ -185,7 +206,8 @@ async function callGemini(apiKey, model, prompt) {
   return JSON.parse(match[0]);
 }
 
-async function refineWithGemini(apiKey, title, description, specText) {
+async function refineWithGemini(apiKey, title, description, specText, categories) {
+  const catList = (Array.isArray(categories) && categories.length ? categories : DEFAULT_CATEGORIES).join("、");
   const prompt = `以下是一個日本網店商品頁面抓到的原始標題、描述、以及頁面上的規格內文，你要幫忙做「代購轉賣」上架用的文案整理，同時做一份英文版給國際買家看，並從規格內文抽出顏色/尺寸/重量等規格資訊。請只回傳純 JSON，不要加任何說明文字：
 {"title_ja":"","description_zh":"","title_en":"","description_en":"","category":"","condition":"","notes":"","colors":[],"size":"","weight":"","spec_notes":"","product_code":""}
 
@@ -194,7 +216,7 @@ async function refineWithGemini(apiKey, title, description, specText) {
 - description_zh：繁體中文商品描述（描述用中文，但裡面出現的品牌名/商品名一樣保留原文不要翻），語氣像認真的小型代購賣家，100~200字，保留新舊狀況與尺寸等重要細節，原文沒提到的不要瞎編
 - title_en：英文商品名稱，給看英文的客人。品牌名/型號保留原樣不要亂翻，只把日文的品項說明部分翻成英文（例如「バターサンド」→「Butter Sandwich Cookies」）。這個欄位絕對不能留空：原文本來就是英文/羅馬字的話，直接沿用同一個名稱即可
 - description_en：英文商品描述，語氣自然像認真的小賣家，跟 description_zh 意思一致，100~200字
-- category：從「包包、鞋類、服飾、配件、美妝保養、家電3C、生活雜貨、食品零食、其他」中選一個最接近的（餅乾、和菓子、伴手禮、飲料、調味料等入口的東西一律選「食品零食」）
+- category：從「${catList}」中選一個最接近的（餅乾、和菓子、伴手禮、飲料、調味料等入口的東西優先選跟食品相關的分類；清單裡找不到適合的就選最接近的一個，不要自己發明清單以外的分類）
 - condition：從「全新、近新、二手良好、二手一般、未知」中選一個，找不到線索就填「全新」（本店商品多為全新代購，除非原文明確提到二手/使用痕跡才選其他）
 - notes：給賣家看的提醒，例如資訊不完整、找不到價格、尺寸不明等，沒有就填空字串
 - colors：從規格內文的「色」欄位抽出可選顏色，翻成繁體中文，陣列形式，例如日文「チャコールブラック／さくらピンク」要拆成 ["炭黑色","櫻花粉"]；規格內文沒有顏色選項就回傳空陣列 []
@@ -296,7 +318,8 @@ exports.importProduct = onCall(
     const apiKey = await loadGeminiKey();
     if (apiKey) {
       try {
-        ai = await refineWithGemini(apiKey, extracted.title, extracted.description, extracted.specText);
+        const categories = await loadCategories();
+        ai = await refineWithGemini(apiKey, extracted.title, extracted.description, extracted.specText, categories);
         imported_via_ai = true;
       } catch (err) {
         ai.notes = `AI 潤飾失敗（不影響原始資料匯入，可手動編輯）：${err.message}`;
@@ -355,7 +378,8 @@ exports.importProduct = onCall(
       source_site: sourceSite,
       ai_notes: [ai.notes, apparelError, bucketWarning].filter(Boolean).join(" / "),
       imported_via_ai,
-      status: "draft",
+      // 匯入結果直接上架（賣家 2026-09-10 要求，不再強制人工複核才發布）
+      status: "published",
       sold: false,
       is_complete: !!((ai.title_ja || extracted.title) && ai.description_zh && pricedFor.price_jpy && uploadedUrls.length),
       human_edited: false,
@@ -507,7 +531,8 @@ exports.importFromData = onCall(
     if (apiKey) {
       try {
         // 書籤工具抓不到頁面規格內文，只有標題/描述，specText 給空字串即可
-        ai = await refineWithGemini(apiKey, title, description, "");
+        const categories = await loadCategories();
+        ai = await refineWithGemini(apiKey, title, description, "", categories);
         imported_via_ai = true;
       } catch (err) {
         ai.notes = `AI 潤飾失敗（不影響原始資料匯入，可手動編輯）：${err.message}`;
@@ -551,7 +576,8 @@ exports.importFromData = onCall(
       ai_notes: [ai.notes, bucketWarning, "透過瀏覽器書籤工具匯入（伺服器連不到此網站）"]
         .filter(Boolean).join(" / "),
       imported_via_ai,
-      status: "draft",
+      // 匯入結果直接上架（賣家 2026-09-10 要求，不再強制人工複核才發布）
+      status: "published",
       sold: false,
       is_complete: !!((ai.title_ja || title) && ai.description_zh && pricedFor.price_jpy && uploadedUrls.length),
       human_edited: false,

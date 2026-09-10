@@ -97,7 +97,8 @@ This document records permanent architectural, design, and policy decisions appr
      形成「Hosting 在 A 專案、資料在 B 專案」的跨專案架構（前端 SDK 指向 `christykalvin` 的設定即可）。
   2. **前台/後台分離**：`public/shopping.html` 為公開瀏覽/搜尋/詢問頁面（唯讀，只顯示 `status == "published"` 商品）；`public/shopping-admin.html` 為登入後台，負責商品 CRUD、照片上傳、上下架與售出狀態管理。
   3. **購買流程 = WhatsApp 詢問下單**：不做金流/購物車，商品詳情頁的 CTA 一律導去 WhatsApp（沿用 `myproperty` 既有的平台 WhatsApp 號碼 `601128874818`），待需求明確後再評估是否升級成真正線上金流結帳。
-  4. **貼連結自動匯入 = Cloud Function + AI 輔助，人工複核後才發布**：`functions/importProduct`（Firebase Functions v2, callable, region `asia-east1`）伺服器端抓取來源網頁（主要目標為 Takashimaya Online，其餘網店以通用 og:meta / JSON-LD 解析器為主）、下載照片重新上傳到自己的 bucket（避免原網站下架後圖裂），若有設定 `ANTHROPIC_API_KEY` 則呼叫 Claude 把日文標題/描述翻譯潤飾成繁體中文。匯入結果一律先寫成 `status:"draft"`，需要後台人工核對才能改成 `published`，不做全自動免審發布。
+  4. **貼連結自動匯入 = Cloud Function + AI 輔助**：`functions/importProduct`（Firebase Functions v2, callable, region `asia-east1`）伺服器端抓取來源網頁（主要目標為 Takashimaya Online，其餘網店以通用 og:meta / JSON-LD 解析器為主）、下載照片重新上傳到自己的 bucket（避免原網站下架後圖裂），若有設定 Gemini 金鑰則呼叫 Gemini 把日文標題/描述翻譯潤飾成繁體中文。
+     - **2026-09-10 變更（使用者明確指示，取代原本「先存草稿、人工複核才發布」的規則）**：匯入結果（`importProduct`、`importFromData` 兩個匯入管道皆同）一律直接寫成 `status:"published"`，不再強制人工複核才上架。後台仍保留 `draft`/`hidden` 狀態可用，賣家發現匯入內容有誤時可自行改回。
   5. **貨幣顯示**：前台以日圓 (JPY) 為主要顯示貨幣，另外依訪客 IP 地區（沿用 `ck-telemetry.js` 已使用的 `freeipapi.com`）換算對應在地貨幣顯示在括號內作參考，僅供估算，不做即時金流換匯結帳。
   6. **照片儲存不使用 Firebase Storage**：`christykalvin` 專案未開通 Firebase Storage，且該開通動作只能在 Firebase Console 手動點選、CLI 無對應指令。因此改由 Cloud Function 以自身服務帳號建立並維護一個公開讀取的 Cloud Storage bucket `christykalvin-shop-photos`（`ensurePhotoBucket()`，首次使用時自動建立，冪等）。後台手動上傳照片改走 `uploadPhoto` callable（前端送 base64），刪除走 `deletePhoto`，前台以 `https://storage.googleapis.com/christykalvin-shop-photos/...` 直接顯示。前端不再引用 Firebase Storage SDK。
 

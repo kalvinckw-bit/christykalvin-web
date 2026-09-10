@@ -16,6 +16,13 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // 商品分類清單：賣家可以自己在後台新增/刪除分類，不用每次麻煩開發者改代碼。
+    // 分類名稱不是機密，而且前台要用它畫分類篩選按鈕，所以額外開放公開讀取
+    // （寫入還是只限管理員，沿用上面 settings/{docId} 的規則）。
+    match /settings/categories {
+      allow read: if true;
+    }
+
     // 商品的進貨成本與加價設定：**一定要跟 products 分開存**。
     // products 的已上架商品是公開可讀的，成本若放在裡面，
     // 任何客人打開開發者工具就會看到我們的進價與利潤率。

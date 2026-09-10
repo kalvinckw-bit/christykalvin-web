@@ -236,7 +236,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, query, where, onSnapshot, addDoc
+  getFirestore, collection, query, where, onSnapshot, addDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -253,8 +253,14 @@ const db = getFirestore(app);
 
 const PLATFORM_CONTACT_WA = "818036098818"; // +81-80-3609-8818 的 wa.me 格式：去掉開頭0，補上國碼
 
-const CATS = ["全部","包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","食品零食","其他"];
-const CATS_EN = ["All","Bags","Shoes","Fashion","Accessories","Beauty & Care","Appliances & Electronics","Lifestyle","Food & Snacks","Other"];
+// 分類清單改由賣家在後台自己新增/刪除（settings/categories），這裡只留預設值當 Firestore 還沒讀回來時的暫時畫面
+const DEFAULT_CATEGORIES = [
+  { zh: "包包", en: "Bags" }, { zh: "鞋類", en: "Shoes" }, { zh: "服飾", en: "Fashion" },
+  { zh: "配件", en: "Accessories" }, { zh: "美妝保養", en: "Beauty & Care" },
+  { zh: "家電3C", en: "Appliances & Electronics" }, { zh: "生活雜貨", en: "Lifestyle" },
+  { zh: "食品零食", en: "Food & Snacks" }, { zh: "其他", en: "Other" },
+];
+let categoriesList = DEFAULT_CATEGORIES;
 const COND_EN = {"全新":"New","近新":"Like New","二手良好":"Used - Good","二手一般":"Used - Fair","未知":"Unknown"};
 
 const STR = {
@@ -304,8 +310,8 @@ function S(){ return STR[lang]; }
 function categoryLabel(cat){
   if (!cat) return "";
   if (lang !== "en") return cat;
-  const idx = CATS.indexOf(cat);
-  return idx >= 0 ? CATS_EN[idx] : cat;
+  const found = categoriesList.find(c => c.zh === cat);
+  return found ? (found.en || found.zh) : cat;
 }
 function conditionLabel(cond){
   if (!cond) return "";
@@ -389,9 +395,11 @@ function fxLine(jpy){
 /* ---------------- 分類 chips ---------------- */
 const chipRow = document.getElementById("chipRow");
 function renderChips(){
-  chipRow.innerHTML = CATS.map((c,i) =>
-    `<button class="chip ${c===activeCat?"active":""}" data-cat="${c}">${esc(categoryLabel(c) || (lang==="en"?CATS_EN[i]:c))}</button>`
-  ).join("");
+  const cats = ["全部", ...categoriesList.map(c => c.zh)];
+  chipRow.innerHTML = cats.map((c) => {
+    const label = c === "全部" ? (lang === "en" ? "All" : "全部") : categoryLabel(c);
+    return `<button class="chip ${c===activeCat?"active":""}" data-cat="${esc(c)}">${esc(label)}</button>`;
+  }).join("");
   chipRow.querySelectorAll(".chip").forEach(btn => {
     btn.addEventListener("click", () => {
       activeCat = btn.dataset.cat;
@@ -401,6 +409,14 @@ function renderChips(){
   });
 }
 renderChips();
+
+// 分類清單即時訂閱：賣家在後台新增/刪除分類，前台不用重新部署就會跟著更新
+onSnapshot(doc(db, "settings", "categories"), (snap) => {
+  const list = snap.exists() && snap.data() && snap.data().list;
+  if (Array.isArray(list) && list.length) categoriesList = list;
+  renderChips();
+  render();
+}, () => { /* 讀不到就沿用預設分類，不影響其他功能 */ });
 
 document.getElementById("searchBox").addEventListener("input", render);
 document.getElementById("sortSelect").addEventListener("change", render);

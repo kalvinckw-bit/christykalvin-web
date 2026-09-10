@@ -112,6 +112,9 @@
   .importStatus{margin-top:14px;font-size:13px;min-height:18px;}
   .importStatus.err{color:var(--danger);}
   .importStatus.ok{color:var(--ok);}
+  .catChip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:16px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;}
+  .catChip button{border:none;background:rgba(0,0,0,.08);color:var(--muted);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;padding:0;}
+  .catChip button:hover{background:var(--danger);color:#fff;}
 </style>
 </head>
 <body>
@@ -150,8 +153,6 @@
         </select>
         <select id="filterCat">
           <option value="all">全部分類</option>
-          <option>包包</option><option>鞋類</option><option>服飾</option><option>配件</option>
-          <option>美妝保養</option><option>家電3C</option><option>生活雜貨</option><option>食品零食</option><option>其他</option>
         </select>
         <input id="searchBox" type="text" placeholder="搜尋商品標題...">
         <button class="btnNew" id="btnNewProduct">+ 手動新增商品</button>
@@ -167,7 +168,8 @@
           貼上商品來源連結（例如 Takashimaya Online 商品頁，或其他網店的商品詳情頁），
           系統會自動抓取照片、標題、描述、價格，重新上傳照片到自己的雲端空間，
           並用 AI 把日文內容翻譯潤飾成繁體中文。<br>
-          匯入結果會先存成「草稿」，請務必到「商品管理」核對內容、確認價格與描述正確後再按「上架發布」。
+          匯入結果會直接上架，建議上架後還是到「商品管理」核對一下內容、確認價格與描述正確
+          （偶爾會抓錯或 AI 判斷錯分類，看到不對隨時可以在後台改）。
         </p>
         <div class="row2">
           <input id="importUrl" type="url" placeholder="貼上商品連結網址...">
@@ -202,6 +204,19 @@
     </div>
 
     <div class="panel" id="panel-pricing">
+      <div class="importBox" style="max-width:760px;margin-bottom:16px;">
+        <p>
+          <b>商品分類：</b>自己新增/刪除就好，不用再麻煩開發者改代碼——
+          新增的分類，前台的分類篩選按鈕跟後台下拉選單會自動跟著出現，AI 匯入商品時也會從這份清單挑分類。
+        </p>
+        <div id="categoryChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div class="row2">
+          <input id="newCatZh" type="text" placeholder="分類名稱（中文，例如：手錶）">
+          <input id="newCatEn" type="text" placeholder="英文名稱（選填，給英文介面用，不填就沿用中文）">
+          <button id="addCategoryBtn">新增分類</button>
+        </div>
+        <div class="importStatus" id="categoryStatus"></div>
+      </div>
       <div class="importBox" style="max-width:760px;">
         <p>
           <b>為什麼要加價：</b>高島屋這類通路有給回饋，直接用他們的標價賣就有利潤，所以設「不加價」。
@@ -295,6 +310,7 @@ onAuthStateChanged(auth, (user) => {
     startListeningInquiries();
     startListeningCosts();
     loadPricingSettings();
+    loadCategories();
   } else {
     loginScreen.style.display = "block";
     appEl.style.display = "none";
@@ -415,6 +431,93 @@ async function deleteInquiry(id){
   catch (err) { alert("刪除失敗：" + err.message); }
 }
 
+/* ---------------- 商品分類（賣家自己在後台新增/刪除，不用改代碼） ---------------- */
+const DEFAULT_CATEGORIES = [
+  { zh: "包包", en: "Bags" }, { zh: "鞋類", en: "Shoes" }, { zh: "服飾", en: "Fashion" },
+  { zh: "配件", en: "Accessories" }, { zh: "美妝保養", en: "Beauty & Care" },
+  { zh: "家電3C", en: "Appliances & Electronics" }, { zh: "生活雜貨", en: "Lifestyle" },
+  { zh: "食品零食", en: "Food & Snacks" }, { zh: "其他", en: "Other" },
+];
+let categoriesList = DEFAULT_CATEGORIES;
+
+async function loadCategories() {
+  try {
+    const d = await getDoc(doc(db, "settings", "categories"));
+    const list = d.exists() && d.data() && d.data().list;
+    if (Array.isArray(list) && list.length) categoriesList = list;
+  } catch (err) {
+    console.warn("讀取分類清單失敗，先用預設值", err);
+  }
+  renderCategoryChips();
+  renderCategoryFilterOptions();
+  render();
+}
+
+async function saveCategories(list) {
+  await setDoc(doc(db, "settings", "categories"), { list, updated_at: Date.now() });
+  categoriesList = list;
+  renderCategoryChips();
+  renderCategoryFilterOptions();
+  render();
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById("categoryChips");
+  wrap.innerHTML = categoriesList.map((c, i) => `
+    <span class="catChip">${esc(c.zh)}${c.en ? ` <span style="color:var(--muted)">(${esc(c.en)})</span>` : ""}
+      <button data-idx="${i}" title="刪除這個分類">✕</button>
+    </span>`).join("");
+  wrap.querySelectorAll("button[data-idx]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.idx);
+      const removed = categoriesList[idx];
+      if (!confirm(`確定要刪除分類「${removed.zh}」嗎？已經用這個分類的商品不會被改動，只是下拉選單裡不會再有這個選項。`)) return;
+      const next = categoriesList.filter((_, i) => i !== idx);
+      try {
+        await saveCategories(next);
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+      }
+    });
+  });
+}
+
+function renderCategoryFilterOptions() {
+  const sel = document.getElementById("filterCat");
+  const current = sel.value;
+  sel.innerHTML = `<option value="all">全部分類</option>` +
+    categoriesList.map((c) => `<option>${esc(c.zh)}</option>`).join("");
+  sel.value = categoriesList.some((c) => c.zh === current) || current === "all" ? current : "all";
+}
+
+document.getElementById("addCategoryBtn").addEventListener("click", async () => {
+  const zhInput = document.getElementById("newCatZh");
+  const enInput = document.getElementById("newCatEn");
+  const statusEl = document.getElementById("categoryStatus");
+  const zh = zhInput.value.trim();
+  const en = enInput.value.trim();
+  if (!zh) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請輸入分類名稱";
+    return;
+  }
+  if (categoriesList.some((c) => c.zh === zh)) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "這個分類已經存在了";
+    return;
+  }
+  try {
+    await saveCategories([...categoriesList, { zh, en: en || zh }]);
+    zhInput.value = "";
+    enInput.value = "";
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `已新增分類「${zh}」，前台跟下拉選單馬上就能選了。`;
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "新增失敗：" + err.message;
+  }
+});
+
 const FIELD_DEFS = [
   // 商品名稱不做中文翻譯：中文介面顯示日文原名、英文介面顯示英文名，
   // 所以後台不再提供「標題(中文)」欄位（品牌/商品名是專有名詞，翻中文反而對不上日本官網）
@@ -521,9 +624,11 @@ function rowHTML(p){
   const thumb = (p.photos && p.photos[0]) || "";
   const fieldsHTML = FIELD_DEFS.map(([key, label, type]) => {
     if (type === "select_cat") {
-      const opts = ["包包","鞋類","服飾","配件","美妝保養","家電3C","生活雜貨","食品零食","其他"];
+      const opts = categoriesList.map((c) => c.zh);
+      // 商品目前的分類如果已經被刪掉了，還是要留在選單裡（用括號標註），不然會憑空消失變成沒選
+      if (p[key] && !opts.includes(p[key])) opts.push(p[key] + "（已刪除）");
       return `<div class="field"><label>${label}</label><select data-key="${key}">
-        ${opts.map(o => `<option ${p[key]===o?"selected":""}>${o}</option>`).join("")}
+        ${opts.map(o => `<option ${(p[key]===o || o===p[key]+"（已刪除）")?"selected":""}>${o}</option>`).join("")}
       </select></div>`;
     }
     if (type === "select_cond") {
@@ -913,10 +1018,10 @@ importBtn.addEventListener("click", async () => {
     const result = await importProductFn({ url });
     const product = result.data;
     importStatusEl.className = "importStatus ok";
-    importStatusEl.textContent = `匯入成功！已建立草稿「${product.title_ja || product.title_en}」，請到「商品管理」核對後再上架。`;
+    importStatusEl.textContent = `匯入成功！「${product.title_ja || product.title_en}」已直接上架，建議核對一下內容是否正確。`;
     document.getElementById("importUrl").value = "";
     document.querySelector('.tab[data-tab="products"]').click();
-    document.getElementById("filterStatus").value = "draft";
+    document.getElementById("filterStatus").value = "published";
     render();
     setTimeout(() => {
       const el = document.getElementById("row_" + product.id);
@@ -1026,10 +1131,10 @@ document.getElementById("clipImportBtn").addEventListener("click", async () => {
     const result = await importFromDataFn(data);
     const product = result.data;
     statusEl.className = "importStatus ok";
-    statusEl.textContent = `匯入成功！已建立草稿「${product.title_ja || product.title_en}」，請到「商品管理」核對後再上架。`;
+    statusEl.textContent = `匯入成功！「${product.title_ja || product.title_en}」已直接上架，建議核對一下內容是否正確。`;
     input.value = "";
     document.querySelector('.tab[data-tab="products"]').click();
-    document.getElementById("filterStatus").value = "draft";
+    document.getElementById("filterStatus").value = "published";
     render();
     setTimeout(() => {
       const el = document.getElementById("row_" + product.id);
