@@ -124,6 +124,71 @@ function embeddedApiHints(html) {
 }
 
 /**
+ * 賣家問「能不能自動選日本」——redirect 鏈路已經證實是 GeoIP 判斷、沒有
+ * cookie 可補，但還沒排除的是：對方伺服器會不會誤信客戶端自己宣稱的
+ * 位置表頭（常見設定錯誤：CDN 後面的 origin 誤把 client 送來的表頭當成
+ * CDN 自己加的地理位置判斷依據）。這裡試幾組常見的 CDN/GeoIP 表頭，
+ * 一組合法的日本 IP（東京大學的公開網段 133.11.0.0/16，只是拿來當「看起來像日本」
+ * 的樣本值，不是真的連線過去），看 origin 會不會被唬過去直接放行。
+ */
+async function probeHeaderSpoof(url) {
+  section("嘗試偽造地區／IP 表頭，看伺服器是否誤信客戶端自報位置（常見設定漏洞測試）");
+  const jpIp = "133.11.238.1";
+  const variants = [
+    { "CF-IPCountry": "JP" },
+    { "X-Country-Code": "JP" },
+    { "X-Vercel-IP-Country": "JP" },
+    { "Fastly-Geo-Country": "JP" },
+    { "X-Forwarded-For": jpIp },
+    { "X-Real-IP": jpIp },
+    { "True-Client-IP": jpIp },
+    { "X-Forwarded-For": jpIp, "CF-IPCountry": "JP", "X-Real-IP": jpIp, "True-Client-IP": jpIp, "X-Country-Code": "JP" },
+  ];
+  for (const extra of variants) {
+    try {
+      const res = await fetch(url, {
+        redirect: "manual",
+        headers: { "User-Agent": UA, "Accept-Language": "ja,zh-TW;q=0.8,en;q=0.5", ...extra },
+      });
+      const loc = res.headers.get("location");
+      const label = Object.entries(extra).map(([k, v]) => `${k}:${v}`).join(", ");
+      console.log(`  [${label}]`);
+      console.log(`    → HTTP ${res.status}${loc ? `  Location: ${loc}` : "  （沒有轉址，可能繞過去了！）"}`);
+    } catch (e) {
+      console.log(`  失敗：${e.message}`);
+    }
+  }
+}
+
+/** 同一個網站常見還有行動版/其他子網域，導向規則可能不一樣，順便都試一次 */
+async function probeAltHosts(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return;
+  }
+  const alts = ["www", "m", "sp", "mobile"].map((sub) => {
+    const host = u.hostname.replace(/^(www|m|sp|mobile)\./, "");
+    return `${u.protocol}//${sub}.${host}${u.pathname}${u.search}`;
+  });
+  section("嘗試其他子網域（行動版等導向規則可能不同）");
+  for (const alt of alts) {
+    try {
+      const res = await fetch(alt, {
+        redirect: "manual",
+        headers: { "User-Agent": UA, "Accept-Language": "ja,zh-TW;q=0.8,en;q=0.5" },
+      });
+      const loc = res.headers.get("location");
+      console.log(`  ${alt}`);
+      console.log(`    → HTTP ${res.status}${loc ? `  Location: ${loc}` : ""}`);
+    } catch (e) {
+      console.log(`  ${alt} → 失敗：${e.message}`);
+    }
+  }
+}
+
+/**
  * Uniqlo 與 GU 是同一個母公司（Fast Retailing）的同一套電商系統，
  * 商品頁是 React SPA，價格不在 HTML 裡，要打他們的 commerce API 才拿得到。
  * 網址長這樣：https://www.uniqlo.com/jp/ja/products/E483535-000/00?...
@@ -222,7 +287,12 @@ async function main() {
     if (jpLinkMatches) {
       console.log("  落地頁裡疑似「選日本」的連結：");
       jpLinkMatches.slice(0, 5).forEach((m) => console.log("   ", truncate(m, 200)));
+    } else {
+      console.log("  落地頁裡沒找到明顯的「選日本」連結。");
     }
+
+    await probeHeaderSpoof(url);
+    await probeAltHosts(url);
   }
 
   section("og: meta 標籤");
