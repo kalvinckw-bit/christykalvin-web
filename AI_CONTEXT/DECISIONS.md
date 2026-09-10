@@ -113,3 +113,22 @@ This document records permanent architectural, design, and policy decisions appr
   3. **交接報告具體透明（Transparent Audit Trail）**：收工報告中必須具體列出同步檔案名稱與目標路徑/ID，嚴禁僅以「已同步」含糊帶過，嚴禁省略。
   4. **嚴禁跳過與假設**：嚴禁跳過此步驟、嚴禁假設「應該還是最新的」——忘記檢查即代表雲端鏡像停擺！
   5. **嚴禁狹隘單點修改（Anti-Silo Mandate）**：規則修訂必須同時更新 `AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`AI_CONTEXT/END_SESSION.md`、`AI_CONTEXT/DECISIONS.md`，誰改動誰負責對齊全體 AI。
+
+---
+
+### Incident: `christykalvin-web` Hosting site 被集團外部來源重複覆蓋成空白部署 (2026-09-10, 調查中，未解決)
+- **Status**: OPEN — 需要有 Firebase Console 存取權限的人（使用者或 Antigravity）協助排查
+- **Date**: 2026-09-10
+- **Context**: 使用者回報 `christykalvin.com/shopping.html` 出現 Firebase 預設「Page Not Found」（空目錄部署錯誤頁）。
+- **已確認的事實（Claude Web/Cloud 從 GitHub Actions 內部直接驗證，非猜測）**：
+  1. 上一次「真正生效」的部署是 commit `514eef6`（2026-09-08 04:28 UTC），CI 內建驗證（sha256 比對＋functions 版本比對）當時全數通過。
+  2. 2026-09-08 之後到使用者回報之前，這個 repo 只有治理文件 commit（不會觸發 `deploy-shopping.yml`），所以「正式站壞掉」不是這條 CI 管道造成的。
+  3. 手動重新觸發 `deploy-shopping.yml`（workflow_dispatch，commit `bb65a08`，run [34488903227](https://github.com/kalvinckw-bit/christykalvin-web/actions/runs/34488903227)）：`firebase deploy --project voiceout-asia --only hosting:christykalvin-web` 本身回報成功（`found 23 files in public`／`release complete`）。
+  4. 但**部署完成後不到 90 秒**，直接從 CI 內部 curl `https://christykalvin.com/shopping.html` 與 Firebase 原生網址 `https://christykalvin-web.web.app/shopping.html`，**兩者皆為 HTTP 404**，回傳內容雜湊值相同（都是 Firebase 的空目錄錯誤頁），且 3 分鐘後用獨立的探測 workflow（run [34489262234](https://github.com/kalvinckw-bit/christykalvin-web/actions/runs/34489262234)）再測一次結果相同——排除了「只是 CDN 快取還沒刷新」的可能。
+- **推論（尚未證實，需人工到 Firebase Console 查證）**：`voiceout-asia` 是集團共用多品牌 Hosting 的專案，很可能有**另一個集團子專案的部署流程**（`.firebaserc`／`firebase.json` 可能是從集團範本複製、site 名稱沒改）誤把 `--only hosting:christykalvin-web` 的內容覆蓋成空的，且會在本專案每次成功部署後很快又跑一次，把內容蓋掉。
+- **Claude Web/Cloud 做不到的部分**：沒有 Firebase Console 存取權限、也看不到集團底下其他 repo 的部署設定，無法直接查出「兇手」是哪個專案。
+- **待辦（Next AI / 使用者 / Antigravity 接手時必讀）**：
+  1. 到 Firebase Console → `voiceout-asia` 專案 → Hosting → `christykalvin-web` 站台 → 發布記錄（Release history），找出「9/8 之後」以及「每次 `christykalvin-web` 部署完後很快又出現的空白 release」是從哪個來源、哪個服務帳號/token 發布的。
+  2. 找到來源後，修正該來源的 `.firebaserc`／部署腳本，讓它不要再誤用 `christykalvin-web` 這個 site 名稱。
+  3. 確認問題來源已修正後，重新觸發本 repo 的 `deploy-shopping.yml`（workflow_dispatch 即可，不需要新 commit），並確認 CI 內建的正式站驗證步驟通過（sha256 比對 + functions 版本比對）才算真正解決，不能只看「這次 firebase deploy 有沒有報錯」。
+  4. 解決後請把這個 Incident 的 Status 改成 RESOLVED，並補上根本原因與修正內容，供集團其他專案引以為戒。
