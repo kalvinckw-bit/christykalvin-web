@@ -20,11 +20,13 @@
     --danger:#B4530A; --ok:#2E7D32; --new:#1565C0; --sold:#8A8A8A;
   }
   *{box-sizing:border-box;}
+  html,body{overflow-x:hidden;max-width:100%;}
   body{margin:0;font-family:"Meiryo","Hiragino Kaku Gothic Pro","Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
   header{background:var(--petrol);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
   header h1{font-size:18px;margin:0;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   header h1 .hdrLogo{width:34px;height:34px;border-radius:8px;flex:none;object-fit:cover;}
-  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;}
+  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  header .user span{overflow-wrap:anywhere;}
   header button{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
   header button:hover{background:rgba(255,255,255,.12);}
 
@@ -67,7 +69,7 @@
   .alertBox{background:#FDF1E7;border:1px solid #E8A87C;color:#8B4000;padding:10px 12px;border-radius:6px;font-size:12.5px;margin-bottom:12px;font-weight:700;}
   .alertBox .alertTime{font-weight:400;color:var(--muted);margin-left:6px;}
   .tag.expired{background:#8B0000;}
-  .meta{font-size:12px;color:var(--muted);}
+  .meta{font-size:12px;color:var(--muted);overflow-wrap:anywhere;}
   .chev{transition:transform .15s;}
   .row.open .chev{transform:rotate(90deg);}
 
@@ -105,8 +107,8 @@
 
   .importBox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;max-width:640px;}
   .importBox p{font-size:13px;color:var(--muted);line-height:1.7;}
-  .importBox .row2{display:flex;gap:10px;}
-  .importBox input{flex:1;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .importBox .row2{display:flex;gap:10px;flex-wrap:wrap;}
+  .importBox input{flex:1;min-width:140px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;box-sizing:border-box;}
   .importBox button{background:var(--petrol);color:#fff;border:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;}
   .importBox button:disabled{opacity:.5;cursor:not-allowed;}
   .importStatus{margin-top:14px;font-size:13px;min-height:18px;}
@@ -197,7 +199,7 @@
         </p>
         <div class="row2" style="align-items:flex-start;">
           <textarea id="clipDataInput" placeholder="在商品頁按過書籤後，這裡貼上複製到的資料（一段 JSON 文字）..."
-            style="flex:1;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;font-family:monospace;"></textarea>
+            style="flex:1;min-width:140px;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;font-family:monospace;box-sizing:border-box;"></textarea>
           <button id="clipImportBtn" style="align-self:flex-start;">匯入</button>
         </div>
         <div class="importStatus" id="clipImportStatus"></div>
