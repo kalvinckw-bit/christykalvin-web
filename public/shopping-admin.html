@@ -183,11 +183,11 @@
 
       <div class="importBox" style="margin-top:16px;">
         <p>
-          <b>Amazon、Yodobashi 這類網站，上面的「貼連結」匯入不了：</b>
-          這兩家會直接擋掉伺服器發出的請求（Amazon 回傳機器人驗證頁、Yodobashi 直接拒絕連線），
-          不是連結格式的問題，是他們專門防雲端機房 IP。<br>
+          <b>Amazon、Yodobashi、P-Bandai 這類網站，上面的「貼連結」匯入不了：</b>
+          這幾家會直接擋掉伺服器發出的請求（Amazon 回傳機器人驗證頁、Yodobashi 直接拒絕連線、
+          P-Bandai 會把非日本的連線導去選地區的頁面），不是連結格式的問題，是他們專門防雲端機房 IP。<br>
           真正能繞過去的只有「你自己的瀏覽器」，所以改用瀏覽器書籤工具：把下面這個按鈕拖到瀏覽器書籤列，
-          之後在 Amazon / Yodobashi 的商品頁按一下，它會直接讀取你瀏覽器裡已經打開的頁面內容，
+          之後在這類網站的商品頁按一下，它會直接讀取你瀏覽器裡已經打開的頁面內容，
           把商品資料複製起來，回來這裡貼上就能匯入。
         </p>
         <p style="margin:14px 0;">
@@ -1068,6 +1068,13 @@ const BOOKMARKLET_SRC = `(function(){
     }
     return out.slice(0, max || 8);
   }
+  // 沒有 product:price:amount 這類 meta 標籤時，退而求其次直接在頁面可見文字裡找價格
+  // （跟 functions/extract.js 伺服器端解析用的同一套 ¥/円 規則，保持前後台判斷一致）
+  function pickPriceFromPageText(){
+    var body = (document.body && document.body.innerText) || '';
+    var m = body.match(/[¥￥]\\s?([\\d,]{2,10})/) || body.match(/([\\d,]{3,10})\\s?円/);
+    return m ? m[1] : '';
+  }
   var host = location.hostname;
   var title, priceText, images, desc;
   if (/amazon\\./.test(host)) {
@@ -1082,7 +1089,7 @@ const BOOKMARKLET_SRC = `(function(){
     desc = pickText(['meta[name="description"]','meta[property="og:description"]']);
   } else {
     title = pickText(['meta[property="og:title"]','title']);
-    priceText = pickText(['meta[property="product:price:amount"]']);
+    priceText = pickText(['meta[property="product:price:amount"]']) || pickPriceFromPageText();
     images = pickImages(['meta[property="og:image"]'], 8);
     desc = pickText(['meta[name="description"]']);
   }
