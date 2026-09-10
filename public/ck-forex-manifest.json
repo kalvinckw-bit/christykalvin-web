@@ -1,0 +1,20 @@
+{
+  "name": "CK ForEX",
+  "short_name": "CK ForEX",
+  "start_url": "./forex.html",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#2c3e50",
+  "icons": [
+    {
+      "src": "ck-forex-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "ck-forex-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
