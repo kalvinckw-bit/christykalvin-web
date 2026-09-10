@@ -195,7 +195,22 @@
             style="display:inline-block;background:var(--gold);color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;cursor:grab;">
             📎 抓取商品資料到 CK 後台
           </a>
-          <span style="font-size:12px;color:var(--muted);margin-left:8px;">← 拖曳這顆按鈕到瀏覽器書籤列</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;">← 電腦：拖曳這顆按鈕到瀏覽器書籤列</span>
+        </p>
+        <details style="margin:0 0 14px;">
+          <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--gold);">📱 手機沒有書籤列可以拖，點這裡看手機設定方式</summary>
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px;">
+            手機瀏覽器沒有書籤列可以拖曳，要改成「先加一個書籤，再把網址換成這顆按鈕的內容」：
+            <ol style="margin:6px 0 10px 18px;padding:0;">
+              <li>先按下面「複製書籤網址」，把工具網址複製到手機剪貼簿。</li>
+              <li><b>iPhone（Safari）：</b>先隨便瀏覽一頁按「加入書籤」存一個書籤 → 到書籤列表點「編輯」→ 點剛存的書籤 → 把「網址」欄整段換成剛剛複製的內容（貼上）→ 名稱改成好認的字，例如「CK抓取」→ 儲存。之後在商品頁打開書籤列表點它就會執行。</li>
+              <li><b>Android：</b>Chrome 近期版本常常會擋掉這種書籤工具（點了沒反應），建議改用 <b>Firefox</b> 或 <b>Kiwi Browser</b>：一樣先加一個書籤，到書籤管理裡編輯該書籤，把網址換成剛複製的內容，存檔後在商品頁點它執行。</li>
+            </ol>
+          </div>
+        </details>
+        <p style="margin:0 0 14px;">
+          <button id="copyBookmarkletBtn" type="button">📋 複製書籤網址（手機設定用）</button>
+          <span id="copyBookmarkletStatus" style="font-size:12px;color:var(--muted);margin-left:8px;"></span>
         </p>
         <div class="row2" style="align-items:flex-start;">
           <textarea id="clipDataInput" placeholder="在商品頁按過書籤後，這裡貼上複製到的資料（一段 JSON 文字）..."
@@ -1115,6 +1130,18 @@ const BOOKMARKLET_SRC = `(function(){
 })();`;
 
 document.getElementById("bookmarkletLink").href = "javascript:" + encodeURIComponent(BOOKMARKLET_SRC);
+
+// 手機沒有書籤列可以拖曳，改成複製到剪貼簿，讓賣家自己貼進手動加的書籤網址欄。
+document.getElementById("copyBookmarkletBtn").addEventListener("click", async () => {
+  const bookmarkletUrl = document.getElementById("bookmarkletLink").href;
+  const statusEl = document.getElementById("copyBookmarkletStatus");
+  try {
+    await navigator.clipboard.writeText(bookmarkletUrl);
+    statusEl.textContent = "已複製，去手機瀏覽器貼到書籤網址欄";
+  } catch (e) {
+    window.prompt("自動複製失敗，請手動複製以下內容：", bookmarkletUrl);
+  }
+});
 
 document.getElementById("clipImportBtn").addEventListener("click", async () => {
   const input = document.getElementById("clipDataInput");
