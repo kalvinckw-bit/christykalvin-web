@@ -72,7 +72,7 @@ jobs:
         run: |
           npx firebase-tools deploy \
             --project christykalvin \
-            --only functions:importProduct,functions:uploadPhoto,functions:deletePhoto,functions:watchSourcePrices,functions:version \
+            --only functions:importProduct,functions:importFromData,functions:uploadPhoto,functions:deletePhoto,functions:watchSourcePrices,functions:version \
             --token "${{ secrets.FIREBASE_TOKEN }}" \
             --non-interactive \
             --force
