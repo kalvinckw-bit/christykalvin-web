@@ -117,7 +117,8 @@ function calcAll() {
 
     if (mcSell > 0 && mcBuy > 0) {
         const midRate = (mcSell + mcBuy) / 2;
-        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5);
+        const midAmount = amount * midRate;
+        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + midAmount.toLocaleString(undefined, {maximumFractionDigits: 0});
     } else {
         document.getElementById('mcMidRateDisplay').innerText = "0.00000";
     }
