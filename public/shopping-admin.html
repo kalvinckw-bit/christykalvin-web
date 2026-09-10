@@ -175,6 +175,30 @@
         </div>
         <div class="importStatus" id="importStatus"></div>
       </div>
+
+      <div class="importBox" style="margin-top:16px;">
+        <p>
+          <b>Amazon、Yodobashi 這類網站，上面的「貼連結」匯入不了：</b>
+          這兩家會直接擋掉伺服器發出的請求（Amazon 回傳機器人驗證頁、Yodobashi 直接拒絕連線），
+          不是連結格式的問題，是他們專門防雲端機房 IP。<br>
+          真正能繞過去的只有「你自己的瀏覽器」，所以改用瀏覽器書籤工具：把下面這個按鈕拖到瀏覽器書籤列，
+          之後在 Amazon / Yodobashi 的商品頁按一下，它會直接讀取你瀏覽器裡已經打開的頁面內容，
+          把商品資料複製起來，回來這裡貼上就能匯入。
+        </p>
+        <p style="margin:14px 0;">
+          <a id="bookmarkletLink" href="#" onclick="return false;"
+            style="display:inline-block;background:var(--gold);color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;cursor:grab;">
+            📎 抓取商品資料到 CK 後台
+          </a>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;">← 拖曳這顆按鈕到瀏覽器書籤列</span>
+        </p>
+        <div class="row2" style="align-items:flex-start;">
+          <textarea id="clipDataInput" placeholder="在商品頁按過書籤後，這裡貼上複製到的資料（一段 JSON 文字）..."
+            style="flex:1;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;font-family:monospace;"></textarea>
+          <button id="clipImportBtn" style="align-self:flex-start;">匯入</button>
+        </div>
+        <div class="importStatus" id="clipImportStatus"></div>
+      </div>
     </div>
 
     <div class="panel" id="panel-pricing">
@@ -235,6 +259,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app, "asia-east1");
 const importProductFn = httpsCallable(functions, "importProduct");
+const importFromDataFn = httpsCallable(functions, "importFromData");
 const uploadPhotoFn = httpsCallable(functions, "uploadPhoto");
 const deletePhotoFn = httpsCallable(functions, "deletePhoto");
 
@@ -902,6 +927,119 @@ importBtn.addEventListener("click", async () => {
     importStatusEl.textContent = "匯入失敗：" + (err.message || err);
   } finally {
     importBtn.disabled = false;
+  }
+});
+
+/* ---------------- 瀏覽器書籤工具（Amazon / Yodobashi 這類會擋伺服器請求的網站） ---------------- */
+/*
+ * importProduct 是「伺服器主動連線來源網站」，Amazon 會回機器人驗證頁、Yodobashi（Akamai）直接 403，
+ * 都是對方看雲端機房 IP 就攔，不是解析規則能解決的。真正繞得過去的只有「使用者自己的瀏覽器」，
+ * 所以做一個書籤工具（bookmarklet）：使用者在商品頁按一下，直接讀取瀏覽器當下已經載入好的頁面，
+ * 不是重新發請求，抓出標題/價格/圖片/描述複製起來，貼回後台匯入。
+ */
+const BOOKMARKLET_SRC = `(function(){
+  function pickText(sels){
+    for (var i=0;i<sels.length;i++){
+      var el = document.querySelector(sels[i]);
+      if (el) {
+        var t = (el.getAttribute('content') || el.innerText || el.textContent || '').trim();
+        if (t) return t;
+      }
+    }
+    return '';
+  }
+  function pickImages(sels, max){
+    var out = [];
+    for (var i=0;i<sels.length;i++){
+      var els = document.querySelectorAll(sels[i]);
+      for (var j=0;j<els.length;j++){
+        var el = els[j];
+        var u = el.getAttribute('content') || el.getAttribute('src') || el.getAttribute('data-src') || el.getAttribute('href');
+        if (u && /^https?:\\/\\//.test(u) && out.indexOf(u) === -1) out.push(u);
+      }
+    }
+    return out.slice(0, max || 8);
+  }
+  var host = location.hostname;
+  var title, priceText, images, desc;
+  if (/amazon\\./.test(host)) {
+    title = pickText(['#productTitle','meta[property="og:title"]']);
+    priceText = pickText(['.a-price .a-offscreen','#priceblock_ourprice','#priceblock_dealprice','#corePrice_feature_div .a-offscreen','.a-price-whole']);
+    images = pickImages(['#imgTagWrapperId img','#landingImage','meta[property="og:image"]'], 8);
+    desc = pickText(['#feature-bullets','#productDescription','meta[name="description"]']);
+  } else if (/yodobashi\\.com/.test(host)) {
+    title = pickText(['h1','meta[property="og:title"]']);
+    priceText = pickText(['.priceText','[class*="Price"]','[class*="price"]','meta[itemprop="price"]']);
+    images = pickImages(['img[class*="product"]','meta[property="og:image"]'], 8);
+    desc = pickText(['meta[name="description"]','meta[property="og:description"]']);
+  } else {
+    title = pickText(['meta[property="og:title"]','title']);
+    priceText = pickText(['meta[property="product:price:amount"]']);
+    images = pickImages(['meta[property="og:image"]'], 8);
+    desc = pickText(['meta[name="description"]']);
+  }
+  var price = priceText ? Number(String(priceText).replace(/[^0-9.]/g,'')) : null;
+  var data = { url: location.href, source_site: host, title: title || '', price: price || null, images: images, description: desc || '' };
+  var json = JSON.stringify(data);
+  function showBox(msg){
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;top:10px;right:10px;z-index:999999;background:#0E4B4F;color:#fff;padding:14px 18px;border-radius:8px;font-size:13px;max-width:320px;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:sans-serif;white-space:pre-wrap;';
+    box.textContent = msg;
+    document.body.appendChild(box);
+    setTimeout(function(){ box.remove(); }, 5000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(function(){
+      showBox('已複製商品資料，回到 CK 後台貼上即可\\n標題: ' + (title || '(抓不到，請確認頁面已完整載入)') + '\\n價格: ' + (price || '(抓不到)') + '\\n照片: ' + images.length + ' 張');
+    }).catch(function(){
+      window.prompt('自動複製失敗，請手動複製以下內容：', json);
+    });
+  } else {
+    window.prompt('請手動複製以下內容：', json);
+  }
+})();`;
+
+document.getElementById("bookmarkletLink").href = "javascript:" + encodeURIComponent(BOOKMARKLET_SRC);
+
+document.getElementById("clipImportBtn").addEventListener("click", async () => {
+  const input = document.getElementById("clipDataInput");
+  const statusEl = document.getElementById("clipImportStatus");
+  const raw = input.value.trim();
+  if (!raw) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請先在商品頁按過書籤工具，把複製到的資料貼在上面";
+    return;
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "貼上的內容不是完整的資料，請確認複製時沒有漏字";
+    return;
+  }
+  const btn = document.getElementById("clipImportBtn");
+  btn.disabled = true;
+  statusEl.className = "importStatus";
+  statusEl.textContent = "匯入中，請稍候（含照片下載與 AI 潤飾）...";
+  try {
+    const result = await importFromDataFn(data);
+    const product = result.data;
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `匯入成功！已建立草稿「${product.title_ja || product.title_en}」，請到「商品管理」核對後再上架。`;
+    input.value = "";
+    document.querySelector('.tab[data-tab="products"]').click();
+    document.getElementById("filterStatus").value = "draft";
+    render();
+    setTimeout(() => {
+      const el = document.getElementById("row_" + product.id);
+      if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }, 300);
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "匯入失敗：" + (err.message || err);
+  } finally {
+    btn.disabled = false;
   }
 });
 </script>

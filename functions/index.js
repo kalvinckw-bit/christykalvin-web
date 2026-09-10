@@ -439,6 +439,143 @@ exports.deletePhoto = onCall(
 );
 
 /**
+ * 瀏覽器書籤工具匯入：給 Amazon、Yodobashi 這類會直接擋掉伺服器端請求的網站用。
+ *
+ * importProduct 是「伺服器主動連線來源網站」，Amazon 會回傳機器人驗證頁、
+ * Yodobashi（Akamai）直接 403，兩者都不是解析規則能解決的問題——
+ * 是對方看雲端機房 IP 就攔。真正能繞過去的只有「使用者自己的瀏覽器」，
+ * 因為那本來就是一般訪客的正常連線。
+ *
+ * 做法：後台提供一個瀏覽器書籤（bookmarklet），使用者在商品頁按一下，
+ * 書籤裡的 JS 直接讀取當下瀏覽器已經載入好的頁面內容（不是重新發請求），
+ * 抓出標題/價格/圖片/描述，複製成一段 JSON，貼回這裡即可。
+ * 商品照片一樣改抓到自己的 bucket；沒有規格內文可以給 AI 抽規格，
+ * 所以顏色/尺寸/重量這些欄位這裡不會有，需要的話後台手動補。
+ */
+exports.importFromData = onCall(
+  { region: "asia-east1", timeoutSeconds: 120, memory: "512MiB" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "請先登入後台");
+    const d = request.data || {};
+    const url = String(d.url || "").trim();
+    const title = String(d.title || "").trim();
+    const description = String(d.description || "").trim();
+    const images = Array.isArray(d.images)
+      ? d.images.filter((u) => typeof u === "string" && u.trim()).slice(0, 8)
+      : [];
+    const priceNum = Number(d.price);
+
+    if (!/^https?:\/\//i.test(url)) {
+      throw new HttpsError("invalid-argument", "缺少來源網址");
+    }
+    if (images.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "書籤工具沒有抓到任何照片，可能該網站頁面結構改版了，請改用手動上傳"
+      );
+    }
+
+    let hostname = "";
+    try {
+      hostname = new URL(url).hostname;
+    } catch (_) {}
+    const sourceSite = String(d.source_site || hostname);
+
+    let bucketWarning = "";
+    try {
+      bucketWarning = (await ensurePhotoBucket()).warning;
+    } catch (err) {
+      throw new HttpsError("internal", `照片儲存空間建立失敗：${err.message}`);
+    }
+
+    const productId = db().collection("products").doc().id;
+    const uploadedUrls = await downloadImagesToStorage(productId, images);
+    if (uploadedUrls.length === 0) {
+      throw new HttpsError(
+        "internal",
+        "商品照片下載失敗（來源圖片網址可能也擋雲端流量），請改用手動上傳"
+      );
+    }
+
+    let ai = {
+      title_ja: "", description_zh: "", title_en: "", description_en: "",
+      category: "", condition: "", notes: "",
+      colors: [], size: "", weight: "", spec_notes: "", product_code: "",
+    };
+    let imported_via_ai = false;
+    const apiKey = await loadGeminiKey();
+    if (apiKey) {
+      try {
+        // 書籤工具抓不到頁面規格內文，只有標題/描述，specText 給空字串即可
+        ai = await refineWithGemini(apiKey, title, description, "");
+        imported_via_ai = true;
+      } catch (err) {
+        ai.notes = `AI 潤飾失敗（不影響原始資料匯入，可手動編輯）：${err.message}`;
+      }
+    } else {
+      ai.notes = "尚未設定 Gemini 金鑰，此筆為原文直接匯入，請人工潤飾後再發布";
+    }
+
+    const costJpy = Number.isFinite(priceNum) && priceNum > 0 ? Math.round(priceNum) : null;
+    const pricing = await loadPricingSettings();
+    const pricedFor = computePrices(
+      { cost_jpy: costJpy, cost_original_jpy: null, source_site: sourceSite },
+      pricing
+    );
+
+    const now = Date.now();
+    const product = {
+      title_ja: ai.title_ja || title,
+      description_ja: description,
+      description_zh: ai.description_zh || "",
+      title_en: ai.title_en || ai.title_ja || title || "",
+      description_en: ai.description_en || "",
+      colors: [],
+      sizes: [],
+      variants: [],
+      size: "",
+      weight: "",
+      spec_notes: "",
+      product_code: "",
+      price_jpy: pricedFor.price_jpy,
+      price_original_jpy: null,
+      sale_label: "",
+      sale_end_at: null,
+      price_source_currency: "JPY",
+      price_source_value: costJpy,
+      category: ai.category || "",
+      condition: ai.condition || "全新",
+      photos: uploadedUrls,
+      source_url: url,
+      source_site: sourceSite,
+      ai_notes: [ai.notes, bucketWarning, "透過瀏覽器書籤工具匯入（伺服器連不到此網站）"]
+        .filter(Boolean).join(" / "),
+      imported_via_ai,
+      status: "draft",
+      sold: false,
+      is_complete: !!((ai.title_ja || title) && ai.description_zh && pricedFor.price_jpy && uploadedUrls.length),
+      human_edited: false,
+      created_at: now,
+      updated_at: now,
+      created_by: request.auth.token.email || request.auth.uid,
+    };
+
+    await db().collection("products").doc(productId).set(product);
+    await db().collection("product_costs").doc(productId).set({
+      cost_jpy: costJpy,
+      cost_original_jpy: null,
+      markup_type: "",
+      markup_value: null,
+      source_site: sourceSite,
+      applied_rule: pricedFor.markup_applied,
+      updated_at: now,
+    });
+
+    return { id: productId, ...product };
+  }
+);
+
+/**
  * 每天回查一次來源網站的價格（目前支援 Uniqlo / GU）。
  *
  * 賣代購最怕兩件事：來源悄悄漲價、限時特價結束了但自己網站還掛著舊特價。
