@@ -89,6 +89,10 @@
                 <input type="number" id="wiseMYR" placeholder="譬如：10621" oninput="calcAll()">
             </div>
         </div>
+        <div class="mc-mid-rate" style="color: var(--wise-color); border-top-color: #74b9ff;">
+            💹 Wise 匯率:
+            <span id="wiseRateDisplay" class="mc-mid-rate-value">0.00000</span>
+        </div>
     </div>
 
     <div class="btn-group">
@@ -130,6 +134,14 @@ function calcAll() {
         document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + Math.round(midAmount).toLocaleString();
     } else {
         document.getElementById('mcMidRateDisplay').innerText = "0.00000";
+    }
+
+    const wiseMYR = parseFloat(document.getElementById('wiseMYR').value) || 0;
+    if (amount > 0 && wiseMYR > 0) {
+        const wiseRate = wiseMYR / amount;
+        document.getElementById('wiseRateDisplay').innerText = wiseRate.toFixed(7);
+    } else {
+        document.getElementById('wiseRateDisplay').innerText = "0.00000";
     }
 }
 
