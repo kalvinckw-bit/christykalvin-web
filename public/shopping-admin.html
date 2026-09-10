@@ -131,6 +131,7 @@
   <header>
     <h1><img class="hdrLogo" src="/icons/icon-192.png" alt="CK Japan" width="34" height="34">Christy Kalvin Select 後台管理 <span style="font-weight:400;font-size:12px;opacity:.7">Powered by CK Holdings</span></h1>
     <div class="user">
+      <a href="/shopping.html" target="_blank" rel="noopener" style="color:#fff;font-size:13px;">🛍️ 查看前台</a>
       <span id="whoami"></span>
       <button id="logoutBtn">登出</button>
     </div>
@@ -851,10 +852,10 @@ document.getElementById("searchBox").addEventListener("input", render);
 // 高島屋有回饋 → 不加價；Uniqlo/GU 沒回饋 → 必須自己加價才有利潤
 const DEFAULT_PRICING = {
   rules: {
-    UNIQLO: { type: "percent", value: 25 },
-    GU: { type: "percent", value: 25 },
+    UNIQLO: { type: "percent", value: 30 },
+    GU: { type: "percent", value: 30 },
     "takashimaya.co.jp": { type: "none", value: 0 },
-    default: { type: "percent", value: 25 },
+    default: { type: "percent", value: 30 },
   },
   rounding: "10",
 };

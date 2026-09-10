@@ -10,13 +10,13 @@
  * 這樣前台顯示的「省 ¥XXX」才會跟實際折扣幅度一致，不會誤導客人。
  */
 
-/** 預設規則：高島屋有回饋所以不加價，其他來源預設加 25%。 */
+/** 預設規則：高島屋有回饋所以不加價，其他來源預設加 30%。 */
 const DEFAULT_PRICING = {
   rules: {
-    UNIQLO: { type: "percent", value: 25 },
-    GU: { type: "percent", value: 25 },
+    UNIQLO: { type: "percent", value: 30 },
+    GU: { type: "percent", value: 30 },
     "takashimaya.co.jp": { type: "none", value: 0 },
-    default: { type: "percent", value: 25 },
+    default: { type: "percent", value: 30 },
   },
   // 進位方式：算完之後往上取整，價格才不會出現 ¥1,237 這種零頭
   rounding: "10", // "none" | "10" | "100"

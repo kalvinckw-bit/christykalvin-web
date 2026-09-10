@@ -20,8 +20,8 @@ function test(name, fn) {
 
 console.log("ruleFor — 依來源網站挑規則");
 test("Uniqlo / GU 用各自的規則", () => {
-  assert.deepStrictEqual(ruleFor("UNIQLO", DEFAULT_PRICING), { type: "percent", value: 25 });
-  assert.deepStrictEqual(ruleFor("GU", DEFAULT_PRICING), { type: "percent", value: 25 });
+  assert.deepStrictEqual(ruleFor("UNIQLO", DEFAULT_PRICING), { type: "percent", value: 30 });
+  assert.deepStrictEqual(ruleFor("GU", DEFAULT_PRICING), { type: "percent", value: 30 });
 });
 
 test("高島屋有回饋，預設不加價", () => {
@@ -30,8 +30,8 @@ test("高島屋有回饋，預設不加價", () => {
 });
 
 test("沒設定過的來源用 default 規則", () => {
-  assert.deepStrictEqual(ruleFor("some-random-shop.jp", DEFAULT_PRICING), { type: "percent", value: 25 });
-  assert.deepStrictEqual(ruleFor("", DEFAULT_PRICING), { type: "percent", value: 25 });
+  assert.deepStrictEqual(ruleFor("some-random-shop.jp", DEFAULT_PRICING), { type: "percent", value: 30 });
+  assert.deepStrictEqual(ruleFor("", DEFAULT_PRICING), { type: "percent", value: 30 });
 });
 
 console.log("roundPrice — 標價進位");
@@ -75,8 +75,8 @@ test("Uniqlo 特價商品：原價與特價都套同一個加價", () => {
     { cost_jpy: 990, cost_original_jpy: 1500, source_site: "UNIQLO" },
     DEFAULT_PRICING
   );
-  assert.strictEqual(r.price_jpy, 1240, "990 加 25% 進位到 1240");
-  assert.strictEqual(r.price_original_jpy, 1880, "1500 加 25% 進位到 1880");
+  assert.strictEqual(r.price_jpy, 1290, "990 加 30% 進位到 1290");
+  assert.strictEqual(r.price_original_jpy, 1950, "1500 加 30% 進位到 1950");
   assert.ok(r.price_original_jpy > r.price_jpy, "原價必須高於售價，前台刪除線才成立");
 });
 
@@ -91,7 +91,7 @@ test("個別商品自己設定的加價，優先於來源網站的預設", () =>
     { cost_jpy: 1000, source_site: "UNIQLO", markup_type: "fixed", markup_value: 800 },
     DEFAULT_PRICING
   );
-  assert.strictEqual(r.price_jpy, 1800, "應該用商品自己的 +¥800，不是來源預設的 25%");
+  assert.strictEqual(r.price_jpy, 1800, "應該用商品自己的 +¥800，不是來源預設的 30%");
 });
 
 test("加價設定改成 30% 後，算出來的價格跟著變", () => {
