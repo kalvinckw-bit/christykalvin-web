@@ -99,6 +99,26 @@ async function loadCategories() {
   return DEFAULT_CATEGORIES;
 }
 
+/**
+ * Gemini 有時候不理會 prompt 裡「不要發明清單以外分類」的指示，
+ * 直接生出清單以外的分類名稱（賣家實際回報過：清單裡沒有「藥妝」，
+ * AI 還是生出了這個分類）。分類清單是賣家自己在後台管理的東西，
+ * 不能讓 AI 越權把賣家沒新增過的分類硬塞進資料庫，否則「讓賣家自己
+ * 管理分類」這個功能就形同虛設。比對不到清單裡的項目就留空、記一筆
+ * 提示，讓賣家自己決定要手動選一個現有分類，還是把這個新名稱加進
+ * 分類清單。
+ */
+function resolveCategory(aiCategory, categories) {
+  const list = Array.isArray(categories) ? categories : [];
+  const trimmed = (aiCategory || "").trim();
+  if (!trimmed) return { category: "", note: "" };
+  if (list.includes(trimmed)) return { category: trimmed, note: "" };
+  return {
+    category: "",
+    note: `AI 建議分類「${trimmed}」不在目前的分類清單中，已略過（請自行從清單挑一個，或去「加價設定」分頁新增這個分類）`,
+  };
+}
+
 function bucket() {
   return gcs.bucket(PHOTO_BUCKET);
 }
@@ -315,10 +335,10 @@ exports.importProduct = onCall(
       colors: [], size: "", weight: "", spec_notes: "", product_code: "",
     };
     let imported_via_ai = false;
+    const categories = await loadCategories();
     const apiKey = await loadGeminiKey();
     if (apiKey) {
       try {
-        const categories = await loadCategories();
         ai = await refineWithGemini(apiKey, extracted.title, extracted.description, extracted.specText, categories);
         imported_via_ai = true;
       } catch (err) {
@@ -327,6 +347,7 @@ exports.importProduct = onCall(
     } else {
       ai.notes = "尚未設定 Gemini 金鑰（環境變數與 settings/ai 都沒有），此筆為原文直接匯入，請人工潤飾後再發布";
     }
+    const catResolved = resolveCategory(ai.category, categories);
 
     let hostname = "";
     try {
@@ -371,12 +392,12 @@ exports.importProduct = onCall(
       sale_end_at: (apparel && apparel.sale_end_at) || null,
       price_source_currency: extracted.currency,
       price_source_value: extracted.price,
-      category: ai.category || "",
+      category: catResolved.category,
       condition: ai.condition || "全新",
       photos: uploadedUrls,
       source_url: url,
       source_site: sourceSite,
-      ai_notes: [ai.notes, apparelError, bucketWarning].filter(Boolean).join(" / "),
+      ai_notes: [ai.notes, catResolved.note, apparelError, bucketWarning].filter(Boolean).join(" / "),
       imported_via_ai,
       // 匯入結果直接上架（賣家 2026-09-10 要求，不再強制人工複核才發布）
       status: "published",
@@ -527,11 +548,11 @@ exports.importFromData = onCall(
       colors: [], size: "", weight: "", spec_notes: "", product_code: "",
     };
     let imported_via_ai = false;
+    const categories = await loadCategories();
     const apiKey = await loadGeminiKey();
     if (apiKey) {
       try {
         // 書籤工具抓不到頁面規格內文，只有標題/描述，specText 給空字串即可
-        const categories = await loadCategories();
         ai = await refineWithGemini(apiKey, title, description, "", categories);
         imported_via_ai = true;
       } catch (err) {
@@ -540,6 +561,7 @@ exports.importFromData = onCall(
     } else {
       ai.notes = "尚未設定 Gemini 金鑰，此筆為原文直接匯入，請人工潤飾後再發布";
     }
+    const catResolved = resolveCategory(ai.category, categories);
 
     const costJpy = Number.isFinite(priceNum) && priceNum > 0 ? Math.round(priceNum) : null;
     const pricing = await loadPricingSettings();
@@ -568,12 +590,12 @@ exports.importFromData = onCall(
       sale_end_at: null,
       price_source_currency: "JPY",
       price_source_value: costJpy,
-      category: ai.category || "",
+      category: catResolved.category,
       condition: ai.condition || "全新",
       photos: uploadedUrls,
       source_url: url,
       source_site: sourceSite,
-      ai_notes: [ai.notes, bucketWarning, "透過瀏覽器書籤工具匯入（伺服器連不到此網站）"]
+      ai_notes: [ai.notes, catResolved.note, bucketWarning, "透過瀏覽器書籤工具匯入（伺服器連不到此網站）"]
         .filter(Boolean).join(" / "),
       imported_via_ai,
       // 匯入結果直接上架（賣家 2026-09-10 要求，不再強制人工複核才發布）
