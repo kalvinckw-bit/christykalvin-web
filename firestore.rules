@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ChristyKalvin 轉賣商城 - products collection
+    // 已上架(published)商品公開可讀；其餘狀態(draft/hidden)僅後台登入帳號可讀
+    // 寫入一律限定已登入(Firebase Auth)帳號，即後台管理員
+    match /products/{productId} {
+      allow read: if resource.data.status == 'published' || request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // 加價規則等後台設定：只有登入的管理員可以讀寫。
+    // 這裡放的是成本加成％數，屬於營業機密，絕對不能讓前台訪客讀到。
+    match /settings/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 商品的進貨成本與加價設定：**一定要跟 products 分開存**。
+    // products 的已上架商品是公開可讀的，成本若放在裡面，
+    // 任何客人打開開發者工具就會看到我們的進價與利潤率。
+    match /product_costs/{productId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 前台留言詢問表單：訪客可以新增(create)詢問，但不能讀取/修改/刪除既有詢問
+    // (避免陌生人看到其他買家的聯絡方式)；後台登入帳號才能讀取/標記/刪除。
+    match /inquiries/{inquiryId} {
+      allow create: if request.resource.data.keys().hasAll(['product_id','contact','message','status','created_at'])
+        && request.resource.data.status == 'new'
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() > 0
+        && request.resource.data.contact.size() < 300
+        && request.resource.data.message is string
+        && request.resource.data.message.size() < 3000
+        && request.resource.data.created_at is number;
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}
