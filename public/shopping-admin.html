@@ -1013,7 +1013,9 @@ function rowHTML(p){
     if (key === "price_jpy") {
       // 打售價的當下就要看得到賺多少 %，不用按儲存才知道——標籤右側放即時利潤徽章，
       // 打字（或改來源成本）就即時重算，跟 saveRow() 真正存檔的邏輯無關，純前端試算。
-      return `<div class="field"><label style="display:flex;justify-content:space-between;align-items:center;">
+      // flex-wrap:wrap：標籤文字太長、跟徽章擠不下同一行時，徽章整個換到下一行，
+      // 不會變成徽章卡在兩行文字中間那種擠壓、對不齊的怪樣子。
+      return `<div class="field"><label style="display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:space-between;align-items:center;">
         ${label}<span class="tag livePct"></span>
       </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
     }
@@ -1021,7 +1023,7 @@ function rowHTML(p){
       // 原價也比照售價放即時利潤徽章——原價填的是「特價前」的價格，賣家一樣想知道
       // 這個價位賺多少 %。注意：原價一定要比售價高才會被前台當成特價顯示（刪除線＋
       // 省多少），原價比售價低或一樣，前台會直接忽略特價設定、只顯示售價。
-      return `<div class="field"><label style="display:flex;justify-content:space-between;align-items:center;">
+      return `<div class="field"><label style="display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:space-between;align-items:center;">
         ${label}<span class="tag livePctOriginal"></span>
       </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
     }
