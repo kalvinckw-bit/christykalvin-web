@@ -104,7 +104,10 @@
   .row.open .detail{display:block;}
   .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px;}
   .field.full{grid-column:1/-1;}
-  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+  /* min-height 固定保留兩行的高度：有些欄位標籤很長（例如「主題標籤」那條說明文字）
+     會換行，標籤只有一行的欄位卻沒有換行，同一排的輸入框高度就會對不齊、一個高一個
+     低。固定保留兩行高度，不管標籤實際上有沒有換行，輸入框永遠從同一個高度開始。 */
+  .field label{display:block;font-size:11px;line-height:1.3;min-height:28px;color:var(--muted);margin-bottom:3px;}
   .field input,.field select,.field textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;font-family:inherit;}
   .field textarea{resize:vertical;min-height:70px;}
 
