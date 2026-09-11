@@ -577,6 +577,42 @@ document.getElementById("addCategoryBtn").addEventListener("click", async () => 
   }
 });
 
+/**
+ * 商品編輯表單裡「分類」下拉選單直接選「➕ 新增分類...」就能新增，不用切去
+ * 「加價設定」分頁。刻意不呼叫 render() 整頁重算——這個下拉選單可能還有其他
+ * 商品列正在編輯、還沒按儲存，整頁重算會把那些還沒存檔的欄位內容洗掉，改成
+ * 只更新畫面上所有分類下拉選單的選項清單，不動其他欄位。
+ */
+async function addCategoryInline(selectEl) {
+  const prev = selectEl.dataset.prevValue || "";
+  const zh = (prompt("新增分類名稱：") || "").trim();
+  if (!zh) { selectEl.value = prev; return; }
+  if (categoriesList.some((c) => c.zh === zh)) {
+    alert("這個分類已經存在了");
+    selectEl.value = zh;
+    selectEl.dataset.prevValue = zh;
+    return;
+  }
+  try {
+    const next = [...categoriesList, { zh, en: zh }];
+    await setDoc(doc(db, "settings", "categories"), { list: next, updated_at: Date.now() });
+    categoriesList = next;
+    renderCategoryChips();
+    renderCategoryFilterOptions();
+    document.querySelectorAll('select[data-key="category"]').forEach((sel) => {
+      const addOpt = sel.querySelector('option[value="__add_new__"]');
+      const newOpt = document.createElement("option");
+      newOpt.textContent = zh;
+      if (addOpt) sel.insertBefore(newOpt, addOpt); else sel.appendChild(newOpt);
+    });
+    selectEl.value = zh;
+    selectEl.dataset.prevValue = zh;
+  } catch (err) {
+    alert("新增失敗：" + err.message);
+    selectEl.value = prev;
+  }
+}
+
 /* ---------------- 主題標籤（跟分類無關，例如 moomin / Hello Kitty 這種系列） ---------------- */
 let themesList = [];
 
@@ -736,6 +772,19 @@ function render(){
       if (costInput) costInput.addEventListener("input", updateLivePct);
       updateLivePct();
     }
+
+    // 分類下拉選單選到「➕ 新增分類...」就跳出新增流程，不用切去「加價設定」分頁
+    const catSelect = rowEl.querySelector('select[data-key="category"]');
+    if (catSelect) {
+      catSelect.dataset.prevValue = catSelect.value;
+      catSelect.addEventListener("change", () => {
+        if (catSelect.value === "__add_new__") {
+          addCategoryInline(catSelect);
+        } else {
+          catSelect.dataset.prevValue = catSelect.value;
+        }
+      });
+    }
   });
 }
 
@@ -774,6 +823,7 @@ function rowHTML(p){
       if (p[key] && !opts.includes(p[key])) opts.push(p[key] + "（已刪除）");
       return `<div class="field"><label>${label}</label><select data-key="${key}">
         ${opts.map(o => `<option ${(p[key]===o || o===p[key]+"（已刪除）")?"selected":""}>${o}</option>`).join("")}
+        <option value="__add_new__">➕ 新增分類...</option>
       </select></div>`;
     }
     if (type === "select_cond") {
@@ -1224,6 +1274,24 @@ const BOOKMARKLET_SRC = `(function(){
     var m = body.match(/[¥￥]\\s?([\\d,]{2,10})/) || body.match(/([\\d,]{3,10})\\s?円/);
     return m ? m[1] : '';
   }
+  // 有些網站（尤其活動／預購頁，例如賣家實測過的 P-Bandai）真正的商品照片只是
+  // 內文裡的 <img>，不會出現在 og:image 這類 meta 標籤裡，只認 meta 常常只抓到
+  // 1 張。改用「圖片實際顯示尺寸夠大」篩選——不用知道這個網站的 class/id
+  // 命名方式，也能濾掉 logo/按鈕/追蹤像素這類小圖，抓到大部分真正的商品照。
+  function pickLargeImages(max, minSize){
+    var out = [];
+    var imgs = document.querySelectorAll('img');
+    for (var i=0;i<imgs.length && out.length<(max||8);i++){
+      var el = imgs[i];
+      var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+      var w = el.naturalWidth || el.width || (rect && rect.width) || 0;
+      var h = el.naturalHeight || el.height || (rect && rect.height) || 0;
+      if (w < (minSize || 200) || h < (minSize || 200)) continue;
+      var u = el.currentSrc || el.src || el.getAttribute('data-src');
+      if (u && /^https?:\\/\\//.test(u) && out.indexOf(u) === -1) out.push(u);
+    }
+    return out;
+  }
   var host = location.hostname;
   var title, priceText, images, desc;
   if (/amazon\\./.test(host)) {
@@ -1241,6 +1309,13 @@ const BOOKMARKLET_SRC = `(function(){
     priceText = pickText(['meta[property="product:price:amount"]']) || pickPriceFromPageText();
     images = pickImages(['meta[property="og:image"]'], 8);
     desc = pickText(['meta[name="description"]']);
+  }
+  // meta 抓到的照片不夠多時，補上頁面裡實際顯示尺寸夠大的 <img>（見上面 pickLargeImages 說明）
+  if (images.length < 8) {
+    var extra = pickLargeImages(8 - images.length);
+    for (var ei=0; ei<extra.length; ei++) {
+      if (images.indexOf(extra[ei]) === -1) images.push(extra[ei]);
+    }
   }
   var price = priceText ? Number(String(priceText).replace(/[^0-9.]/g,'')) : null;
   var data = { url: location.href, source_site: host, title: title || '', price: price || null, images: images, description: desc || '' };
