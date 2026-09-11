@@ -14,6 +14,33 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="CK代購">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script>
+/* 強制不要顯示舊版畫面：這頁被加到手機主畫面後是「獨立 App」模式，
+   沒有網址列、沒有下拉重新整理，iOS 很容易直接顯示上次的舊畫面快照
+   （bfcache）而不是真的連網抓新版。deploy-shopping.yml 每次部署會把
+   下面這行的版本佔位字串換成當次的 commit SHA；每次打開/回到這頁，
+   都去問伺服器現在線上是哪個版本，兩者對不起來就自動整頁重新整理。 */
+(function(){
+  var BUILD_SHA = "__BUILD_SHA__";
+  if (BUILD_SHA.indexOf("BUILD_SHA") !== -1) return; // 本機開發環境沒經過部署替換，不執行
+  function checkForUpdate(){
+    fetch("/build-version.json?_=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if (data && data.sha && data.sha !== BUILD_SHA) location.reload();
+      })
+      .catch(function(){});
+  }
+  window.addEventListener("pageshow", function(e){
+    if (e.persisted) { location.reload(); return; }
+    checkForUpdate();
+  });
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+})();
+</script>
 <style>
   :root{
     --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;

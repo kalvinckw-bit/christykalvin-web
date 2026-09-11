@@ -27,6 +27,18 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      # 把這次的 commit SHA 寫進 shopping.html / shopping-admin.html 裡（取代 __BUILD_SHA__
+      # 佔位字串），也同步寫一份 public/build-version.json。這兩頁被賣家加到手機主畫面後是
+      # 「獨立 App」模式，沒有網址列、沒有下拉重新整理，iOS 很容易直接顯示上次的舊畫面快照，
+      # 頁面裡的版本檢查腳本會拿這個 SHA 去跟 build-version.json 對，兜不起來就自動重整——
+      # 一定要在 Deploy Hosting 之前跑，不然部署上去的還是沒替換過的佔位字串。
+      - name: Stamp hosting version
+        run: |
+          printf '{"sha":"%s","deployedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/build-version.json
+          sed -i "s/__BUILD_SHA__/$GITHUB_SHA/g" public/shopping.html public/shopping-admin.html
+          cat public/build-version.json
+
       # Hosting 一定要獨立部署，而且排在最前面。
       # 之前把 hosting 跟 functions 包在同一個 deploy 指令，functions 那邊一報錯
       # （例如 artifact cleanup policy）整包就中斷，hosting 檔案雖然上傳了卻沒有
