@@ -81,6 +81,8 @@
   main{max-width:1180px;margin:0 auto;padding:18px 20px 80px;}
 
   .chipRow{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px;-webkit-overflow-scrolling:touch;}
+  .chipRow[hidden]{display:none;} /* .chipRow 的 display:flex 是 author 樣式，優先度比瀏覽器對 hidden 屬性的預設值高，
+    不額外補這條規則的話，themeChipRow.hidden=true 不會真的把整排藏起來 */
   .chip{
     flex:none;padding:7px 16px;border-radius:20px;border:1px solid var(--line);background:#fff;
     font-size:12.5px;cursor:pointer;white-space:nowrap;color:var(--text);
@@ -242,6 +244,7 @@
 
 <main>
   <div class="chipRow" id="chipRow"></div>
+  <div class="chipRow" id="themeChipRow" hidden></div>
   <div class="toolbar2">
     <span class="count" id="countLine"></span>
     <select id="sortSelect">
@@ -294,6 +297,10 @@ const DEFAULT_CATEGORIES = [
   { zh: "食品零食", en: "Food & Snacks" }, { zh: "其他", en: "Other" },
 ];
 let categoriesList = DEFAULT_CATEGORIES;
+// 主題標籤（settings/themes）：跟分類是兩件不同的事——分類是「這是什麼東西」，
+// 主題標籤是「這是哪個系列/角色」（例如 moomin、Hello Kitty），客人點了就篩出所有
+// 掛這個標籤的商品，不管分類是什麼。沒有預設值，賣家還沒建過就不顯示這排篩選按鈕。
+let themesList = [];
 const COND_EN = {"全新":"New","近新":"Like New","二手良好":"Used - Good","二手一般":"Used - Fair","未知":"Unknown"};
 
 const STR = {
@@ -366,6 +373,7 @@ function productDesc(p){
 
 let allProducts = [];
 let activeCat = "全部";
+let activeTheme = "全部";
 let fxRate = null;    // 1 JPY = fxRate * localCurrency
 let fxCode = null;    // 例如 "MYR"
 let urlParamHandled = false;
@@ -451,6 +459,34 @@ onSnapshot(doc(db, "settings", "categories"), (snap) => {
   render();
 }, () => { /* 讀不到就沿用預設分類，不影響其他功能 */ });
 
+/* ---------------- 主題標籤 chips（跟分類無關，例如 moomin / Hello Kitty 這種系列） ---------------- */
+const themeChipRow = document.getElementById("themeChipRow");
+function renderThemeChips(){
+  themeChipRow.hidden = themesList.length === 0;
+  if (themesList.length === 0) return;
+  const themes = ["全部", ...themesList];
+  themeChipRow.innerHTML = themes.map((t) => {
+    const label = t === "全部" ? (lang === "en" ? "All" : "全部") : t;
+    return `<button class="chip ${t===activeTheme?"active":""}" data-theme="${esc(t)}">${esc(label)}</button>`;
+  }).join("");
+  themeChipRow.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeTheme = btn.dataset.theme;
+      themeChipRow.querySelectorAll(".chip").forEach(b => b.classList.toggle("active", b === btn));
+      render();
+    });
+  });
+}
+renderThemeChips();
+
+// 主題標籤清單即時訂閱：賣家在後台新增/刪除，前台不用重新部署就會跟著更新
+onSnapshot(doc(db, "settings", "themes"), (snap) => {
+  const list = snap.exists() && snap.data() && snap.data().list;
+  themesList = Array.isArray(list) ? list : [];
+  renderThemeChips();
+  render();
+}, () => { /* 讀不到就當作還沒有任何主題標籤，篩選按鈕不顯示 */ });
+
 document.getElementById("searchBox").addEventListener("input", render);
 document.getElementById("sortSelect").addEventListener("change", render);
 
@@ -470,6 +506,7 @@ function setLang(l){
   document.querySelectorAll(".langBtn").forEach(b => b.classList.toggle("active", b.dataset.lang === l));
   applyStaticStrings();
   renderChips();
+  renderThemeChips();
   render();
   if (currentProductId) openModal(currentProductId);
 }
@@ -547,6 +584,7 @@ function render(){
 
   let list = allProducts.filter(p => {
     if (activeCat !== "全部" && (p.category || "其他") !== activeCat) return false;
+    if (activeTheme !== "全部" && !(Array.isArray(p.themes) && p.themes.includes(activeTheme))) return false;
     if (search){
       const hay = [p.title_zh, p.title_en, p.title_ja].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(search)) return false;

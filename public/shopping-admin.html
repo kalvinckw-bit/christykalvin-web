@@ -262,6 +262,19 @@
         </div>
         <div class="importStatus" id="categoryStatus"></div>
       </div>
+      <div class="importBox" style="max-width:760px;margin-bottom:16px;">
+        <p>
+          <b>主題標籤：</b>跟分類是兩件不同的事——分類是「這是什麼東西」（包包/服飾/食品），
+          主題標籤是「這是哪個系列/角色」（例如 moomin、Hello Kitty），客人點了就篩出所有掛這個標籤的商品，
+          不管分類是什麼。自己新增/刪除，一個商品可以掛好幾個標籤（在「商品管理」的「主題標籤」欄位用逗號分隔）。
+        </p>
+        <div id="themeChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div class="row2">
+          <input id="newTheme" type="text" placeholder="主題標籤名稱（例如：moomin、Hello Kitty）">
+          <button id="addThemeBtn">新增標籤</button>
+        </div>
+        <div class="importStatus" id="themeStatus"></div>
+      </div>
       <div class="importBox" style="max-width:760px;">
         <p>
           <b>為什麼要加價：</b>高島屋這類通路有給回饋，直接用他們的標價賣就有利潤，所以設「不加價」。
@@ -356,6 +369,7 @@ onAuthStateChanged(auth, (user) => {
     startListeningCosts();
     loadPricingSettings();
     loadCategories();
+    loadThemes();
   } else {
     loginScreen.style.display = "block";
     appEl.style.display = "none";
@@ -563,6 +577,72 @@ document.getElementById("addCategoryBtn").addEventListener("click", async () => 
   }
 });
 
+/* ---------------- 主題標籤（跟分類無關，例如 moomin / Hello Kitty 這種系列） ---------------- */
+let themesList = [];
+
+async function loadThemes() {
+  try {
+    const d = await getDoc(doc(db, "settings", "themes"));
+    const list = d.exists() && d.data() && d.data().list;
+    if (Array.isArray(list)) themesList = list;
+  } catch (err) {
+    console.warn("讀取主題標籤清單失敗，先當作還沒有任何標籤", err);
+  }
+  renderThemeChips();
+}
+
+async function saveThemes(list) {
+  await setDoc(doc(db, "settings", "themes"), { list, updated_at: Date.now() });
+  themesList = list;
+  renderThemeChips();
+}
+
+function renderThemeChips() {
+  const wrap = document.getElementById("themeChips");
+  wrap.innerHTML = themesList.map((t, i) => `
+    <span class="catChip">${esc(t)}
+      <button data-idx="${i}" title="刪除這個主題標籤">✕</button>
+    </span>`).join("");
+  wrap.querySelectorAll("button[data-idx]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.idx);
+      const removed = themesList[idx];
+      if (!confirm(`確定要刪除主題標籤「${removed}」嗎？已經掛這個標籤的商品不會被改動，只是篩選按鈕不會再出現。`)) return;
+      const next = themesList.filter((_, i) => i !== idx);
+      try {
+        await saveThemes(next);
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+      }
+    });
+  });
+}
+
+document.getElementById("addThemeBtn").addEventListener("click", async () => {
+  const input = document.getElementById("newTheme");
+  const statusEl = document.getElementById("themeStatus");
+  const name = input.value.trim();
+  if (!name) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請輸入主題標籤名稱";
+    return;
+  }
+  if (themesList.includes(name)) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "這個主題標籤已經存在了";
+    return;
+  }
+  try {
+    await saveThemes([...themesList, name]);
+    input.value = "";
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `已新增主題標籤「${name}」，商品編輯的「主題標籤」欄位跟前台篩選按鈕馬上就能用了。`;
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "新增失敗：" + err.message;
+  }
+});
+
 const FIELD_DEFS = [
   // 商品名稱不做中文翻譯：中文介面顯示日文原名、英文介面顯示英文名，
   // 所以後台不再提供「標題(中文)」欄位（品牌/商品名是專有名詞，翻中文反而對不上日本官網）
@@ -576,6 +656,7 @@ const FIELD_DEFS = [
   ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
   ["sale_label", "特價標籤", "text", false],
   ["category", "分類", "select_cat", true],
+  ["themes", "主題標籤(逗號分隔，例如：moomin、Hello Kitty，跟分類無關)", "colors_text", false],
   ["condition", "新舊狀況", "select_cond", true],
   ["status", "狀態", "select_status", true],
   ["colors", "顏色選項(逗號分隔)", "colors_text", false],

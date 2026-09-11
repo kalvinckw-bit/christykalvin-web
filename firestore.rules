@@ -23,6 +23,13 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // 主題標籤清單（跟分類無關的另一套篩選，例如「moomin」「Hello Kitty」這種 IP／聯名系列）：
+    // 賣家自己在後台新增/刪除，前台客人點了就篩出所有掛同一個主題的商品。
+    // 標籤名稱不是機密，前台要用它畫篩選按鈕，所以一樣公開讀取、寫入限管理員。
+    match /settings/themes {
+      allow read: if true;
+    }
+
     // 商品的進貨成本與加價設定：**一定要跟 products 分開存**。
     // products 的已上架商品是公開可讀的，成本若放在裡面，
     // 任何客人打開開發者工具就會看到我們的進價與利潤率。
