@@ -147,6 +147,10 @@
   .catChip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:16px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;}
   .catChip button{border:none;background:rgba(0,0,0,.08);color:var(--muted);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;padding:0;}
   .catChip button:hover{background:var(--danger);color:#fff;}
+  .themePicker{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .themeChip{padding:5px 12px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--text);}
+  .themeChip.active{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+  .themeAddBtn{padding:5px 10px;border-radius:16px;border:1px dashed var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -739,7 +743,7 @@ const FIELD_DEFS = [
   ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
   ["sale_label", "特價標籤", "text", false],
   ["category", "分類", "select_cat", true],
-  ["themes", "主題標籤(逗號分隔，例如：moomin、Hello Kitty，跟分類無關)", "colors_text", false],
+  ["themes", "主題標籤（跟分類無關，可複選，例如：moomin、Hello Kitty）", "theme_picker", false],
   ["condition", "新舊狀況", "select_cond", true],
   ["status", "狀態", "select_status", true],
   ["colors", "顏色選項(逗號分隔)", "colors_text", false],
@@ -862,6 +866,58 @@ function render(){
         }
       });
     }
+
+    // 主題標籤：點標籤切換選取狀態，同步寫進旁邊的隱藏欄位（saveRow() 讀的是這個）。
+    // 版面固定是「.themePicker 後面緊接著那顆隱藏欄位」，用 nextElementSibling 拿，
+    // 不用另外比對 data-key，其他商品列的選取器也能用同一套邏輯處理。
+    const themePicker = rowEl.querySelector("[data-theme-picker-for]");
+    if (themePicker) wireThemePicker(themePicker);
+  });
+}
+
+/** 主題標籤選取器：點了切換 active、同步寫進緊接在後面的隱藏欄位。 */
+function wireThemePicker(picker){
+  const hiddenInput = picker.nextElementSibling;
+  const sync = () => {
+    const selected = Array.from(picker.querySelectorAll(".themeChip.active")).map((el) => el.dataset.theme);
+    if (hiddenInput) hiddenInput.value = selected.join("、");
+  };
+  picker.querySelectorAll(".themeChip").forEach((chip) => {
+    chip.addEventListener("click", () => { chip.classList.toggle("active"); sync(); });
+  });
+  const addBtn = picker.querySelector(".themeAddBtn");
+  if (!addBtn) return;
+  addBtn.addEventListener("click", async () => {
+    const name = (prompt("新增主題標籤名稱（例如：moomin、Hello Kitty）：") || "").trim();
+    if (!name) return;
+    if (!themesList.includes(name)) {
+      try {
+        await saveThemes([...themesList, name]);
+      } catch (err) {
+        alert("新增失敗：" + err.message);
+        return;
+      }
+    }
+    // 不觸發整頁 render()，避免弄丟其他商品列還沒存檔的欄位——改成把新標籤加到
+    // 畫面上每一個主題標籤選取器：新標籤在「按了新增」這個商品上直接勾選，其他
+    // 商品列只是多一個可以選的按鈕（沒選取），不用重新整理頁面就能用。
+    document.querySelectorAll("[data-theme-picker-for]").forEach((otherPicker) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "themeChip" + (otherPicker === picker ? " active" : "");
+      btn.dataset.theme = name;
+      btn.textContent = name;
+      btn.addEventListener("click", () => {
+        btn.classList.toggle("active");
+        const otherHidden = otherPicker.nextElementSibling;
+        const selected = Array.from(otherPicker.querySelectorAll(".themeChip.active")).map((el) => el.dataset.theme);
+        if (otherHidden) otherHidden.value = selected.join("、");
+      });
+      const placeholder = otherPicker.querySelector("span");
+      if (placeholder) placeholder.remove();
+      otherPicker.insertBefore(btn, otherPicker.querySelector(".themeAddBtn"));
+    });
+    sync();
   });
 }
 
@@ -934,6 +990,25 @@ function rowHTML(p){
     if (type === "colors_text") {
       const val = Array.isArray(p[key]) ? p[key].join("、") : (p[key] || "");
       return `<div class="field"><label>${label}</label><input data-key="${key}" data-type="colors_text" type="text" value="${esc(val)}"></div>`;
+    }
+    if (type === "theme_picker") {
+      // 分類是下拉選單、選了就不會打錯字；主題標籤原本是逗號分隔的文字框，賣家
+      // 自己打字很容易跟已經建立的標籤對不起來（例如「moomin」打成「Moomin」），
+      // 前台用標籤名稱完全比對，對不起來客人點了就篩不到，等於白掛標籤。改成跟
+      // 分類一樣「用點的」——列出已建立的標籤讓賣家直接點選開關，不用自己打字，
+      // 想加新標籤才用旁邊的「＋ 新增」。
+      const current = Array.isArray(p[key]) ? p[key] : [];
+      const chips = themesList.length
+        ? themesList.map((t) => `<button type="button" class="themeChip ${current.includes(t) ? "active" : ""}" data-theme="${esc(t)}">${esc(t)}</button>`).join("")
+        : `<span style="font-size:12px;color:var(--muted);">尚未建立任何主題標籤，按「＋ 新增」建立第一個</span>`;
+      return `<div class="field full">
+        <label>${label}</label>
+        <div class="themePicker" data-theme-picker-for="${key}">
+          ${chips}
+          <button type="button" class="themeAddBtn">＋ 新增</button>
+        </div>
+        <input type="hidden" data-key="${key}" data-type="colors_text" value="${esc(current.join("、"))}">
+      </div>`;
     }
     if (key === "price_jpy") {
       // 打售價的當下就要看得到賺多少 %，不用按儲存才知道——標籤右側放即時利潤徽章，
@@ -1111,7 +1186,7 @@ async function createBlankProduct(){
   const now = Date.now();
   const blank = {
     title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
-    colors: [], sizes: [], variants: [], size: "", weight: "", spec_notes: "", product_code: "",
+    colors: [], sizes: [], variants: [], themes: [], size: "", weight: "", spec_notes: "", product_code: "",
     price_original_jpy: null, sale_end_at: null, sale_label: "",
     price_jpy: null, category: "其他", condition: "全新",
     photos: [], source_url: "", source_site: "手動新增",
