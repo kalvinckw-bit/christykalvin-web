@@ -609,6 +609,25 @@ function render(){
     rowEl.querySelectorAll(".ph .rm").forEach(btn => {
       btn.addEventListener("click", () => removePhoto(p.id, Number(btn.dataset.idx)));
     });
+
+    // 售價欄位旁邊的即時利潤徽章：打售價（或改來源成本）當下就重算，不用按儲存
+    const priceInput = rowEl.querySelector('[data-key="price_jpy"]');
+    const costInput = rowEl.querySelector('[data-key="cost_jpy"]');
+    const liveBadge = rowEl.querySelector(".livePct");
+    if (priceInput && liveBadge) {
+      const updateLivePct = () => {
+        const cost = Number(costInput && costInput.value) || 0;
+        const price = Number(priceInput.value) || 0;
+        if (!cost || !price) { liveBadge.textContent = ""; liveBadge.className = "tag livePct"; return; }
+        const amount = price - cost;
+        const pct = Math.round((amount / cost) * 1000) / 10;
+        liveBadge.textContent = `${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）`;
+        liveBadge.className = "tag livePct " + (amount >= 0 ? "profit" : "loss");
+      };
+      priceInput.addEventListener("input", updateLivePct);
+      if (costInput) costInput.addEventListener("input", updateLivePct);
+      updateLivePct();
+    }
   });
 }
 
@@ -680,6 +699,13 @@ function rowHTML(p){
     if (type === "colors_text") {
       const val = Array.isArray(p[key]) ? p[key].join("、") : (p[key] || "");
       return `<div class="field"><label>${label}</label><input data-key="${key}" data-type="colors_text" type="text" value="${esc(val)}"></div>`;
+    }
+    if (key === "price_jpy") {
+      // 打售價的當下就要看得到賺多少 %，不用按儲存才知道——標籤右側放即時利潤徽章，
+      // 打字（或改來源成本）就即時重算，跟 saveRow() 真正存檔的邏輯無關，純前端試算。
+      return `<div class="field"><label style="display:flex;justify-content:space-between;align-items:center;">
+        ${label}<span class="tag livePct"></span>
+      </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
     }
     return `<div class="field"><label>${label}</label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
   }).join("");
