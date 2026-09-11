@@ -1312,10 +1312,15 @@ const BOOKMARKLET_SRC = `(function(){
     return out.slice(0, max || 8);
   }
   // 沒有 product:price:amount 這類 meta 標籤時，退而求其次直接在頁面可見文字裡找價格
-  // （跟 functions/extract.js 伺服器端解析用的同一套 ¥/円 規則，保持前後台判斷一致）
+  // （前兩種規則跟 functions/extract.js 伺服器端解析用的同一套 ¥/円 規則，保持前後台判斷一致）。
+  // 第三種是補的：有些網站的 ¥ 符號是用 CSS 畫上去的圖示或裝飾，不是真的文字，
+  // innerText 抓不到 ¥ 這個字元，價格後面也不一定接著「円」，但幾乎都會標「税込」
+  // （含稅），賣家實測 P-Bandai 就是這種格式——所以再補一條「數字後面接著税込」的規則。
   function pickPriceFromPageText(){
     var body = (document.body && document.body.innerText) || '';
-    var m = body.match(/[¥￥]\\s?([\\d,]{2,10})/) || body.match(/([\\d,]{3,10})\\s?円/);
+    var m = body.match(/[¥￥]\\s?([\\d,]{2,10})/) ||
+      body.match(/([\\d,]{3,10})\\s?円/) ||
+      body.match(/([\\d,]{3,10})\\s*[（(]?\\s*税込/);
     return m ? m[1] : '';
   }
   // 有些網站（尤其活動／預購頁，例如賣家實測過的 P-Bandai）真正的商品照片只是
@@ -1329,6 +1334,10 @@ const BOOKMARKLET_SRC = `(function(){
   // 2. 縮圖常見會用 data-src / data-original 這類屬性放真正的大圖網址，
   //    或包在 <a href="大圖網址"> 裡面，這幾種來源都一併找
   // 3. 如果有 srcset，挑其中解析度最高的那個網址（比 src 本身更清楚）
+  // 4. 有 lazy-load／輪播屬性（data-src 這類）的圖，就算量出來的尺寸是 0 也一併收，
+  //    因為輪播元件常把「目前沒顯示」的那幾張縮圖設成 display:none 或還沒載入圖片，
+  //    量出來尺寸是 0，用尺寸篩選會誤判成雜訊圖濾掉，但有這些屬性本身就代表它是
+  //    真正要顯示的內容圖（logo/按鈕不會用這種延遲載入寫法），不該只看當下量到的尺寸
   function pickBestUrlFromImg(el){
     var srcset = el.getAttribute('srcset') || el.getAttribute('data-srcset');
     if (srcset) {
@@ -1339,6 +1348,11 @@ const BOOKMARKLET_SRC = `(function(){
     return el.currentSrc || el.getAttribute('data-original') || el.getAttribute('data-zoom-image') ||
       el.getAttribute('data-large') || el.getAttribute('data-src') || el.src;
   }
+  function hasLazyLoadHint(el){
+    return !!(el.getAttribute('data-src') || el.getAttribute('data-original') ||
+      el.getAttribute('data-zoom-image') || el.getAttribute('data-large') ||
+      el.getAttribute('srcset') || el.getAttribute('data-srcset'));
+  }
   function pickLargeImages(max, minSize){
     var out = [];
     var imgs = document.querySelectorAll('img');
@@ -1347,7 +1361,8 @@ const BOOKMARKLET_SRC = `(function(){
       var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
       var w = el.naturalWidth || el.width || (rect && rect.width) || 0;
       var h = el.naturalHeight || el.height || (rect && rect.height) || 0;
-      if (w < (minSize || 56) || h < (minSize || 56)) continue;
+      var bigEnough = w >= (minSize || 56) && h >= (minSize || 56);
+      if (!bigEnough && !hasLazyLoadHint(el)) continue;
       var u = pickBestUrlFromImg(el);
       // 縮圖常常包在 <a href="真正的大圖網址"> 裡面，父層連結網址通常比縮圖本身更清楚
       var parentA = el.closest ? el.closest('a') : null;

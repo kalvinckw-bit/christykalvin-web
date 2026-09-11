@@ -86,6 +86,15 @@ test("高島屋商品：照抓不加價", () => {
   assert.strictEqual(r.price_original_jpy, null, "沒特價就不該生出原價");
 });
 
+test("書籤工具沒抓到價格（cost_jpy 是 null）：售價要是 null，不能變成 ¥0", () => {
+  // 賣家實測 P-Bandai 商品時真的發生過：書籤工具抓不到價格，cost_jpy 存成 null，
+  // JS 的 Number(null) 是 0 不是 NaN，沒特別處理的話會被當成「成本 ¥0」算出
+  // 一個看起來正常、實際上完全錯誤的售價 ¥0，商品可能就這樣掛著 0 元上架。
+  const r = computePrices({ cost_jpy: null, source_site: "UNIQLO" }, DEFAULT_PRICING);
+  assert.strictEqual(r.price_jpy, null, "沒有成本就不該算出任何售價，更不能是 0");
+  assert.strictEqual(r.price_original_jpy, null);
+});
+
 test("個別商品自己設定的加價，優先於來源網站的預設", () => {
   const r = computePrices(
     { cost_jpy: 1000, source_site: "UNIQLO", markup_type: "fixed", markup_value: 800 },

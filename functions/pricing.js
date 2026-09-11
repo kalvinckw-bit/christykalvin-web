@@ -70,7 +70,11 @@ function applyMarkup(cost, rule, rounding) {
  * 否則用該來源網站的預設規則。
  */
 function computePrices(product, pricing) {
-  const cost = Number(product.cost_jpy);
+  // 不能直接 Number(product.cost_jpy)：JS 的 Number(null) 是 0，不是 NaN，
+  // 抓不到成本時（書籤工具沒抓到價格）cost_jpy 會被存成 null，這裡如果
+  // 沒特別處理，null 會被誤當成「成本 ¥0」，算出一個看起來正常、實際上
+  // 完全錯誤的售價 ¥0（賣家實測 P-Bandai 商品時真的發生過這個狀況）。
+  const cost = product.cost_jpy == null ? null : Number(product.cost_jpy);
   const costOriginal = Number(product.cost_original_jpy) || null;
 
   const rule = product.markup_type
