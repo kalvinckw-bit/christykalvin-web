@@ -801,23 +801,53 @@ function render(){
       btn.addEventListener("click", () => removePhoto(p.id, Number(btn.dataset.idx)));
     });
 
-    // 售價欄位旁邊的即時利潤徽章：打售價（或改來源成本）當下就重算，不用按儲存
-    const priceInput = rowEl.querySelector('[data-key="price_jpy"]');
+    // 售價、原價欄位旁邊的即時利潤徽章：打價錢（或改來源成本）當下就重算，不用按儲存。
+    // 兩個欄位都用同一顆來源成本當基準，各自獨立顯示賺多少 ¥／幾 %。
     const costInput = rowEl.querySelector('[data-key="cost_jpy"]');
-    const liveBadge = rowEl.querySelector(".livePct");
-    if (priceInput && liveBadge) {
-      const updateLivePct = () => {
+    function bindLiveProfitBadge(priceEl, badgeEl, badgeClass){
+      if (!priceEl || !badgeEl) return () => {};
+      const update = () => {
         const cost = Number(costInput && costInput.value) || 0;
-        const price = Number(priceInput.value) || 0;
-        if (!cost || !price) { liveBadge.textContent = ""; liveBadge.className = "tag livePct"; return; }
+        const price = Number(priceEl.value) || 0;
+        if (!cost || !price) { badgeEl.textContent = ""; badgeEl.className = "tag " + badgeClass; return; }
         const amount = price - cost;
         const pct = Math.round((amount / cost) * 1000) / 10;
-        liveBadge.textContent = `${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）`;
-        liveBadge.className = "tag livePct " + (amount >= 0 ? "profit" : "loss");
+        badgeEl.textContent = `${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）`;
+        badgeEl.className = "tag " + badgeClass + " " + (amount >= 0 ? "profit" : "loss");
       };
-      priceInput.addEventListener("input", updateLivePct);
-      if (costInput) costInput.addEventListener("input", updateLivePct);
-      updateLivePct();
+      priceEl.addEventListener("input", update);
+      if (costInput) costInput.addEventListener("input", update);
+      update();
+      return update;
+    }
+    const priceInput = rowEl.querySelector('[data-key="price_jpy"]');
+    const updateLivePct = bindLiveProfitBadge(priceInput, rowEl.querySelector(".livePct"), "livePct");
+    const originalPriceInput = rowEl.querySelector('[data-key="price_original_jpy"]');
+    bindLiveProfitBadge(originalPriceInput, rowEl.querySelector(".livePctOriginal"), "livePctOriginal");
+
+    // 「加價方式／加價數值」本身只是規則，光打數字不會自動變成售價——
+    // 賣家反映打了看不出效果，改成一改這兩個欄位就直接照規則把售價算出來、
+    // 填進「售價 JPY」欄位（連帶更新旁邊的即時利潤徽章），不用再另外按
+    // 「依規則重算售價」按鈕。只在有來源成本時才自動算，沒有成本算不出價錢。
+    const markupTypeSel = rowEl.querySelector('[data-key="markup_type"]');
+    const markupValueInput = rowEl.querySelector('[data-key="markup_value"]');
+    if (priceInput && (markupTypeSel || markupValueInput)) {
+      const recalcFromMarkup = () => {
+        const cost = Number(costInput && costInput.value) || null;
+        if (!cost) return;
+        const markupType = markupTypeSel ? markupTypeSel.value : "";
+        const markupValue = markupValueInput ? Number(markupValueInput.value) || 0 : 0;
+        const rule = markupType
+          ? { type: markupType, value: markupValue }
+          : ruleFor(p.source_site, pricingSettings);
+        const newPrice = applyMarkup(cost, rule, pricingSettings.rounding);
+        if (newPrice != null) {
+          priceInput.value = newPrice;
+          updateLivePct();
+        }
+      };
+      if (markupTypeSel) markupTypeSel.addEventListener("change", recalcFromMarkup);
+      if (markupValueInput) markupValueInput.addEventListener("input", recalcFromMarkup);
     }
 
     // 分類下拉選單選到「➕ 新增分類...」就跳出新增流程，不用切去「加價設定」分頁
@@ -910,6 +940,14 @@ function rowHTML(p){
       // 打字（或改來源成本）就即時重算，跟 saveRow() 真正存檔的邏輯無關，純前端試算。
       return `<div class="field"><label style="display:flex;justify-content:space-between;align-items:center;">
         ${label}<span class="tag livePct"></span>
+      </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
+    }
+    if (key === "price_original_jpy") {
+      // 原價也比照售價放即時利潤徽章——原價填的是「特價前」的價格，賣家一樣想知道
+      // 這個價位賺多少 %。注意：原價一定要比售價高才會被前台當成特價顯示（刪除線＋
+      // 省多少），原價比售價低或一樣，前台會直接忽略特價設定、只顯示售價。
+      return `<div class="field"><label style="display:flex;justify-content:space-between;align-items:center;">
+        ${label}<span class="tag livePctOriginal"></span>
       </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
     }
     return `<div class="field"><label>${label}</label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
