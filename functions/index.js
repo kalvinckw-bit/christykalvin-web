@@ -19,6 +19,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { Storage } = require("@google-cloud/storage");
 const { extractFromHtml } = require("./extract");
 const { fetchFastRetailingProduct } = require("./fastretailing");
+const { isPremicoUrl, parsePremicoHtml } = require("./premico");
 const { DEFAULT_PRICING, computePrices } = require("./pricing");
 
 initializeApp();
@@ -306,6 +307,23 @@ exports.importProduct = onCall(
       if (apparel.price_jpy != null) {
         extracted.price = apparel.price_jpy;
         extracted.currency = "JPY";
+      }
+    }
+    // PREMICO（iei.jp）預購頁：同一頁列出分期金額、一括價格稅前/稅後、運費稅前/稅後好幾個數字，
+    // 通用解析器只會抓到第一個看到的金額（分期月付金），不是賣家實際要付的成本；
+    // 商品照片是內文 <img>（gallery_XX.jpg），og:image 之外通用解析器也掃不到。
+    if (isPremicoUrl(url)) {
+      try {
+        const premico = parsePremicoHtml(html, url);
+        if (premico.images.length) {
+          extracted.images = [...new Set([...premico.images, ...extracted.images])];
+        }
+        if (premico.price_jpy != null) {
+          extracted.price = premico.price_jpy;
+          extracted.currency = "JPY";
+        }
+      } catch (err) {
+        apparelError = apparelError || `PREMICO 專用解析失敗，改用一般解析：${err.message}`;
       }
     }
     if (extracted.images.length === 0) {
