@@ -578,6 +578,48 @@ document.getElementById("addCategoryBtn").addEventListener("click", async () => 
 });
 
 /**
+ * 跟「加價設定」分頁的分類管理長得一樣（中文＋英文兩個欄位），用彈出視窗顯示，
+ * 因為 window.prompt() 一次只能問一個問題，沒辦法像既有的分類管理區塊一樣
+ * 同時收中文／英文兩個名稱。
+ */
+function showAddCategoryModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;padding:20px;max-width:360px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.3);">
+        <h3 style="margin:0 0 14px;font-size:15px;color:var(--petrol);">新增分類</h3>
+        <div class="field" style="margin-bottom:10px;">
+          <label>分類名稱（中文，例如：手錶）</label>
+          <input id="modalCatZh" type="text">
+        </div>
+        <div class="field" style="margin-bottom:18px;">
+          <label>英文名稱（選填，給英文介面用，不填就沿用中文）</label>
+          <input id="modalCatEn" type="text">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="modalCatCancel" type="button" style="padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;">取消</button>
+          <button id="modalCatOk" type="button" style="padding:8px 14px;border-radius:6px;border:1px solid var(--petrol);background:var(--petrol);color:#fff;font-size:13px;cursor:pointer;">新增</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const zhInput = overlay.querySelector("#modalCatZh");
+    const enInput = overlay.querySelector("#modalCatEn");
+    zhInput.focus();
+    const close = (result) => { overlay.remove(); resolve(result); };
+    overlay.querySelector("#modalCatCancel").addEventListener("click", () => close(null));
+    overlay.querySelector("#modalCatOk").addEventListener("click", () => {
+      const zh = zhInput.value.trim();
+      if (!zh) { zhInput.focus(); return; }
+      close({ zh, en: enInput.value.trim() });
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+    zhInput.addEventListener("keydown", (e) => { if (e.key === "Enter") overlay.querySelector("#modalCatOk").click(); });
+    enInput.addEventListener("keydown", (e) => { if (e.key === "Enter") overlay.querySelector("#modalCatOk").click(); });
+  });
+}
+
+/**
  * 商品編輯表單裡「分類」下拉選單直接選「➕ 新增分類...」就能新增，不用切去
  * 「加價設定」分頁。刻意不呼叫 render() 整頁重算——這個下拉選單可能還有其他
  * 商品列正在編輯、還沒按儲存，整頁重算會把那些還沒存檔的欄位內容洗掉，改成
@@ -585,8 +627,10 @@ document.getElementById("addCategoryBtn").addEventListener("click", async () => 
  */
 async function addCategoryInline(selectEl) {
   const prev = selectEl.dataset.prevValue || "";
-  const zh = (prompt("新增分類名稱：") || "").trim();
-  if (!zh) { selectEl.value = prev; return; }
+  const result = await showAddCategoryModal();
+  if (!result) { selectEl.value = prev; return; }
+  const zh = result.zh;
+  const en = result.en || zh;
   if (categoriesList.some((c) => c.zh === zh)) {
     alert("這個分類已經存在了");
     selectEl.value = zh;
@@ -594,7 +638,7 @@ async function addCategoryInline(selectEl) {
     return;
   }
   try {
-    const next = [...categoriesList, { zh, en: zh }];
+    const next = [...categoriesList, { zh, en }];
     await setDoc(doc(db, "settings", "categories"), { list: next, updated_at: Date.now() });
     categoriesList = next;
     renderCategoryChips();
