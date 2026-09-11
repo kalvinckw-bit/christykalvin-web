@@ -1322,6 +1322,23 @@ const BOOKMARKLET_SRC = `(function(){
   // 內文裡的 <img>，不會出現在 og:image 這類 meta 標籤裡，只認 meta 常常只抓到
   // 1 張。改用「圖片實際顯示尺寸夠大」篩選——不用知道這個網站的 class/id
   // 命名方式，也能濾掉 logo/按鈕/追蹤像素這類小圖，抓到大部分真正的商品照。
+  //
+  // P-Bandai 這類商品頁常見版型是一張大圖＋下面一排縮圖（縮圖本身顯示尺寸
+  // 就只有 60~100px 左右，太高的門檻會把縮圖也濾掉），所以：
+  // 1. 門檻降到 56px（可以擋住大部分導覽列圖示、按鈕、追蹤像素，同時留住縮圖）
+  // 2. 縮圖常見會用 data-src / data-original 這類屬性放真正的大圖網址，
+  //    或包在 <a href="大圖網址"> 裡面，這幾種來源都一併找
+  // 3. 如果有 srcset，挑其中解析度最高的那個網址（比 src 本身更清楚）
+  function pickBestUrlFromImg(el){
+    var srcset = el.getAttribute('srcset') || el.getAttribute('data-srcset');
+    if (srcset) {
+      var candidates = srcset.split(',').map(function(s){ return s.trim().split(/\\s+/); });
+      candidates.sort(function(a,b){ return (parseInt(b[1])||0) - (parseInt(a[1])||0); });
+      if (candidates[0] && candidates[0][0]) return candidates[0][0];
+    }
+    return el.currentSrc || el.getAttribute('data-original') || el.getAttribute('data-zoom-image') ||
+      el.getAttribute('data-large') || el.getAttribute('data-src') || el.src;
+  }
   function pickLargeImages(max, minSize){
     var out = [];
     var imgs = document.querySelectorAll('img');
@@ -1330,8 +1347,14 @@ const BOOKMARKLET_SRC = `(function(){
       var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
       var w = el.naturalWidth || el.width || (rect && rect.width) || 0;
       var h = el.naturalHeight || el.height || (rect && rect.height) || 0;
-      if (w < (minSize || 200) || h < (minSize || 200)) continue;
-      var u = el.currentSrc || el.src || el.getAttribute('data-src');
+      if (w < (minSize || 56) || h < (minSize || 56)) continue;
+      var u = pickBestUrlFromImg(el);
+      // 縮圖常常包在 <a href="真正的大圖網址"> 裡面，父層連結網址通常比縮圖本身更清楚
+      var parentA = el.closest ? el.closest('a') : null;
+      if (parentA) {
+        var href = parentA.getAttribute('href') || '';
+        if (/\\.(jpg|jpeg|png|webp)(\\?|$)/i.test(href)) u = href;
+      }
       if (u && /^https?:\\/\\//.test(u) && out.indexOf(u) === -1) out.push(u);
     }
     return out;
