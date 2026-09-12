@@ -346,7 +346,9 @@ async function main() {
   if (sizeIdx === -1) {
     console.log("（沒找到「サイズ選択」這類文字）");
   } else {
-    console.log(truncate(body.slice(sizeIdx, sizeIdx + 2200), 2200));
+    // 尺寸區塊比顏色區塊長很多（每個尺寸一個 <input>+<label>，屬性又長），
+    // 上次只抓 2200 字在第一個 <label> 就被截斷，看不到完整的尺寸清單，這次抓大一點。
+    console.log(truncate(body.slice(sizeIdx, sizeIdx + 9000), 9000));
   }
 
   // extract.js 目前只認 og:image / twitter:image / itemprop=image 這幾種 meta 來源，
