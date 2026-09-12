@@ -59,6 +59,22 @@ function extractFromHtml(html, pageUrl) {
     if (t && t.length <= 20 && !colors.includes(t)) colors.push(t);
   });
 
+  // 尺寸選項：跟上面的顏色色塊同一個 data 標記家族（實測 peachjohn.co.jp），
+  // 差別是顏色的其他選項要連去別的商品網址才能看到，尺寸則是同一頁用
+  // <input type="radio" name="goods" value="商品ID"> + 對應的
+  // <label for="商品ID">尺寸文字...</label> 讓 JS 原地切換庫存/價格，
+  // 不用另外抓別的網址，整份尺寸清單已經在這一頁的 HTML 裡。
+  let sizes = [];
+  $('input[type="radio"][name="goods"][id]').each((_, el) => {
+    const id = $(el).attr("id");
+    const label = $(`label[for="${id}"]`);
+    if (!label.length) return;
+    const clone = label.clone();
+    clone.find('[class*="stock"]').remove();
+    const t = clone.text().replace(/\s+/g, " ").trim();
+    if (t && t.length <= 15 && !sizes.includes(t)) sizes.push(t);
+  });
+
   let priceRaw =
     $('meta[property="product:price:amount"]').attr("content") ||
     $('meta[itemprop="price"]').attr("content") ||
@@ -168,6 +184,7 @@ function extractFromHtml(html, pageUrl) {
     currency,
     specText,
     colors,
+    sizes,
   };
 }
 

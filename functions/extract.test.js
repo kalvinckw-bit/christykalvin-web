@@ -230,4 +230,29 @@ test("沒有顏色色塊時回傳空陣列，不會亂猜", () => {
   assert.deepStrictEqual(r.colors, []);
 });
 
+console.log("extractFromHtml — 尺寸選項（同一頁用 radio+label 原地切換，實測 peachjohn.co.jp 情境）");
+test("抓 radio[name=goods]+對應 label 的文字，當作尺寸選項，並濾掉庫存文字", () => {
+  // 節錄自實際頁面：每個尺寸是一個 <input type=\"radio\" name=\"goods\">，
+  // 對應的 <label for=\"同一個 id\"> 裡面有尺寸文字（如 B65）跟庫存文字
+  // （如「在庫あり」），庫存文字要濾掉，不然會混進尺寸名稱裡。
+  const html = `<html><body>
+    <div class="block-size-select-modal--input-area-inner">
+      <input type="radio" name="goods" value="10317700105" id="10317700105" data-js_variation_stock_qty="244" disabled>
+      <label for="10317700105"><span class="mont">B65</span><span class="block-size-select-modal--stock">在庫あり</span></label>
+      <input type="radio" name="goods" value="10317700106" id="10317700106" data-js_variation_stock_qty="240" disabled>
+      <label for="10317700106"><span class="mont">B70</span><span class="block-size-select-modal--stock">在庫あり</span></label>
+      <input type="radio" name="goods" value="10317700199" id="10317700199" data-js_variation_stock_qty="0" disabled>
+      <label for="10317700199"><span class="mont">G75</span><span class="block-size-select-modal--stock">売り切れ</span></label>
+    </div>
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.deepStrictEqual(r.sizes, ["B65", "B70", "G75"]);
+});
+
+test("沒有尺寸 radio 時回傳空陣列，不會亂猜", () => {
+  const html = `<html><body><p>沒有任何尺寸選項</p></body></html>`;
+  const r = extractFromHtml(html, "https://a.jp/");
+  assert.deepStrictEqual(r.sizes, []);
+});
+
 console.log(`\n${passed} 項測試通過${process.exitCode ? "，有測試失敗" : ""}`);

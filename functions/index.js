@@ -397,8 +397,12 @@ exports.importProduct = onCall(
         : (extracted.colors && extracted.colors.length)
           ? extracted.colors
           : (Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : []),
-      // 服飾用的尺寸清單（S/M/L…）；家電那種單一尺寸描述仍走 size 欄位
-      sizes: (apparel && apparel.sizes) || [],
+      // 服飾用的尺寸清單（S/M/L…）；家電那種單一尺寸描述仍走 size 欄位。
+      // 優先序跟顏色一樣：Uniqlo/GU 專用解析器 > 通用解析器從 DOM 抓到的
+      // radio+label 尺寸選項（實測 peachjohn.co.jp）> 沒有就空陣列
+      sizes: (apparel && apparel.sizes && apparel.sizes.length)
+        ? apparel.sizes
+        : (extracted.sizes && extracted.sizes.length ? extracted.sizes : []),
       variants: (apparel && apparel.variants) || [],
       size: ai.size || "",
       weight: ai.weight || "",
