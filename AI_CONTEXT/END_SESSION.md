@@ -40,8 +40,10 @@ Triggered whenever the user says `end` or requests to finish/hand off the sessio
 5. **Google Drive Mirror Sync (全集團專案 Google Drive 鏡像同步)**:
    - 全集團專案在 Google Drive 皆有對應實體鏡像（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb`），無任何自動 webhook 或排程機制，必須由 AI 在收工時執行：
      1. 執行 `git diff --name-only <上次同步commit>..HEAD` 或實體檢查找出本次 session 異動檔案清單。
-     2. 將異動檔案同步更新/複製至 Google Drive 該專案根目錄鏡像對應路徑（若在無本機掛載之環境如 Web Claude，則調用 Google Drive API 上傳）。
-     3. 嚴禁跳過這一步，嚴禁假設「應該最新」。
+     2. 將異動檔案同步更新/複製至 Google Drive 該專案根目錄鏡像對應路徑。
+        - ⚠️ **Web / 雲端沙盒環境安全防護**：在無本地掛載磁碟（無 `G:\` 實體路徑）之雲端/Web AI 環境（如 Web 或手機端 Claude）中，**嚴禁調用 Google Drive API 執行破壞性的「刪除檔案（Trash）再重新建立」**！Web 端 AI 收工時只需確保代碼正確 `git add`、`git commit` 並 `git push` 至 GitHub 遠端倉庫；本機桌端（Antigravity）會負責實體磁碟目錄的 1:1 秒級鏡像同步與還原。
+     3. 在收工交接報告（SESSION HANDOFF）中，明確列出「這次同步了哪些檔案、對應到 Drive 哪個路徑或 GitHub Commit」，嚴禁只寫「已同步」三個字，嚴禁省略。
+     4. 嚴禁跳過這一步，嚴禁假設「應該最新」。
 
 6. **Output Standard Handoff Report**:
    - Output the exact summary format below:
@@ -60,7 +62,9 @@ Work Completed (做過的事情)
 - [Detail 2]
 
 Google Drive Sync Status (Drive 鏡像同步狀態)
-- [列出同步檔案清單與對應 Drive 檔案 ID，嚴禁只寫「已同步」]
+- [有本地磁碟掛載的環境：列出同步檔案清單與對應 Drive 檔案 ID。
+   無本地磁碟掛載的 Web/雲端環境：改列出本次 GitHub commit hash，
+   並註明「本機桌端 Antigravity 會負責實體磁碟目錄鏡像同步」，嚴禁只寫「已同步」]
 
 Next Actions / Must-Do (必須要做的事情)
 - [Must-Do 1]

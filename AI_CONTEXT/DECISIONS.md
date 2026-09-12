@@ -110,8 +110,9 @@ This document records permanent architectural, design, and policy decisions appr
 - **Context**: 全集團旗下所有專案（不僅限於 ChristyKalvinWeb，而是涵蓋 `Projects` 底下所有子專案：`CK Holdings` 旗下所有子專案、`Facebook Auto Post`、`Laundry + Cafe`、`Python` 工具群、`00 Master AI Context Template` 等），在 Google Drive 均有對應之實體鏡像目錄（`G:\マイドライブ\Projects\<專案名稱>`）。為落實跨 AI、跨裝置、跨微軟/谷歌雲端生態的絕對對齊，全集團專案必須遵循三位一體同步規範。
 - **Constitutional Rules (憲法級硬性準則)**:
   1. **全集團一體適用（Universal Group Scope）**：所有位於 `Projects` 目錄下之專案，一律強制適用本同步規範，絕無例外，嚴禁誤判為特定單一專案獨有！
-  2. **收工手動鏡像（Mandatory End Handoff Parity）**：Google Drive 鏡像無自動雲端排程或 Webhook 機制，任何 AI（Claude、Antigravity、ChatGPT、Codex 等）在執行 `end` 時，**必須主動找出本次 session 異動之檔案，並同步更新複製至 Google Drive 該專案根目錄鏡像對應路徑**（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`，若在純雲端無本地磁碟掛載之環境如 Web Claude，則必須調用 Google Drive API 上傳）。
-  3. **交接報告具體透明（Transparent Audit Trail）**：收工報告中必須具體列出同步檔案名稱與目標路徑/ID，嚴禁僅以「已同步」含糊帶過，嚴禁省略。
+  2. **收工手動鏡像（Mandatory End Handoff Parity）**：Google Drive 鏡像無自動雲端排程或 Webhook 機制，任何 AI（Claude、Antigravity、ChatGPT、Codex 等）在執行 `end` 時，**必須主動找出本次 session 異動之檔案，並同步更新複製至 Google Drive 該專案根目錄鏡像對應路徑**（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`）。
+     - ⚠️ **【2026-09-12 修訂】Web / 雲端沙盒環境安全防護**：在無本地掛載磁碟（無 `G:\` 實體路徑）之雲端/Web AI 環境（如 Web 或手機端 Claude）中，**嚴禁調用 Google Drive API 執行破壞性的「刪除檔案（Trash）再重新建立」**！Web 端 AI 收工時只需確保代碼正確 `git add`、`git commit` 並 `git push` 至 GitHub 遠端倉庫；本機桌端（Antigravity）會負責實體磁碟目錄的 1:1 秒級鏡像同步與還原。（此修訂緣由：Web Claude 曾在 session 中先把 Google Drive 上的舊檔丟進垃圾桶、準備重新上傳新內容時被使用者中途喊停，導致 Drive 上短暫出現檔案缺失狀態——這正是本規則要防範的破壞性操作。）
+  3. **交接報告具體透明（Transparent Audit Trail）**：收工報告中必須具體列出同步檔案名稱與目標路徑/ID（有本地磁碟掛載環境），或本次 GitHub commit hash（無本地磁碟掛載之 Web/雲端環境），嚴禁僅以「已同步」含糊帶過，嚴禁省略。
   4. **嚴禁跳過與假設**：嚴禁跳過此步驟、嚴禁假設「應該還是最新的」——忘記檢查即代表雲端鏡像停擺！
   5. **嚴禁狹隘單點修改（Anti-Silo Mandate）**：規則修訂必須同時更新 `AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`AI_CONTEXT/END_SESSION.md`、`AI_CONTEXT/DECISIONS.md`，誰改動誰負責對齊全體 AI。
 
