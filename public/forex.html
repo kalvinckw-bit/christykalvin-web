@@ -217,7 +217,7 @@ function showResult() {
             const roundedPrice = Math.round(price);
             const priceStr = roundedPrice.toLocaleString();
             const netProfitStr = netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）<br>淨賺：RM ${netProfitStr}</td><td class="td-share"><button type="button" class="btn-whatsapp" onclick="shareWhatsApp(${amount}, ${roundedPrice})">📲</button></td></tr>`;
+            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">賣價：RM ${priceStr}<br>匯率：${rate.toFixed(5)}<br>淨賺：RM ${netProfitStr}</td><td class="td-share"><button type="button" class="btn-whatsapp" onclick="shareWhatsApp(${amount}, ${roundedPrice})">📲</button></td></tr>`;
         }
     }
 
