@@ -105,7 +105,7 @@
     <div id="result" class="result">
         <table class="profit-table">
             <thead>
-                <tr>
+                <tr id="profitHeadRow">
                     <th>你想賺 (Profit)</th>
                     <th>你要賣 (Price)</th>
                 </tr>
@@ -158,34 +158,47 @@ function showResult() {
     const mcSell = parseFloat(document.getElementById('mcSell').value);
     const wiseMYR = parseFloat(document.getElementById('wiseMYR').value);
     const body = document.getElementById('profitBody');
+    const headRow = document.getElementById('profitHeadRow');
 
-    if (!amount || !mcSell || !wiseMYR) {
-        alert("請先輸入金額、Money Changer 賣價與 Wise 馬幣");
+    if (!amount || !wiseMYR) {
+        alert("請先輸入 JPY 金額與 Wise 顯示的 MYR");
         return;
     }
 
-    const costMC = amount * mcSell; 
-    const costWise = wiseMYR;        
-    const limitPrice = costMC - 2; // 硬性天花板
+    body.innerHTML = "";
 
-    body.innerHTML = ""; 
+    if (mcSell) {
+        // 有填 Money Changer 賣出價：用原本 RM10 跳級邏輯
+        headRow.innerHTML = `<th>你想賺 (Profit)</th><th>你要賣 (Price)</th>`;
 
-    // 修改邏輯：只做整數 +10 的跳級，只要下一個跳級會超過 limitPrice 就停止
-    for (let profit = 10; ; profit += 10) {
-        let targetPrice = costWise + profit;
-        
-        // 只要當前價格超過了天花板，就直接跳出，不再補 MAX 行
-        if (targetPrice > limitPrice) {
-            break;
+        const costMC = amount * mcSell;
+        const costWise = wiseMYR;
+        const limitPrice = costMC - 2; // 硬性天花板
+
+        for (let profit = 10; ; profit += 10) {
+            let targetPrice = costWise + profit;
+            if (targetPrice > limitPrice) {
+                break;
+            }
+            body.innerHTML += `<tr><td class="tag-profit">RM ${profit}</td><td class="tag-price">RM ${targetPrice.toFixed(0)}</td></tr>`;
         }
-        
-        body.innerHTML += `<tr><td class="tag-profit">RM ${profit}</td><td class="tag-price">RM ${targetPrice.toFixed(0)}</td></tr>`;
-    }
 
-    if (body.innerHTML === "") {
-        alert(`⚠️ 無法生成利潤表！\n\nMoney Changer 賣出總額只有 RM ${costMC.toFixed(0)}，\n但 Wise 成本已經是 RM ${costWise.toFixed(0)}，\n已經沒有安全的加價空間（連 RM10 都賺不到）。\n\n請檢查賣出價或 Wise 馬幣金額是否正確。`);
-        document.getElementById('result').style.display = 'none';
-        return;
+        if (body.innerHTML === "") {
+            alert(`⚠️ 無法生成利潤表！\n\nMoney Changer 賣出總額只有 RM ${costMC.toFixed(0)}，\n但 Wise 成本已經是 RM ${costWise.toFixed(0)}，\n已經沒有安全的加價空間（連 RM10 都賺不到）。\n\n請檢查賣出價或 Wise 馬幣金額是否正確。`);
+            document.getElementById('result').style.display = 'none';
+            return;
+        }
+    } else {
+        // 沒填 Money Changer：只憑 Wise 成本，生成 0.5% ~ 3.0% 毛利率對照表
+        headRow.innerHTML = `<th>毛利率</th><th>建議賣價 / 匯率</th>`;
+
+        const costWise = wiseMYR;
+        for (let marginPct = 0.5; marginPct <= 3.0001; marginPct += 0.5) {
+            const price = costWise / (1 - marginPct / 100);
+            const rate = price / amount;
+            const priceStr = price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）</td></tr>`;
+        }
     }
 
     document.getElementById('result').style.display = 'block';
