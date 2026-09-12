@@ -331,6 +331,16 @@ async function main() {
   console.log("  可能的 API 路徑:");
   apis.forEach((a) => console.log("   ", a));
 
+  // 賣家問「其他顏色抓不到嗎」——查一下顏色選擇區塊在 HTML 裡長什麼樣子，
+  // 才知道其他顏色是連去別的網址、還是同一頁用 JS 切換、還是根本沒有結構化資訊。
+  section("顏色/尺寸選擇區塊（找「カラー」「サイズ」附近的 HTML，看其他顏色是不是連到別的網址）");
+  const colorIdx = body.search(/カラー選択|カラー：|色選択/);
+  if (colorIdx === -1) {
+    console.log("（沒找到「カラー選択」這類文字，可能是圖片裡的文字或用別的詞）");
+  } else {
+    console.log(truncate(body.slice(colorIdx, colorIdx + 1500), 1500));
+  }
+
   // extract.js 目前只認 og:image / twitter:image / itemprop=image 這幾種 meta 來源，
   // 有些活動頁（例如 premico 這類預購 LP 頁）真正的商品圖是內文裡的 <img> 標籤，
   // 沒有走 meta，所以現有解析抓不到——先列出來看看有沒有漏掉的圖，再決定要不要
