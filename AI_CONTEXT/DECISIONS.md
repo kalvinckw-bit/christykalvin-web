@@ -118,7 +118,42 @@ This document records permanent architectural, design, and policy decisions appr
 
 ---
 
-### Incident: `christykalvin-web` Hosting site 被同 repo 另一分支部署重複覆蓋 (2026-09-10, 已徹底解決)
+### Decision: 集團三大戰略網域收斂 (Three Strategic Domain Convergence) — 2026-09-12 廣播
+- **Status**: RECEIVED（本 repo 範圍內已核對現況，尚未執行檔案收斂/刪除動作）
+- **Date**: 2026-09-12
+- **Context**: 使用者在 Web Claude session 對話中直接廣播此決策，宣稱 SSoT 依據是
+  `00 Master AI Context Template/AI_CONTEXT/GROUP_GLOBAL_STATUS.md`。
+  ⚠️ **誠實揭露**：本 session 是無本地磁碟掛載的雲端沙盒環境（見本身分 session 檔開頭的環境限制
+  說明），讀不到 `C:\Users\kalvi\OneDrive\...` 路徑，**無法直接讀取/核對這份 SSoT 原始檔案**。
+  以下記錄的是使用者對話中親口宣布的內容，視為使用者本人的直接指示，但尚未經雲端 AI 獨立核對
+  master 檔案內容一致。
+- **廣播內容（Rule，依使用者原文記錄）**：
+  1. **三大戰略網域收斂**（其餘零散網域收斂放棄）：
+     - `ck-holdings.my`（Firebase Site: `ck-holdings`）：集團頂層控股門戶，整合收斂
+       `/cari-rumah.html`、`/creditcard.html`、`/jpcreditcard.html`、`/dead-man-switch.html`、
+       `/metaoffice.html`、`/sougu.html` 共 6 頁。
+     - `christykalvin.com`（Firebase Site: `christykalvin-web`，**本 repo**）：全球精品商城與即時
+       匯率工具，核心收斂為 `/forex.html`、`/shopping.html`、`/shopping-admin.html` 共 3 頁。
+     - `voiceout.asia`（Firebase Site: `voiceout-asia`）：核心即時地圖雷達與訊息通訊，核心收斂為
+       `/index.html`、`/chat.html`、`/admin.html`、`/merchant.html` 共 4 頁。
+  2. **實體目錄 1:1 對齊**：`Voice Out Enterprise` 移出 `CK Holdings`、升級為與 `CK Holdings`、
+     `ChristyKalvinWeb` 平級的一級獨立專案目錄；`CK Holdings` 目錄旗下為 `ck-holdings-web`、
+     `Cari Rumah`、`Crosspath (Sougu)`、`Meta Office`；`Facebook Auto Post` 與
+     `Python\luno-btc-myr-trading-bot` 為創辦人個人私有工具、不屬於集團、嚴禁上官網；
+     `Smart Laundromat + Cafe` 為線下暫緩項目、保持內部保留不公開。
+  3. **雲端鏡像同步安全鐵律**：與上一條「Universal Dual-Cloud Mirror Parity」決策 2026-09-12
+     修訂的內容完全一致（Web/雲端無本地磁碟環境嚴禁呼叫 Drive API 刪除再重建，只需 git push，
+     本機 Antigravity 負責實體鏡像）——此處重複廣播，不是新規則。
+- **本 repo 現況核對（2026-09-12 Web Claude 檢查 `public/` 實際內容）**：
+  `public/` 目前有 8 個 HTML 檔案：`forex.html`、`shopping.html`、`shopping-admin.html`
+  （符合廣播宣稱的 3 大核心頁面）＋ `calculater.html`、`index.html`、`metaoffice.html`、
+  `myproperty.html`、`schedule.html`（**5 個不在廣播宣稱的 3 大核心頁面清單內**）。
+  根據上面「Incident: 被同分支部署重複覆蓋」的記錄，這 5 個檔案是 2026-09-10 為了解決
+  「兩個並行分支共用同一個 Hosting target 互相覆蓋」的問題，才把 forex 分支與商城分支的
+  全站檔案雙向合併進來的，目的是防止 404，不確定是否仍是這次廣播要收斂/移除的對象。
+  **尚未執行任何刪除或搬移**——這類會影響正式站台上線內容的動作，需要使用者明確確認範圍
+  （例如：這 5 個檔案要整批移到 `ck-holdings.my` 對應 repo？還是繼續留在這裡當備援？）
+  之後才執行，避免比照上述「Hosting 被覆蓋」事故重演。
 - **Status**: RESOLVED
 - **Date**: 2026-09-10
 - **根本原因排查報告（Root Cause Analysis 由 Antigravity 透過 Firebase Hosting API 完整溯源）**：
