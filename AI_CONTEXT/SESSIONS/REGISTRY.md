@@ -10,9 +10,9 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Host**: Desktop App
 - **Machine**: Windows Workstation
 - **Session File**: `AI_CONTEXT/SESSIONS/Antigravity (Desktop, Windows).md`
-- **State**: Standby / Synchronized
-- **Heartbeat**: {DATE}
-- **Current Objective**: Standby for Antigravity (Desktop, Windows) tasks.
+- **State**: Completed / Fully Synchronized
+- **Heartbeat**: 2026-09-10 23:56 JST
+- **Current Objective**: Investigated shopping.html 404 incident, identified parallel branch collision, unified codebase across forex & ec-resale branches, and verified production live on christykalvin.com.
 - **Reserved Files**: None
 
 ----------------------------------------
@@ -122,5 +122,21 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Heartbeat**: {DATE}
 - **Current Objective**: Standby for ChatGPT (VS Code, MacBook) tasks.
 - **Reserved Files**: None
+
+----------------------------------------
+
+### 11. Claude (Web, Cloud)
+- **AI**: Claude (Claude Code)
+- **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
+- **Machine**: 雲端 Linux 容器（非本機）
+- **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
+- **State**: Standby / Synchronized（GitHub 已同步；Google Drive 鏡像有 3 個檔案未同步，見該身分 session 檔）
+- **Heartbeat**: 2026-09-12
+- **Current Objective**: PWA 強制更新、主題標籤系統、P-Bandai 書籤工具修復、售價¥0真兇修復、
+  peachjohn.co.jp 通用解析（照片/顏色/尺寸）三連修已完成並驗證部署上線。
+- **Reserved Files**: None
+- **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
+  被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`
+  等高風險指令會被安全機制擋下。詳見該身分的 session 檔開頭。
 
 ----------------------------------------

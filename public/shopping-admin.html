@@ -1,0 +1,1598 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christy Kalvin Select 後台管理</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest-admin.json">
+<meta name="theme-color" content="#0E4B4F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CK代購管理">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script>
+/* 強制不要顯示舊版畫面：這頁被加到手機主畫面後是「獨立 App」模式，
+   沒有網址列、沒有下拉重新整理，iOS 很容易直接顯示上次的舊畫面快照
+   （bfcache）而不是真的連網抓新版。deploy-shopping.yml 每次部署會把
+   下面這行的版本佔位字串換成當次的 commit SHA；每次打開/回到這頁，
+   都去問伺服器現在線上是哪個版本，兩者對不起來就自動整頁重新整理。 */
+(function(){
+  var BUILD_SHA = "__BUILD_SHA__";
+  if (BUILD_SHA.indexOf("BUILD_SHA") !== -1) return; // 本機開發環境沒經過部署替換，不執行
+  function checkForUpdate(){
+    fetch("/build-version.json?_=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if (data && data.sha && data.sha !== BUILD_SHA) location.reload();
+      })
+      .catch(function(){});
+  }
+  window.addEventListener("pageshow", function(e){
+    if (e.persisted) { location.reload(); return; }
+    checkForUpdate();
+  });
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+})();
+</script>
+<style>
+  :root{
+    --petrol:#0E4B4F; --petrol-d:#0A3538; --gold:#C8801C; --gold-d:#9C6215;
+    --bg:#F4F1EA; --card:#FFFFFF; --line:#DDD6C7; --text:#20302F; --muted:#6B7876;
+    --danger:#B4530A; --ok:#2E7D32; --new:#1565C0; --sold:#8A8A8A;
+  }
+  *{box-sizing:border-box;}
+  html,body{overflow-x:hidden;max-width:100%;}
+  body{margin:0;font-family:"Meiryo","Hiragino Kaku Gothic Pro","Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--petrol);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  header h1{font-size:18px;margin:0;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  header h1 .hdrLogo{width:34px;height:34px;border-radius:8px;flex:none;object-fit:cover;}
+  header .user{font-size:13px;opacity:.85;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  header .user span{overflow-wrap:anywhere;}
+  header button{background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+  header button:hover{background:rgba(255,255,255,.12);}
+
+  #loginScreen{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px;}
+  #loginScreen h2{margin-top:0;font-size:16px;}
+  #loginScreen input{width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  #loginScreen button{width:100%;padding:10px;background:var(--petrol);color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-weight:700;}
+  #loginErr{color:var(--danger);font-size:13px;min-height:18px;margin-top:6px;}
+
+  main{max-width:1200px;margin:0 auto;padding:20px 24px 60px;}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tab{padding:10px 16px;background:transparent;border:none;border-bottom:2px solid transparent;font-size:14px;cursor:pointer;color:var(--muted);font-weight:700;}
+  .tab.active{color:var(--petrol);border-bottom-color:var(--petrol);}
+  .tab .badge-count{background:var(--danger);color:#fff;font-size:11px;border-radius:10px;padding:1px 7px;margin-left:6px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .toolbar select,.toolbar input{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;}
+  .toolbar .stat{font-size:13px;color:var(--muted);margin-left:auto;}
+  .btnNew{background:var(--gold);color:#fff;border:none;padding:9px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btnNew:hover{opacity:.88;}
+
+  .grid{display:flex;flex-direction:column;gap:10px;}
+  .row{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .row-head{display:flex;gap:10px;align-items:center;cursor:pointer;flex-wrap:wrap;}
+  .row-head img.thumb{width:40px;height:40px;object-fit:cover;border-radius:6px;background:#F1EEE4;flex:none;}
+  .row-head .proj{font-weight:700;font-size:15px;flex:1;min-width:160px;}
+  .tag{font-size:11px;padding:2px 8px;border-radius:10px;color:#fff;font-weight:700;}
+  .tag.draft{background:var(--new);}
+  .tag.published{background:var(--ok);}
+  .tag.hidden{background:#777;}
+  .tag.sold{background:var(--sold);}
+  .tag.incomplete{background:var(--danger);}
+  .tag.onsale{background:#D2691E;}
+  .tag.profit{background:#2E7D32;}
+  .tag.loss{background:#B4530A;}
+  .calcBox{background:#F0F6F0;border:1px solid #C7DCC7;border-radius:6px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;}
+  .alertBox{background:#FDF1E7;border:1px solid #E8A87C;color:#8B4000;padding:10px 12px;border-radius:6px;font-size:12.5px;margin-bottom:12px;font-weight:700;}
+  .alertBox .alertTime{font-weight:400;color:var(--muted);margin-left:6px;}
+  .tag.expired{background:#8B0000;}
+  .meta{font-size:12px;color:var(--muted);overflow-wrap:anywhere;}
+  .chev{transition:transform .15s;}
+  .row.open .chev{transform:rotate(90deg);}
+
+  .detail{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .row.open .detail{display:block;}
+  .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px;}
+  .field.full{grid-column:1/-1;}
+  /* min-height 固定保留兩行的高度：有些欄位標籤很長（例如「主題標籤」那條說明文字）
+     會換行，標籤只有一行的欄位卻沒有換行，同一排的輸入框高度就會對不齊、一個高一個
+     低。固定保留兩行高度，不管標籤實際上有沒有換行，輸入框永遠從同一個高度開始。 */
+  .field label{display:block;font-size:11px;line-height:1.3;min-height:28px;color:var(--muted);margin-bottom:3px;}
+  .field input,.field select,.field textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;font-family:inherit;}
+  .field textarea{resize:vertical;min-height:70px;}
+
+  .photoRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .photoRow .ph{position:relative;width:76px;height:76px;border-radius:6px;overflow:hidden;background:#F1EEE4;}
+  .photoRow .ph img{width:100%;height:100%;object-fit:cover;}
+  .photoRow .ph .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;}
+  .photoRow .addPh{width:76px;height:76px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--muted);cursor:pointer;background:#fff;}
+
+  .raw{background:#FAF8F2;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:12px;white-space:pre-wrap;max-height:140px;overflow:auto;margin-bottom:12px;color:var(--muted);}
+  .srcLink{margin-bottom:8px;font-size:12.5px;}
+  .srcLink a{color:var(--gold-d);text-decoration:underline;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .actions button{padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;}
+  .actions button.primary{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+  .actions button.warn{background:var(--danger);color:#fff;border-color:var(--danger);}
+  .actions button:hover{opacity:.85;}
+  .savedFlash{font-size:12px;color:var(--ok);margin-left:6px;display:none;}
+  .inqRow{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;}
+  .inqRow.unread{border-left:4px solid var(--danger);}
+  .inqTop{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+  .inqProduct{font-weight:700;font-size:14px;flex:1;min-width:160px;}
+  .inqContact{font-size:13px;color:var(--petrol-d);font-weight:700;}
+  .inqMsg{font-size:13px;color:var(--text);white-space:pre-wrap;background:#FAF8F2;border-radius:6px;padding:10px;margin-bottom:8px;}
+  .inqMeta{font-size:11.5px;color:var(--muted);}
+  #empty{text-align:center;color:var(--muted);padding:60px 0;}
+
+  .importBox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;max-width:640px;}
+  .importBox p{font-size:13px;color:var(--muted);line-height:1.7;}
+  .importBox .row2{display:flex;gap:10px;flex-wrap:wrap;}
+  .importBox input{flex:1;min-width:140px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;box-sizing:border-box;}
+  .importBox button{background:var(--petrol);color:#fff;border:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;}
+  .importBox button:disabled{opacity:.5;cursor:not-allowed;}
+  .importStatus{margin-top:14px;font-size:13px;min-height:18px;}
+  .importStatus.err{color:var(--danger);}
+  .importStatus.ok{color:var(--ok);}
+  .catChip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:16px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;}
+  .catChip button{border:none;background:rgba(0,0,0,.08);color:var(--muted);width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;padding:0;}
+  .catChip button:hover{background:var(--danger);color:#fff;}
+  .themePicker{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .themeChip{padding:5px 12px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--text);}
+  .themeChip.active{background:var(--petrol);color:#fff;border-color:var(--petrol);}
+  .themeAddBtn{padding:5px 10px;border-radius:16px;border:1px dashed var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <h2>Christy Kalvin Select 後台登入</h2>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="密碼" autocomplete="current-password">
+  <button id="loginBtn">登入</button>
+  <div id="loginErr"></div>
+</div>
+
+<div id="app" style="display:none;">
+  <header>
+    <h1><img class="hdrLogo" src="/icons/icon-192.png" alt="CK Japan" width="34" height="34">Christy Kalvin Select 後台管理 <span style="font-weight:400;font-size:12px;opacity:.7">Powered by CK Holdings</span></h1>
+    <div class="user">
+      <a href="/shopping.html" target="_blank" rel="noopener" style="color:#fff;font-size:13px;">🛍️ 查看前台</a>
+      <span id="whoami"></span>
+      <button id="logoutBtn">登出</button>
+    </div>
+  </header>
+  <main>
+    <div class="tabs">
+      <button class="tab active" data-tab="products">商品管理</button>
+      <button class="tab" data-tab="import">貼連結自動匯入 <span class="badge-count" id="draftCount" style="display:none">0</span></button>
+      <button class="tab" data-tab="inquiries">買家詢問 <span class="badge-count" id="inquiryCount" style="display:none">0</span></button>
+      <button class="tab" data-tab="pricing">加價設定</button>
+    </div>
+
+    <div class="panel active" id="panel-products">
+      <div class="toolbar">
+        <select id="filterStatus">
+          <option value="all">全部狀態</option>
+          <option value="draft">草稿(待審核)</option>
+          <option value="published">已上架</option>
+          <option value="hidden">已隱藏</option>
+        </select>
+        <select id="filterCat">
+          <option value="all">全部分類</option>
+        </select>
+        <input id="searchBox" type="text" placeholder="搜尋商品標題...">
+        <button class="btnNew" id="btnNewProduct">+ 手動新增商品</button>
+        <span class="stat" id="statLine"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div id="empty" style="display:none;">沒有符合條件的商品</div>
+    </div>
+
+    <div class="panel" id="panel-import">
+      <div class="importBox">
+        <p>
+          貼上商品來源連結（例如 Takashimaya Online 商品頁，或其他網店的商品詳情頁），
+          系統會自動抓取照片、標題、描述、價格，重新上傳照片到自己的雲端空間，
+          並用 AI 把日文內容翻譯潤飾成繁體中文。<br>
+          匯入結果會直接上架，建議上架後還是到「商品管理」核對一下內容、確認價格與描述正確
+          （偶爾會抓錯或 AI 判斷錯分類，看到不對隨時可以在後台改）。
+        </p>
+        <div class="row2">
+          <input id="importUrl" type="url" placeholder="貼上商品連結網址...">
+          <button id="importBtn">抓取</button>
+        </div>
+        <div class="importStatus" id="importStatus"></div>
+      </div>
+
+      <div class="importBox" style="margin-top:16px;">
+        <p>
+          <b>Amazon、Yodobashi、P-Bandai 這類網站，上面的「貼連結」匯入不了：</b>
+          這幾家會直接擋掉伺服器發出的請求（Amazon 回傳機器人驗證頁、Yodobashi 直接拒絕連線、
+          P-Bandai 會把非日本的連線導去選地區的頁面），不是連結格式的問題，是他們專門防雲端機房 IP。<br>
+          真正能繞過去的只有「你自己的瀏覽器」，所以改用瀏覽器書籤工具：把下面這個按鈕拖到瀏覽器書籤列，
+          之後在這類網站的商品頁按一下，它會直接讀取你瀏覽器裡已經打開的頁面內容，
+          把商品資料複製起來，回來這裡貼上就能匯入。
+        </p>
+        <p style="margin:14px 0;">
+          <a id="bookmarkletLink" href="#" onclick="return false;"
+            style="display:inline-block;background:var(--gold);color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;cursor:grab;">
+            📎 抓取商品資料到 CK 後台
+          </a>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;">← 電腦：拖曳這顆按鈕到瀏覽器書籤列</span>
+        </p>
+        <details style="margin:0 0 14px;">
+          <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--gold);">📱 手機沒有書籤列可以拖，點這裡看手機設定方式</summary>
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px;">
+            手機瀏覽器沒有書籤列可以拖曳，要改成「先加一個書籤，再把網址換成這顆按鈕的內容」：
+            <ol style="margin:6px 0 10px 18px;padding:0;">
+              <li>先按下面「複製書籤網址」，把工具網址複製到手機剪貼簿。</li>
+              <li><b>iPhone（Safari）：</b>先隨便瀏覽一頁按「加入書籤」存一個書籤 → 到書籤列表點「編輯」→ 點剛存的書籤 → 把「網址」欄整段換成剛剛複製的內容（貼上）→ 名稱改成好認的字，例如「CK抓取」→ 儲存。之後在商品頁打開書籤列表點它就會執行。</li>
+              <li><b>Android：</b>Chrome 近期版本常常會擋掉這種書籤工具（點了沒反應），建議改用 <b>Firefox</b> 或 <b>Kiwi Browser</b>：一樣先加一個書籤，到書籤管理裡編輯該書籤，把網址換成剛複製的內容，存檔後在商品頁點它執行。</li>
+            </ol>
+          </div>
+        </details>
+        <p style="margin:0 0 14px;">
+          <button id="copyBookmarkletBtn" type="button">📋 複製書籤網址（手機設定用）</button>
+          <span id="copyBookmarkletStatus" style="font-size:12px;color:var(--muted);margin-left:8px;"></span>
+        </p>
+        <div class="row2" style="align-items:flex-start;">
+          <textarea id="clipDataInput" placeholder="在商品頁按過書籤後，這裡貼上複製到的資料（一段 JSON 文字）..."
+            style="flex:1;min-width:140px;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;font-family:monospace;box-sizing:border-box;"></textarea>
+          <button id="clipImportBtn" style="align-self:flex-start;">匯入</button>
+        </div>
+        <div class="importStatus" id="clipImportStatus"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-pricing">
+      <div class="importBox" style="max-width:760px;margin-bottom:16px;">
+        <p>
+          <b>商品分類：</b>自己新增/刪除就好，不用再麻煩開發者改代碼——
+          新增的分類，前台的分類篩選按鈕跟後台下拉選單會自動跟著出現，AI 匯入商品時也會從這份清單挑分類。
+        </p>
+        <div id="categoryChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div class="row2">
+          <input id="newCatZh" type="text" placeholder="分類名稱（中文，例如：手錶）">
+          <input id="newCatEn" type="text" placeholder="英文名稱（選填，給英文介面用，不填就沿用中文）">
+          <button id="addCategoryBtn">新增分類</button>
+        </div>
+        <div class="importStatus" id="categoryStatus"></div>
+      </div>
+      <div class="importBox" style="max-width:760px;margin-bottom:16px;">
+        <p>
+          <b>主題標籤：</b>跟分類是兩件不同的事——分類是「這是什麼東西」（包包/服飾/食品），
+          主題標籤是「這是哪個系列/角色」（例如 moomin、Hello Kitty），客人點了就篩出所有掛這個標籤的商品，
+          不管分類是什麼。自己新增/刪除，一個商品可以掛好幾個標籤（在「商品管理」的「主題標籤」欄位用逗號分隔）。
+        </p>
+        <div id="themeChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div class="row2">
+          <input id="newTheme" type="text" placeholder="主題標籤名稱（例如：moomin、Hello Kitty）">
+          <button id="addThemeBtn">新增標籤</button>
+        </div>
+        <div class="importStatus" id="themeStatus"></div>
+      </div>
+      <div class="importBox" style="max-width:760px;">
+        <p>
+          <b>為什麼要加價：</b>高島屋這類通路有給回饋，直接用他們的標價賣就有利潤，所以設「不加價」。
+          Uniqlo、GU 沒有回饋，照抄他們的價格等於做白工，必須自己加價。<br>
+          這裡設定的是<b>各來源的預設規則</b>，貼連結匯入時會自動套用；個別商品要調整可以到「商品管理」單獨改。
+        </p>
+        <div id="pricingRules"></div>
+        <div class="field" style="max-width:260px;margin-top:14px;">
+          <label>標價進位方式</label>
+          <select id="roundingSelect">
+            <option value="10">進位到 10 元（¥1,237 → ¥1,240）</option>
+            <option value="100">進位到 100 元（¥1,237 → ¥1,300）</option>
+            <option value="none">不進位（¥1,237）</option>
+          </select>
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <button class="primary" id="savePricingBtn">儲存加價設定</button>
+          <button id="recalcAllBtn">依新規則重算所有商品售價</button>
+          <span class="savedFlash" id="pricingFlash">已儲存 ✓</span>
+        </div>
+        <div class="importStatus" id="pricingStatus"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-inquiries">
+      <div class="grid" id="inquiryGrid"></div>
+      <div id="inquiryEmpty" style="display:none;">目前沒有買家詢問</div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, query, orderBy, limit
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getFunctions, httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbTKwYIs3pdPKffbk4-GiQzK7P8lQpUBQ",
+  authDomain: "christykalvin.firebaseapp.com",
+  projectId: "christykalvin",
+  storageBucket: "christykalvin.firebasestorage.app",
+  messagingSenderId: "488782388942",
+  appId: "1:488782388942:web:0501238a5c77fe9feeba9f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app, "asia-east1");
+const importProductFn = httpsCallable(functions, "importProduct");
+const importFromDataFn = httpsCallable(functions, "importFromData");
+const uploadPhotoFn = httpsCallable(functions, "uploadPhoto");
+const deletePhotoFn = httpsCallable(functions, "deletePhoto");
+
+const loginScreen = document.getElementById("loginScreen");
+const appEl = document.getElementById("app");
+const loginErr = document.getElementById("loginErr");
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("password").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+function doLogin(){
+  loginErr.textContent = "";
+  const email = document.getElementById("email").value.trim();
+  const pw = document.getElementById("password").value;
+  signInWithEmailAndPassword(auth, email, pw).catch(err => {
+    loginErr.textContent = "登入失敗：" + (err.code === "auth/invalid-credential" ? "帳號或密碼錯誤" : err.message);
+  });
+}
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+let allProducts = [];
+let allInquiries = [];
+let unsub = null;
+let unsubInquiries = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.style.display = "none";
+    appEl.style.display = "block";
+    document.getElementById("whoami").textContent = user.email;
+    startListening();
+    startListeningInquiries();
+    startListeningCosts();
+    loadPricingSettings();
+    loadCategories();
+    loadThemes();
+  } else {
+    loginScreen.style.display = "block";
+    appEl.style.display = "none";
+    if (unsub) unsub();
+    if (unsubInquiries) unsubInquiries();
+  }
+});
+
+/* ---------------- 分頁切換 ---------------- */
+document.querySelectorAll(".tab").forEach(tabBtn => {
+  tabBtn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tabBtn.classList.add("active");
+    document.getElementById("panel-" + tabBtn.dataset.tab).classList.add("active");
+  });
+});
+
+function esc(s){
+  return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ---------------- 商品列表 ---------------- */
+function startListening(){
+  const q = query(collection(db, "products"), orderBy("created_at", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const draftN = allProducts.filter(p => p.status === "draft").length;
+    const badge = document.getElementById("draftCount");
+    if (draftN > 0) { badge.style.display = "inline"; badge.textContent = draftN; }
+    else { badge.style.display = "none"; }
+    render();
+  }, (err) => {
+    document.getElementById("statLine").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+/* ---------------- 買家詢問 ---------------- */
+/* 成本與加價設定存在 product_costs（僅管理員可讀），
+   跟公開的 products 分開，才不會讓客人看到我們的進價與利潤。 */
+let costMap = {};
+function startListeningCosts(){
+  onSnapshot(collection(db, "product_costs"), (snap) => {
+    costMap = {};
+    snap.docs.forEach(d => { costMap[d.id] = d.data(); });
+    render();
+  }, (err) => console.warn("讀取成本資料失敗", err));
+}
+/** 把商品跟它的成本資料合起來給畫面用 */
+function withCost(p){
+  return { ...p, ...(costMap[p.id] || {}) };
+}
+
+function startListeningInquiries(){
+  const q = query(collection(db, "inquiries"), orderBy("created_at", "desc"), limit(200));
+  unsubInquiries = onSnapshot(q, (snap) => {
+    allInquiries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const newN = allInquiries.filter(i => i.status === "new").length;
+    const badge = document.getElementById("inquiryCount");
+    if (newN > 0) { badge.style.display = "inline"; badge.textContent = newN; }
+    else { badge.style.display = "none"; }
+    renderInquiries();
+  }, (err) => {
+    document.getElementById("inquiryEmpty").style.display = "block";
+    document.getElementById("inquiryEmpty").textContent = "讀取失敗：" + err.message;
+  });
+}
+
+function renderInquiries(){
+  const grid = document.getElementById("inquiryGrid");
+  const empty = document.getElementById("inquiryEmpty");
+  if (allInquiries.length === 0){
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    empty.textContent = "目前沒有買家詢問";
+    return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = allInquiries.map(i => inquiryRowHTML(i)).join("");
+  allInquiries.forEach(i => {
+    const row = document.getElementById("inq_" + i.id);
+    const markBtn = row.querySelector(".btn-mark");
+    if (markBtn) markBtn.addEventListener("click", () => markInquiryRead(i.id));
+    row.querySelector(".btn-del").addEventListener("click", () => deleteInquiry(i.id));
+  });
+}
+
+function inquiryRowHTML(i){
+  const isNew = i.status === "new";
+  return `
+  <div class="inqRow${isNew ? " unread" : ""}" id="inq_${i.id}">
+    <div class="inqTop">
+      ${isNew ? `<span class="tag draft">新</span>` : ""}
+      <span class="inqProduct">${esc(i.product_title || "(商品已刪除)")}</span>
+      <span class="inqContact">📞 ${esc(i.contact)}</span>
+      <span class="meta">${i.created_at ? new Date(i.created_at).toLocaleString("zh-TW") : ""}</span>
+    </div>
+    <div class="inqMsg">${esc(i.message || "(無留言內容)")}</div>
+    <div class="inqMeta">
+      ${i.color ? `顏色：${esc(i.color)} · ` : ""}${i.price_jpy ? `¥${Number(i.price_jpy).toLocaleString()} · ` : ""}
+      ${i.product_link ? `<a href="${esc(i.product_link)}" target="_blank" rel="noopener">↗ 查看商品</a>` : ""}
+    </div>
+    <div class="actions" style="margin-top:8px;">
+      ${isNew ? `<button class="btn-mark">標記已處理</button>` : ""}
+      <button class="warn btn-del">刪除</button>
+    </div>
+  </div>`;
+}
+
+async function markInquiryRead(id){
+  try { await updateDoc(doc(db, "inquiries", id), { status: "read" }); }
+  catch (err) { alert("操作失敗：" + err.message); }
+}
+
+async function deleteInquiry(id){
+  if (!confirm("確定要刪除這則詢問嗎？")) return;
+  try { await deleteDoc(doc(db, "inquiries", id)); }
+  catch (err) { alert("刪除失敗：" + err.message); }
+}
+
+/* ---------------- 商品分類（賣家自己在後台新增/刪除，不用改代碼） ---------------- */
+const DEFAULT_CATEGORIES = [
+  { zh: "包包", en: "Bags" }, { zh: "鞋類", en: "Shoes" }, { zh: "服飾", en: "Fashion" },
+  { zh: "配件", en: "Accessories" }, { zh: "美妝保養", en: "Beauty & Care" },
+  { zh: "家電3C", en: "Appliances & Electronics" }, { zh: "生活雜貨", en: "Lifestyle" },
+  { zh: "食品零食", en: "Food & Snacks" }, { zh: "其他", en: "Other" },
+];
+let categoriesList = DEFAULT_CATEGORIES;
+
+async function loadCategories() {
+  try {
+    const d = await getDoc(doc(db, "settings", "categories"));
+    const list = d.exists() && d.data() && d.data().list;
+    if (Array.isArray(list) && list.length) categoriesList = list;
+  } catch (err) {
+    console.warn("讀取分類清單失敗，先用預設值", err);
+  }
+  renderCategoryChips();
+  renderCategoryFilterOptions();
+  render();
+}
+
+async function saveCategories(list) {
+  await setDoc(doc(db, "settings", "categories"), { list, updated_at: Date.now() });
+  categoriesList = list;
+  renderCategoryChips();
+  renderCategoryFilterOptions();
+  render();
+}
+
+function renderCategoryChips() {
+  const wrap = document.getElementById("categoryChips");
+  wrap.innerHTML = categoriesList.map((c, i) => `
+    <span class="catChip">${esc(c.zh)}${c.en ? ` <span style="color:var(--muted)">(${esc(c.en)})</span>` : ""}
+      <button data-idx="${i}" title="刪除這個分類">✕</button>
+    </span>`).join("");
+  wrap.querySelectorAll("button[data-idx]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.idx);
+      const removed = categoriesList[idx];
+      if (!confirm(`確定要刪除分類「${removed.zh}」嗎？已經用這個分類的商品不會被改動，只是下拉選單裡不會再有這個選項。`)) return;
+      const next = categoriesList.filter((_, i) => i !== idx);
+      try {
+        await saveCategories(next);
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+      }
+    });
+  });
+}
+
+function renderCategoryFilterOptions() {
+  const sel = document.getElementById("filterCat");
+  const current = sel.value;
+  sel.innerHTML = `<option value="all">全部分類</option>` +
+    categoriesList.map((c) => `<option>${esc(c.zh)}</option>`).join("");
+  sel.value = categoriesList.some((c) => c.zh === current) || current === "all" ? current : "all";
+}
+
+document.getElementById("addCategoryBtn").addEventListener("click", async () => {
+  const zhInput = document.getElementById("newCatZh");
+  const enInput = document.getElementById("newCatEn");
+  const statusEl = document.getElementById("categoryStatus");
+  const zh = zhInput.value.trim();
+  const en = enInput.value.trim();
+  if (!zh) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請輸入分類名稱";
+    return;
+  }
+  if (categoriesList.some((c) => c.zh === zh)) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "這個分類已經存在了";
+    return;
+  }
+  try {
+    await saveCategories([...categoriesList, { zh, en: en || zh }]);
+    zhInput.value = "";
+    enInput.value = "";
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `已新增分類「${zh}」，前台跟下拉選單馬上就能選了。`;
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "新增失敗：" + err.message;
+  }
+});
+
+/**
+ * 跟「加價設定」分頁的分類管理長得一樣（中文＋英文兩個欄位），用彈出視窗顯示，
+ * 因為 window.prompt() 一次只能問一個問題，沒辦法像既有的分類管理區塊一樣
+ * 同時收中文／英文兩個名稱。
+ */
+function showAddCategoryModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;padding:20px;max-width:360px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.3);">
+        <h3 style="margin:0 0 14px;font-size:15px;color:var(--petrol);">新增分類</h3>
+        <div class="field" style="margin-bottom:10px;">
+          <label>分類名稱（中文，例如：手錶）</label>
+          <input id="modalCatZh" type="text">
+        </div>
+        <div class="field" style="margin-bottom:18px;">
+          <label>英文名稱（選填，給英文介面用，不填就沿用中文）</label>
+          <input id="modalCatEn" type="text">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="modalCatCancel" type="button" style="padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;">取消</button>
+          <button id="modalCatOk" type="button" style="padding:8px 14px;border-radius:6px;border:1px solid var(--petrol);background:var(--petrol);color:#fff;font-size:13px;cursor:pointer;">新增</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const zhInput = overlay.querySelector("#modalCatZh");
+    const enInput = overlay.querySelector("#modalCatEn");
+    zhInput.focus();
+    const close = (result) => { overlay.remove(); resolve(result); };
+    overlay.querySelector("#modalCatCancel").addEventListener("click", () => close(null));
+    overlay.querySelector("#modalCatOk").addEventListener("click", () => {
+      const zh = zhInput.value.trim();
+      if (!zh) { zhInput.focus(); return; }
+      close({ zh, en: enInput.value.trim() });
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+    zhInput.addEventListener("keydown", (e) => { if (e.key === "Enter") overlay.querySelector("#modalCatOk").click(); });
+    enInput.addEventListener("keydown", (e) => { if (e.key === "Enter") overlay.querySelector("#modalCatOk").click(); });
+  });
+}
+
+/**
+ * 商品編輯表單裡「分類」下拉選單直接選「➕ 新增分類...」就能新增，不用切去
+ * 「加價設定」分頁。刻意不呼叫 render() 整頁重算——這個下拉選單可能還有其他
+ * 商品列正在編輯、還沒按儲存，整頁重算會把那些還沒存檔的欄位內容洗掉，改成
+ * 只更新畫面上所有分類下拉選單的選項清單，不動其他欄位。
+ */
+async function addCategoryInline(selectEl) {
+  const prev = selectEl.dataset.prevValue || "";
+  const result = await showAddCategoryModal();
+  if (!result) { selectEl.value = prev; return; }
+  const zh = result.zh;
+  const en = result.en || zh;
+  if (categoriesList.some((c) => c.zh === zh)) {
+    alert("這個分類已經存在了");
+    selectEl.value = zh;
+    selectEl.dataset.prevValue = zh;
+    return;
+  }
+  try {
+    const next = [...categoriesList, { zh, en }];
+    await setDoc(doc(db, "settings", "categories"), { list: next, updated_at: Date.now() });
+    categoriesList = next;
+    renderCategoryChips();
+    renderCategoryFilterOptions();
+    document.querySelectorAll('select[data-key="category"]').forEach((sel) => {
+      const addOpt = sel.querySelector('option[value="__add_new__"]');
+      const newOpt = document.createElement("option");
+      newOpt.textContent = zh;
+      if (addOpt) sel.insertBefore(newOpt, addOpt); else sel.appendChild(newOpt);
+    });
+    selectEl.value = zh;
+    selectEl.dataset.prevValue = zh;
+  } catch (err) {
+    alert("新增失敗：" + err.message);
+    selectEl.value = prev;
+  }
+}
+
+/* ---------------- 主題標籤（跟分類無關，例如 moomin / Hello Kitty 這種系列） ---------------- */
+let themesList = [];
+
+async function loadThemes() {
+  try {
+    const d = await getDoc(doc(db, "settings", "themes"));
+    const list = d.exists() && d.data() && d.data().list;
+    if (Array.isArray(list)) themesList = list;
+  } catch (err) {
+    console.warn("讀取主題標籤清單失敗，先當作還沒有任何標籤", err);
+  }
+  renderThemeChips();
+}
+
+async function saveThemes(list) {
+  await setDoc(doc(db, "settings", "themes"), { list, updated_at: Date.now() });
+  themesList = list;
+  renderThemeChips();
+}
+
+function renderThemeChips() {
+  const wrap = document.getElementById("themeChips");
+  wrap.innerHTML = themesList.map((t, i) => `
+    <span class="catChip">${esc(t)}
+      <button data-idx="${i}" title="刪除這個主題標籤">✕</button>
+    </span>`).join("");
+  wrap.querySelectorAll("button[data-idx]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.idx);
+      const removed = themesList[idx];
+      if (!confirm(`確定要刪除主題標籤「${removed}」嗎？已經掛這個標籤的商品不會被改動，只是篩選按鈕不會再出現。`)) return;
+      const next = themesList.filter((_, i) => i !== idx);
+      try {
+        await saveThemes(next);
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+      }
+    });
+  });
+}
+
+document.getElementById("addThemeBtn").addEventListener("click", async () => {
+  const input = document.getElementById("newTheme");
+  const statusEl = document.getElementById("themeStatus");
+  const name = input.value.trim();
+  if (!name) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請輸入主題標籤名稱";
+    return;
+  }
+  if (themesList.includes(name)) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "這個主題標籤已經存在了";
+    return;
+  }
+  try {
+    await saveThemes([...themesList, name]);
+    input.value = "";
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `已新增主題標籤「${name}」，商品編輯的「主題標籤」欄位跟前台篩選按鈕馬上就能用了。`;
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "新增失敗：" + err.message;
+  }
+});
+
+const FIELD_DEFS = [
+  // 商品名稱不做中文翻譯：中文介面顯示日文原名、英文介面顯示英文名，
+  // 所以後台不再提供「標題(中文)」欄位（品牌/商品名是專有名詞，翻中文反而對不上日本官網）
+  ["title_ja", "商品名稱（日文原名，中文介面顯示這個）", "text", true],
+  ["title_en", "商品名稱（英文，英文介面顯示這個）", "text", false],
+  ["cost_jpy", "來源成本 JPY（自動抓的，我們的進貨價）", "number", false],
+  ["markup_type", "加價方式", "select_markup", false],
+  ["markup_value", "加價數值（% 或 元）", "number", false],
+  ["price_jpy", "售價 JPY（賣給客人的價格）", "number", true],
+  ["price_original_jpy", "原價 JPY（有折扣才填，前台會畫刪除線）", "number", false],
+  ["sale_end_at", "特價截止日（過期自動改回原價）", "datetime", false],
+  ["sale_label", "特價標籤", "text", false],
+  ["category", "分類", "select_cat", true],
+  ["themes", "主題標籤（跟分類無關，可複選，例如：moomin、Hello Kitty）", "theme_picker", false],
+  ["condition", "新舊狀況", "select_cond", true],
+  ["status", "狀態", "select_status", true],
+  ["colors", "顏色選項(逗號分隔)", "colors_text", false],
+  ["sizes", "尺寸選項(逗號分隔，服飾用)", "colors_text", false],
+  ["size", "尺寸", "text", false],
+  ["weight", "重量", "text", false],
+  ["product_code", "商品編號", "text", false],
+];
+
+function render(){
+  const status = document.getElementById("filterStatus").value;
+  const cat = document.getElementById("filterCat").value;
+  const search = document.getElementById("searchBox").value.trim().toLowerCase();
+
+  let list = allProducts.filter(p => {
+    if (status !== "all" && (p.status || "draft") !== status) return false;
+    if (cat !== "all" && (p.category || "其他") !== cat) return false;
+    if (search) {
+      const hay = [p.title_ja, p.title_en, p.title_zh].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("statLine").textContent = `共 ${allProducts.length} 件，符合篩選 ${list.length} 件`;
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+
+  if (list.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  grid.innerHTML = list.map(p => rowHTML(withCost(p))).join("");
+
+  list.forEach(p => {
+    const rowEl = document.getElementById("row_" + p.id);
+    rowEl.querySelector(".row-head").addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      rowEl.classList.toggle("open");
+    });
+    rowEl.querySelector(".btn-save").addEventListener("click", () => saveRow(p.id));
+    const recalcBtn = rowEl.querySelector(".btn-recalc");
+    if (recalcBtn) recalcBtn.addEventListener("click", async () => {
+      const r = computePrices(withCost(p));
+      if (r.price_jpy == null) { alert("沒有來源成本，無法重算"); return; }
+      await updateDoc(doc(db, "products", p.id), {
+        price_jpy: r.price_jpy, price_original_jpy: r.price_original_jpy, updated_at: Date.now(),
+      });
+    });
+    rowEl.querySelector(".btn-delete").addEventListener("click", () => removeRow(p.id, p.title_ja || p.title_zh));
+    const soldBtn = rowEl.querySelector(".btn-sold");
+    if (soldBtn) soldBtn.addEventListener("click", () => toggleSold(p.id, !p.sold));
+    const addPh = rowEl.querySelector(".addPh");
+    if (addPh) addPh.addEventListener("click", () => addPhotos(p.id));
+    rowEl.querySelectorAll(".ph .rm").forEach(btn => {
+      btn.addEventListener("click", () => removePhoto(p.id, Number(btn.dataset.idx)));
+    });
+
+    // 售價、原價欄位旁邊的即時利潤徽章：打價錢（或改來源成本）當下就重算，不用按儲存。
+    // 兩個欄位都用同一顆來源成本當基準，各自獨立顯示賺多少 ¥／幾 %。
+    const costInput = rowEl.querySelector('[data-key="cost_jpy"]');
+    function bindLiveProfitBadge(priceEl, badgeEl, badgeClass){
+      if (!priceEl || !badgeEl) return () => {};
+      const update = () => {
+        const cost = Number(costInput && costInput.value) || 0;
+        const price = Number(priceEl.value) || 0;
+        if (!cost || !price) { badgeEl.textContent = ""; badgeEl.className = "tag " + badgeClass; return; }
+        const amount = price - cost;
+        const pct = Math.round((amount / cost) * 1000) / 10;
+        badgeEl.textContent = `${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）`;
+        badgeEl.className = "tag " + badgeClass + " " + (amount >= 0 ? "profit" : "loss");
+      };
+      priceEl.addEventListener("input", update);
+      if (costInput) costInput.addEventListener("input", update);
+      update();
+      return update;
+    }
+    const priceInput = rowEl.querySelector('[data-key="price_jpy"]');
+    const updateLivePct = bindLiveProfitBadge(priceInput, rowEl.querySelector(".livePct"), "livePct");
+    const originalPriceInput = rowEl.querySelector('[data-key="price_original_jpy"]');
+    bindLiveProfitBadge(originalPriceInput, rowEl.querySelector(".livePctOriginal"), "livePctOriginal");
+
+    // 「加價方式／加價數值」本身只是規則，光打數字不會自動變成售價——
+    // 賣家反映打了看不出效果，改成一改這兩個欄位就直接照規則把售價算出來、
+    // 填進「售價 JPY」欄位（連帶更新旁邊的即時利潤徽章），不用再另外按
+    // 「依規則重算售價」按鈕。只在有來源成本時才自動算，沒有成本算不出價錢。
+    const markupTypeSel = rowEl.querySelector('[data-key="markup_type"]');
+    const markupValueInput = rowEl.querySelector('[data-key="markup_value"]');
+    if (priceInput && (markupTypeSel || markupValueInput)) {
+      const recalcFromMarkup = () => {
+        const cost = Number(costInput && costInput.value) || null;
+        if (!cost) return;
+        const markupType = markupTypeSel ? markupTypeSel.value : "";
+        const markupValue = markupValueInput ? Number(markupValueInput.value) || 0 : 0;
+        const rule = markupType
+          ? { type: markupType, value: markupValue }
+          : ruleFor(p.source_site, pricingSettings);
+        const newPrice = applyMarkup(cost, rule, pricingSettings.rounding);
+        if (newPrice != null) {
+          priceInput.value = newPrice;
+          updateLivePct();
+        }
+      };
+      if (markupTypeSel) markupTypeSel.addEventListener("change", recalcFromMarkup);
+      if (markupValueInput) markupValueInput.addEventListener("input", recalcFromMarkup);
+    }
+
+    // 分類下拉選單選到「➕ 新增分類...」就跳出新增流程，不用切去「加價設定」分頁
+    const catSelect = rowEl.querySelector('select[data-key="category"]');
+    if (catSelect) {
+      catSelect.dataset.prevValue = catSelect.value;
+      catSelect.addEventListener("change", () => {
+        if (catSelect.value === "__add_new__") {
+          addCategoryInline(catSelect);
+        } else {
+          catSelect.dataset.prevValue = catSelect.value;
+        }
+      });
+    }
+
+    // 主題標籤：點標籤切換選取狀態，同步寫進旁邊的隱藏欄位（saveRow() 讀的是這個）。
+    // 版面固定是「.themePicker 後面緊接著那顆隱藏欄位」，用 nextElementSibling 拿，
+    // 不用另外比對 data-key，其他商品列的選取器也能用同一套邏輯處理。
+    const themePicker = rowEl.querySelector("[data-theme-picker-for]");
+    if (themePicker) wireThemePicker(themePicker);
+  });
+}
+
+/** 主題標籤選取器：點了切換 active、同步寫進緊接在後面的隱藏欄位。 */
+function wireThemePicker(picker){
+  const hiddenInput = picker.nextElementSibling;
+  const sync = () => {
+    const selected = Array.from(picker.querySelectorAll(".themeChip.active")).map((el) => el.dataset.theme);
+    if (hiddenInput) hiddenInput.value = selected.join("、");
+  };
+  picker.querySelectorAll(".themeChip").forEach((chip) => {
+    chip.addEventListener("click", () => { chip.classList.toggle("active"); sync(); });
+  });
+  const addBtn = picker.querySelector(".themeAddBtn");
+  if (!addBtn) return;
+  addBtn.addEventListener("click", async () => {
+    const name = (prompt("新增主題標籤名稱（例如：moomin、Hello Kitty）：") || "").trim();
+    if (!name) return;
+    if (!themesList.includes(name)) {
+      try {
+        await saveThemes([...themesList, name]);
+      } catch (err) {
+        alert("新增失敗：" + err.message);
+        return;
+      }
+    }
+    // 不觸發整頁 render()，避免弄丟其他商品列還沒存檔的欄位——改成把新標籤加到
+    // 畫面上每一個主題標籤選取器：新標籤在「按了新增」這個商品上直接勾選，其他
+    // 商品列只是多一個可以選的按鈕（沒選取），不用重新整理頁面就能用。
+    document.querySelectorAll("[data-theme-picker-for]").forEach((otherPicker) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "themeChip" + (otherPicker === picker ? " active" : "");
+      btn.dataset.theme = name;
+      btn.textContent = name;
+      btn.addEventListener("click", () => {
+        btn.classList.toggle("active");
+        const otherHidden = otherPicker.nextElementSibling;
+        const selected = Array.from(otherPicker.querySelectorAll(".themeChip.active")).map((el) => el.dataset.theme);
+        if (otherHidden) otherHidden.value = selected.join("、");
+      });
+      const placeholder = otherPicker.querySelector("span");
+      if (placeholder) placeholder.remove();
+      otherPicker.insertBefore(btn, otherPicker.querySelector(".themeAddBtn"));
+    });
+    sync();
+  });
+}
+
+/** 這筆賺多少：後台一眼看出利潤，沒有成本資料就不顯示 */
+function profitBadge(p){
+  const cost = Number(p.cost_jpy), price = Number(p.price_jpy);
+  if (!cost || !price) return "";
+  const amount = price - cost;
+  const pct = Math.round((amount / cost) * 1000) / 10;
+  const cls = amount > 0 ? "profit" : "loss";
+  return `<span class="tag ${cls}">${amount >= 0 ? "賺" : "虧"} ¥${Math.abs(amount).toLocaleString()}（${pct}%）</span>`;
+}
+
+function rowHTML(p){
+  const status = p.status || "draft";
+  const tags = [`<span class="tag ${status}">${status === "draft" ? "草稿" : status === "published" ? "已上架" : "已隱藏"}</span>`];
+  if (p.sold) tags.push(`<span class="tag sold">已售出</span>`);
+  if (!p.is_complete) tags.push(`<span class="tag incomplete">⚠️ 資料不完整</span>`);
+
+  // 特價狀態：過期的要醒目提示，不然會一直掛著死掉的特價
+  const saleEnd = Number(p.sale_end_at) || 0;
+  const hasDiscount = Number(p.price_original_jpy) > Number(p.price_jpy);
+  if (p.price_alert) tags.push(`<span class="tag incomplete">⚠️ 查價提醒</span>`);
+  if (saleEnd && saleEnd < Date.now()) {
+    tags.push(`<span class="tag expired">⌛ 特價已過期</span>`);
+  } else if (hasDiscount) {
+    const until = saleEnd ? new Date(saleEnd).toLocaleDateString("zh-TW", {month:"numeric", day:"numeric"}) : "";
+    tags.push(`<span class="tag onsale">🔥 特價中${until ? ` 至${until}` : ""}</span>`);
+  }
+
+  const thumb = (p.photos && p.photos[0]) || "";
+  const fieldsHTML = FIELD_DEFS.map(([key, label, type]) => {
+    if (type === "select_cat") {
+      const opts = categoriesList.map((c) => c.zh);
+      // 商品目前的分類如果已經被刪掉了，還是要留在選單裡（用括號標註），不然會憑空消失變成沒選
+      if (p[key] && !opts.includes(p[key])) opts.push(p[key] + "（已刪除）");
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(o => `<option ${(p[key]===o || o===p[key]+"（已刪除）")?"selected":""}>${o}</option>`).join("")}
+        <option value="__add_new__">➕ 新增分類...</option>
+      </select></div>`;
+    }
+    if (type === "select_cond") {
+      const opts = ["全新","近新","二手良好","二手一般","未知"];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(o => `<option ${p[key]===o?"selected":""}>${o}</option>`).join("")}
+      </select></div>`;
+    }
+    if (type === "select_status") {
+      const opts = [["draft","草稿"],["published","已上架"],["hidden","已隱藏"]];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(([v,l]) => `<option value="${v}" ${p[key]===v?"selected":""}>${l}</option>`).join("")}
+      </select></div>`;
+    }
+    if (type === "select_markup") {
+      const opts = [["", "（用來源預設規則）"], ["none", "不加價"], ["percent", "加百分比 %"], ["fixed", "加固定金額 ¥"]];
+      return `<div class="field"><label>${label}</label><select data-key="${key}">
+        ${opts.map(([v, l]) => `<option value="${v}" ${(p[key]||"")===v?"selected":""}>${l}</option>`).join("")}
+      </select></div>`;
+    }
+    if (type === "datetime") {
+      // Firestore 存毫秒時間戳，輸入框用 datetime-local
+      const ms = Number(p[key]) || 0;
+      let val = "";
+      if (ms) {
+        const d = new Date(ms - new Date().getTimezoneOffset() * 60000);
+        val = d.toISOString().slice(0, 16);
+      }
+      return `<div class="field"><label>${label}</label><input data-key="${key}" data-type="datetime" type="datetime-local" value="${val}"></div>`;
+    }
+    if (type === "colors_text") {
+      const val = Array.isArray(p[key]) ? p[key].join("、") : (p[key] || "");
+      return `<div class="field"><label>${label}</label><input data-key="${key}" data-type="colors_text" type="text" value="${esc(val)}"></div>`;
+    }
+    if (type === "theme_picker") {
+      // 分類是下拉選單、選了就不會打錯字；主題標籤原本是逗號分隔的文字框，賣家
+      // 自己打字很容易跟已經建立的標籤對不起來（例如「moomin」打成「Moomin」），
+      // 前台用標籤名稱完全比對，對不起來客人點了就篩不到，等於白掛標籤。改成跟
+      // 分類一樣「用點的」——列出已建立的標籤讓賣家直接點選開關，不用自己打字，
+      // 想加新標籤才用旁邊的「＋ 新增」。
+      const current = Array.isArray(p[key]) ? p[key] : [];
+      const chips = themesList.length
+        ? themesList.map((t) => `<button type="button" class="themeChip ${current.includes(t) ? "active" : ""}" data-theme="${esc(t)}">${esc(t)}</button>`).join("")
+        : `<span style="font-size:12px;color:var(--muted);">尚未建立任何主題標籤，按「＋ 新增」建立第一個</span>`;
+      return `<div class="field full">
+        <label>${label}</label>
+        <div class="themePicker" data-theme-picker-for="${key}">
+          ${chips}
+          <button type="button" class="themeAddBtn">＋ 新增</button>
+        </div>
+        <input type="hidden" data-key="${key}" data-type="colors_text" value="${esc(current.join("、"))}">
+      </div>`;
+    }
+    if (key === "price_jpy") {
+      // 打售價的當下就要看得到賺多少 %，不用按儲存才知道——標籤右側放即時利潤徽章，
+      // 打字（或改來源成本）就即時重算，跟 saveRow() 真正存檔的邏輯無關，純前端試算。
+      // flex-wrap:wrap：標籤文字太長、跟徽章擠不下同一行時，徽章整個換到下一行，
+      // 不會變成徽章卡在兩行文字中間那種擠壓、對不齊的怪樣子。
+      return `<div class="field"><label style="display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:space-between;align-items:center;">
+        ${label}<span class="tag livePct"></span>
+      </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
+    }
+    if (key === "price_original_jpy") {
+      // 原價也比照售價放即時利潤徽章——原價填的是「特價前」的價格，賣家一樣想知道
+      // 這個價位賺多少 %。注意：原價一定要比售價高才會被前台當成特價顯示（刪除線＋
+      // 省多少），原價比售價低或一樣，前台會直接忽略特價設定、只顯示售價。
+      return `<div class="field"><label style="display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:space-between;align-items:center;">
+        ${label}<span class="tag livePctOriginal"></span>
+      </label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
+    }
+    return `<div class="field"><label>${label}</label><input data-key="${key}" type="${type}" value="${esc(p[key])}"></div>`;
+  }).join("");
+
+  const photosHTML = (p.photos||[]).map((url, idx) => `
+    <div class="ph"><img src="${esc(url)}"><button class="rm" data-idx="${idx}" title="刪除">✕</button></div>
+  `).join("");
+
+  return `
+  <div class="row" id="row_${p.id}">
+    <div class="row-head">
+      <span class="chev">▶</span>
+      ${thumb ? `<img class="thumb" src="${esc(thumb)}">` : ""}
+      <span class="proj">${esc(p.title_ja || p.title_zh) || "(未命名商品)"}</span>
+      ${tags.join("")}
+      ${profitBadge(p)}
+      <span class="meta">${esc(p.category)||""} · ${esc(p.source_site)||"手動新增"} · ${p.created_at ? new Date(p.created_at).toLocaleDateString("zh-TW") : ""}</span>
+    </div>
+    <div class="detail">
+      <div class="photoRow">
+        ${photosHTML}
+        <div class="addPh" title="新增照片">＋</div>
+      </div>
+      <div class="fields">
+        ${fieldsHTML}
+        <div class="field full"><label>描述(中文)</label><textarea data-key="description_zh">${esc(p.description_zh)}</textarea></div>
+        <div class="field full"><label>描述(英文)</label><textarea data-key="description_en">${esc(p.description_en)}</textarea></div>
+        <div class="field full"><label>描述(原文)</label><textarea data-key="description_ja">${esc(p.description_ja)}</textarea></div>
+        <div class="field full"><label>其他規格備註</label><textarea data-key="spec_notes">${esc(p.spec_notes)}</textarea></div>
+      </div>
+      ${p.cost_jpy ? `<div class="calcBox">
+        來源成本 <b>¥${Number(p.cost_jpy).toLocaleString()}</b>
+        →（${p.markup_type ? "此商品自訂加價" : `${esc(p.source_site||"")} 的預設規則`}）
+        → 目前售價 <b>¥${Number(p.price_jpy||0).toLocaleString()}</b>
+        <button class="btn-recalc" data-id="${p.id}" style="margin-left:10px;padding:3px 10px;font-size:12px;">依規則重算售價</button>
+      </div>` : ""}
+      ${p.price_alert ? `<div class="alertBox">⚠️ 查價提醒：${esc(p.price_alert)}${
+        p.price_alert_at ? `<span class="alertTime">（${new Date(p.price_alert_at).toLocaleString("zh-TW")} 檢查）</span>` : ""
+      }</div>` : ""}
+      ${(Array.isArray(p.variants) && p.variants.length) ? `
+        <div class="raw"><b>來源網站的尺寸/顏色庫存（自動抓取）</b><br>${
+          p.variants.map(v => `${esc(v.color||"-")} / ${esc(v.size||"-")}：${
+            v.in_stock ? `有貨${v.quantity!=null?`(${v.quantity})`:""}` : "缺貨"
+          }`).join("　·　")
+        }</div>` : ""}
+      ${p.source_url ? `<div class="srcLink"><a href="${esc(p.source_url)}" target="_blank" rel="noopener">↗ 查看原始商品連結</a></div>` : ""}
+      ${p.ai_notes ? `<div class="raw">AI備註：${esc(p.ai_notes)}</div>` : ""}
+      <div class="actions">
+        <button class="primary btn-save">儲存</button>
+        <button class="btn-sold">${p.sold ? "標記為未售出" : "標記為已售出"}</button>
+        <button class="warn btn-delete">永久刪除</button>
+        <span class="savedFlash">已儲存 ✓</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveRow(id){
+  const rowEl = document.getElementById("row_" + id);
+  const update = { human_edited: true, updated_at: Date.now() };
+  rowEl.querySelectorAll("[data-key]").forEach(inp => {
+    const key = inp.dataset.key;
+    let val = inp.value.trim ? inp.value.trim() : inp.value;
+    if (inp.dataset.type === "datetime") {
+      update[key] = val === "" ? null : new Date(val).getTime();
+    } else if (inp.dataset.type === "colors_text") {
+      update[key] = val === "" ? [] : val.split(/[、,，]/).map(s => s.trim()).filter(Boolean);
+    } else if (key === "price_jpy" || key === "price_original_jpy" || key === "cost_jpy" || key === "markup_value") {
+      update[key] = val === "" ? null : Number(val);
+    } else {
+      update[key] = val === "" ? null : val;
+    }
+  });
+  update.is_complete = !!(update.title_ja && update.price_jpy && update.description_zh);
+
+  // 成本與加價是機密欄位，要分流寫到 product_costs，不能混進公開的 products
+  const COST_FIELDS = ["cost_jpy", "cost_original_jpy", "markup_type", "markup_value"];
+  const costUpdate = {};
+  for (const f of COST_FIELDS) {
+    if (f in update) { costUpdate[f] = update[f]; delete update[f]; }
+  }
+
+  try {
+    await updateDoc(doc(db, "products", id), update);
+    if (Object.keys(costUpdate).length) {
+      costUpdate.updated_at = Date.now();
+      await setDoc(doc(db, "product_costs", id), costUpdate, { merge: true });
+    }
+    const flash = rowEl.querySelector(".savedFlash");
+    flash.style.display = "inline";
+    setTimeout(() => flash.style.display = "none", 2000);
+  } catch (err) {
+    alert("儲存失敗：" + err.message);
+  }
+}
+
+async function toggleSold(id, sold){
+  try {
+    await updateDoc(doc(db, "products", id), { sold, updated_at: Date.now() });
+  } catch (err) {
+    alert("操作失敗：" + err.message);
+  }
+}
+
+async function removeRow(id, title){
+  if (!confirm(`確定要永久刪除「${title || "(未命名商品)"}」嗎？此動作無法復原（雲端上的照片檔案不會一併清除）。`)) return;
+  try {
+    await deleteDoc(doc(db, "products", id));
+  } catch (err) {
+    alert("刪除失敗：" + err.message);
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = () => reject(new Error("讀取檔案失敗"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addPhotos(id){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.onchange = async () => {
+    const p = allProducts.find(x => x.id === id);
+    const urls = [...((p && p.photos) || [])];
+    for (const file of input.files) {
+      try {
+        const dataBase64 = await fileToBase64(file);
+        const res = await uploadPhotoFn({
+          productId: id, filename: file.name, contentType: file.type, dataBase64
+        });
+        urls.push(res.data.url);
+        if (res.data.warning) alert(res.data.warning);
+      } catch (err) {
+        alert(`照片「${file.name}」上傳失敗：` + (err.message || err));
+      }
+    }
+    await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+  };
+  input.click();
+}
+
+async function removePhoto(id, idx){
+  const p = allProducts.find(x => x.id === id);
+  if (!p || !p.photos) return;
+  const urls = p.photos.slice();
+  const [removed] = urls.splice(idx, 1);
+  await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+  if (removed) {
+    try { await deletePhotoFn({ url: removed }); } catch (_) { /* 忽略刪檔失敗，不影響資料庫更新 */ }
+  }
+}
+
+async function createBlankProduct(){
+  const now = Date.now();
+  const blank = {
+    title_en: "", title_ja: "", description_zh: "", description_en: "", description_ja: "",
+    colors: [], sizes: [], variants: [], themes: [], size: "", weight: "", spec_notes: "", product_code: "",
+    price_original_jpy: null, sale_end_at: null, sale_label: "",
+    price_jpy: null, category: "其他", condition: "全新",
+    photos: [], source_url: "", source_site: "手動新增",
+    status: "published", sold: false, is_complete: false, human_edited: true,
+    created_at: now, updated_at: now, created_by: auth.currentUser?.email || ""
+  };
+  const newDoc = doc(collection(db, "products"));
+  await setDoc(newDoc, blank);
+  document.getElementById("filterStatus").value = "all";
+  document.getElementById("filterCat").value = "all";
+  document.getElementById("searchBox").value = "";
+  setTimeout(() => {
+    const el = document.getElementById("row_" + newDoc.id);
+    if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  }, 300);
+}
+document.getElementById("btnNewProduct").addEventListener("click", createBlankProduct);
+
+document.getElementById("filterStatus").addEventListener("change", render);
+document.getElementById("filterCat").addEventListener("change", render);
+document.getElementById("searchBox").addEventListener("input", render);
+
+/* ---------------- 加價設定 ---------------- */
+// 高島屋有回饋 → 不加價；Uniqlo/GU 沒回饋 → 必須自己加價才有利潤
+const DEFAULT_PRICING = {
+  rules: {
+    UNIQLO: { type: "percent", value: 30 },
+    GU: { type: "percent", value: 30 },
+    "takashimaya.co.jp": { type: "none", value: 0 },
+    default: { type: "percent", value: 30 },
+  },
+  rounding: "10",
+};
+const RULE_LABELS = {
+  UNIQLO: "Uniqlo",
+  GU: "GU",
+  "takashimaya.co.jp": "高島屋（有回饋）",
+  default: "其他所有來源",
+};
+let pricingSettings = JSON.parse(JSON.stringify(DEFAULT_PRICING));
+
+function ruleFor(sourceSite, cfg){
+  const rules = (cfg || pricingSettings).rules || {};
+  const site = String(sourceSite || "").trim();
+  if (site && rules[site]) return rules[site];
+  const key = Object.keys(rules).find(k => k !== "default" && site && site.toLowerCase().includes(k.toLowerCase()));
+  return key ? rules[key] : (rules.default || { type: "none", value: 0 });
+}
+function roundPrice(v, mode){
+  if (v == null || !isFinite(v)) return null;
+  const n = Math.max(0, v);
+  if (mode === "100") return Math.ceil(n / 100) * 100;
+  if (mode === "10") return Math.ceil(n / 10) * 10;
+  return Math.round(n);
+}
+function applyMarkup(cost, rule, rounding){
+  if (cost == null || !isFinite(cost)) return null;
+  const value = Number(rule.value) || 0;
+  let out = cost;
+  if (rule.type === "percent") out = cost * (1 + value / 100);
+  else if (rule.type === "fixed") out = cost + value;
+  return roundPrice(out, rounding);
+}
+function computePrices(p, cfg){
+  const conf = cfg || pricingSettings;
+  const cost = Number(p.cost_jpy);
+  const costOriginal = Number(p.cost_original_jpy) || null;
+  const rule = p.markup_type
+    ? { type: p.markup_type, value: Number(p.markup_value) || 0 }
+    : ruleFor(p.source_site, conf);
+  return {
+    price_jpy: applyMarkup(cost, rule, conf.rounding),
+    price_original_jpy: costOriginal ? applyMarkup(costOriginal, rule, conf.rounding) : null,
+    rule,
+  };
+}
+
+async function loadPricingSettings(){
+  try {
+    const d = await getDoc(doc(db, "settings", "pricing"));
+    if (d.exists() && d.data() && d.data().rules) pricingSettings = d.data();
+  } catch (err) {
+    console.warn("讀取加價設定失敗，先用預設值", err);
+  }
+  renderPricingPanel();
+}
+
+function renderPricingPanel(){
+  const wrap = document.getElementById("pricingRules");
+  const rules = pricingSettings.rules || {};
+  wrap.innerHTML = Object.keys(RULE_LABELS).map(key => {
+    const r = rules[key] || { type: "none", value: 0 };
+    return `<div class="fields" style="margin-bottom:6px;" data-rule="${key}">
+      <div class="field"><label>來源</label>
+        <input type="text" value="${esc(RULE_LABELS[key])}" disabled></div>
+      <div class="field"><label>加價方式</label>
+        <select data-rule-type="${key}">
+          <option value="none" ${r.type==="none"?"selected":""}>不加價（照抓）</option>
+          <option value="percent" ${r.type==="percent"?"selected":""}>加百分比 %</option>
+          <option value="fixed" ${r.type==="fixed"?"selected":""}>加固定金額 ¥</option>
+        </select></div>
+      <div class="field"><label>數值</label>
+        <input type="number" data-rule-value="${key}" value="${r.value ?? 0}"></div>
+      <div class="field"><label>試算：來源 ¥1,000 →</label>
+        <input type="text" data-rule-preview="${key}" disabled></div>
+    </div>`;
+  }).join("");
+  document.getElementById("roundingSelect").value = pricingSettings.rounding || "10";
+  wrap.querySelectorAll("[data-rule-type],[data-rule-value]").forEach(el => {
+    el.addEventListener("input", updatePricingPreview);
+  });
+  document.getElementById("roundingSelect").addEventListener("change", updatePricingPreview);
+  updatePricingPreview();
+}
+
+function readPricingForm(){
+  const rules = {};
+  document.querySelectorAll("[data-rule-type]").forEach(sel => {
+    const key = sel.dataset.ruleType;
+    const valEl = document.querySelector(`[data-rule-value="${key}"]`);
+    rules[key] = { type: sel.value, value: Number(valEl.value) || 0 };
+  });
+  return { rules, rounding: document.getElementById("roundingSelect").value };
+}
+
+function updatePricingPreview(){
+  const cfg = readPricingForm();
+  document.querySelectorAll("[data-rule-preview]").forEach(el => {
+    const rule = cfg.rules[el.dataset.rulePreview];
+    const v = applyMarkup(1000, rule, cfg.rounding);
+    el.value = v == null ? "-" : `¥${v.toLocaleString()}（賺 ¥${(v - 1000).toLocaleString()}）`;
+  });
+}
+
+document.getElementById("savePricingBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("pricingStatus");
+  try {
+    pricingSettings = readPricingForm();
+    await setDoc(doc(db, "settings", "pricing"), pricingSettings);
+    const flash = document.getElementById("pricingFlash");
+    flash.style.display = "inline";
+    setTimeout(() => flash.style.display = "none", 2000);
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = "已儲存。之後匯入的商品會自動套用這個規則。";
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "儲存失敗：" + err.message;
+  }
+});
+
+// 改了規則之後，把既有商品的售價一次重算（只動沒有手動指定加價的商品）
+document.getElementById("recalcAllBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("pricingStatus");
+  const targets = allProducts.map(withCost).filter(p => p.cost_jpy && !p.markup_type);
+  if (!targets.length) {
+    statusEl.className = "importStatus";
+    statusEl.textContent = "沒有需要重算的商品（只會重算有來源成本、且沒有單獨設定加價的商品）。";
+    return;
+  }
+  if (!confirm(`會依目前規則重算 ${targets.length} 件商品的售價，確定嗎？`)) return;
+  let done = 0;
+  for (const p of targets) {
+    const r = computePrices(p, readPricingForm());
+    if (r.price_jpy == null) continue;
+    await updateDoc(doc(db, "products", p.id), {
+      price_jpy: r.price_jpy,
+      price_original_jpy: r.price_original_jpy,
+      updated_at: Date.now(),
+    });
+    done++;
+  }
+  statusEl.className = "importStatus ok";
+  statusEl.textContent = `已重算 ${done} 件商品的售價。`;
+});
+
+/* ---------------- 貼連結自動匯入 ---------------- */
+const importBtn = document.getElementById("importBtn");
+const importStatusEl = document.getElementById("importStatus");
+
+importBtn.addEventListener("click", async () => {
+  const url = document.getElementById("importUrl").value.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    importStatusEl.className = "importStatus err";
+    importStatusEl.textContent = "請輸入有效的網址(需以 http/https 開頭)";
+    return;
+  }
+  importBtn.disabled = true;
+  importStatusEl.className = "importStatus";
+  importStatusEl.textContent = "抓取中，請稍候（含照片下載與 AI 潤飾，可能需要 10~30 秒）...";
+  try {
+    const result = await importProductFn({ url });
+    const product = result.data;
+    importStatusEl.className = "importStatus ok";
+    importStatusEl.textContent = `匯入成功！「${product.title_ja || product.title_en}」已直接上架，建議核對一下內容是否正確。`;
+    document.getElementById("importUrl").value = "";
+    document.querySelector('.tab[data-tab="products"]').click();
+    document.getElementById("filterStatus").value = "published";
+    render();
+    setTimeout(() => {
+      const el = document.getElementById("row_" + product.id);
+      if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }, 300);
+  } catch (err) {
+    importStatusEl.className = "importStatus err";
+    importStatusEl.textContent = "匯入失敗：" + (err.message || err);
+  } finally {
+    importBtn.disabled = false;
+  }
+});
+
+/* ---------------- 瀏覽器書籤工具（Amazon / Yodobashi 這類會擋伺服器請求的網站） ---------------- */
+/*
+ * importProduct 是「伺服器主動連線來源網站」，Amazon 會回機器人驗證頁、Yodobashi（Akamai）直接 403，
+ * 都是對方看雲端機房 IP 就攔，不是解析規則能解決的。真正繞得過去的只有「使用者自己的瀏覽器」，
+ * 所以做一個書籤工具（bookmarklet）：使用者在商品頁按一下，直接讀取瀏覽器當下已經載入好的頁面，
+ * 不是重新發請求，抓出標題/價格/圖片/描述複製起來，貼回後台匯入。
+ */
+const BOOKMARKLET_SRC = `(function(){
+  function pickText(sels){
+    for (var i=0;i<sels.length;i++){
+      var el = document.querySelector(sels[i]);
+      if (el) {
+        var t = (el.getAttribute('content') || el.innerText || el.textContent || '').trim();
+        if (t) return t;
+      }
+    }
+    return '';
+  }
+  function pickImages(sels, max){
+    var out = [];
+    for (var i=0;i<sels.length;i++){
+      var els = document.querySelectorAll(sels[i]);
+      for (var j=0;j<els.length;j++){
+        var el = els[j];
+        var u = el.getAttribute('content') || el.getAttribute('src') || el.getAttribute('data-src') || el.getAttribute('href');
+        if (u && /^https?:\\/\\//.test(u) && out.indexOf(u) === -1) out.push(u);
+      }
+    }
+    return out.slice(0, max || 8);
+  }
+  // 沒有 product:price:amount 這類 meta 標籤時，退而求其次直接在頁面可見文字裡找價格
+  // （前兩種規則跟 functions/extract.js 伺服器端解析用的同一套 ¥/円 規則，保持前後台判斷一致）。
+  // 第三種是補的：有些網站的 ¥ 符號是用 CSS 畫上去的圖示或裝飾，不是真的文字，
+  // innerText 抓不到 ¥ 這個字元，價格後面也不一定接著「円」，但幾乎都會標「税込」
+  // （含稅），賣家實測 P-Bandai 就是這種格式——所以再補一條「數字後面接著税込」的規則。
+  function pickPriceFromPageText(){
+    var body = (document.body && document.body.innerText) || '';
+    var m = body.match(/[¥￥]\\s?([\\d,]{2,10})/) ||
+      body.match(/([\\d,]{3,10})\\s?円/) ||
+      body.match(/([\\d,]{3,10})\\s*[（(]?\\s*税込/);
+    return m ? m[1] : '';
+  }
+  // 有些網站（尤其活動／預購頁，例如賣家實測過的 P-Bandai）真正的商品照片只是
+  // 內文裡的 <img>，不會出現在 og:image 這類 meta 標籤裡，只認 meta 常常只抓到
+  // 1 張。改用「圖片實際顯示尺寸夠大」篩選——不用知道這個網站的 class/id
+  // 命名方式，也能濾掉 logo/按鈕/追蹤像素這類小圖，抓到大部分真正的商品照。
+  //
+  // P-Bandai 這類商品頁常見版型是一張大圖＋下面一排縮圖（縮圖本身顯示尺寸
+  // 就只有 60~100px 左右，太高的門檻會把縮圖也濾掉），所以：
+  // 1. 門檻降到 56px（可以擋住大部分導覽列圖示、按鈕、追蹤像素，同時留住縮圖）
+  // 2. 縮圖常見會用 data-src / data-original 這類屬性放真正的大圖網址，
+  //    或包在 <a href="大圖網址"> 裡面，這幾種來源都一併找
+  // 3. 如果有 srcset，挑其中解析度最高的那個網址（比 src 本身更清楚）
+  // 4. 有 lazy-load／輪播屬性（data-src 這類）的圖，就算量出來的尺寸是 0 也一併收，
+  //    因為輪播元件常把「目前沒顯示」的那幾張縮圖設成 display:none 或還沒載入圖片，
+  //    量出來尺寸是 0，用尺寸篩選會誤判成雜訊圖濾掉，但有這些屬性本身就代表它是
+  //    真正要顯示的內容圖（logo/按鈕不會用這種延遲載入寫法），不該只看當下量到的尺寸
+  function pickBestUrlFromImg(el){
+    var srcset = el.getAttribute('srcset') || el.getAttribute('data-srcset');
+    if (srcset) {
+      var candidates = srcset.split(',').map(function(s){ return s.trim().split(/\\s+/); });
+      candidates.sort(function(a,b){ return (parseInt(b[1])||0) - (parseInt(a[1])||0); });
+      if (candidates[0] && candidates[0][0]) return candidates[0][0];
+    }
+    return el.currentSrc || el.getAttribute('data-original') || el.getAttribute('data-zoom-image') ||
+      el.getAttribute('data-large') || el.getAttribute('data-src') || el.src;
+  }
+  function hasLazyLoadHint(el){
+    return !!(el.getAttribute('data-src') || el.getAttribute('data-original') ||
+      el.getAttribute('data-zoom-image') || el.getAttribute('data-large') ||
+      el.getAttribute('srcset') || el.getAttribute('data-srcset'));
+  }
+  function pickLargeImages(max, minSize){
+    var out = [];
+    var imgs = document.querySelectorAll('img');
+    for (var i=0;i<imgs.length && out.length<(max||8);i++){
+      var el = imgs[i];
+      var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+      var w = el.naturalWidth || el.width || (rect && rect.width) || 0;
+      var h = el.naturalHeight || el.height || (rect && rect.height) || 0;
+      var bigEnough = w >= (minSize || 56) && h >= (minSize || 56);
+      if (!bigEnough && !hasLazyLoadHint(el)) continue;
+      var u = pickBestUrlFromImg(el);
+      // 縮圖常常包在 <a href="真正的大圖網址"> 裡面，父層連結網址通常比縮圖本身更清楚
+      var parentA = el.closest ? el.closest('a') : null;
+      if (parentA) {
+        var href = parentA.getAttribute('href') || '';
+        if (/\\.(jpg|jpeg|png|webp)(\\?|$)/i.test(href)) u = href;
+      }
+      if (u && /^https?:\\/\\//.test(u) && out.indexOf(u) === -1) out.push(u);
+    }
+    return out;
+  }
+  var host = location.hostname;
+  var title, priceText, images, desc;
+  if (/amazon\\./.test(host)) {
+    title = pickText(['#productTitle','meta[property="og:title"]']);
+    priceText = pickText(['.a-price .a-offscreen','#priceblock_ourprice','#priceblock_dealprice','#corePrice_feature_div .a-offscreen','.a-price-whole']);
+    images = pickImages(['#imgTagWrapperId img','#landingImage','meta[property="og:image"]'], 8);
+    desc = pickText(['#feature-bullets','#productDescription','meta[name="description"]']);
+  } else if (/yodobashi\\.com/.test(host)) {
+    title = pickText(['h1','meta[property="og:title"]']);
+    priceText = pickText(['.priceText','[class*="Price"]','[class*="price"]','meta[itemprop="price"]']);
+    images = pickImages(['img[class*="product"]','meta[property="og:image"]'], 8);
+    desc = pickText(['meta[name="description"]','meta[property="og:description"]']);
+  } else {
+    title = pickText(['meta[property="og:title"]','title']);
+    priceText = pickText(['meta[property="product:price:amount"]']) || pickPriceFromPageText();
+    images = pickImages(['meta[property="og:image"]'], 8);
+    desc = pickText(['meta[name="description"]']);
+  }
+  // meta 抓到的照片不夠多時，補上頁面裡實際顯示尺寸夠大的 <img>（見上面 pickLargeImages 說明）
+  if (images.length < 8) {
+    var extra = pickLargeImages(8 - images.length);
+    for (var ei=0; ei<extra.length; ei++) {
+      if (images.indexOf(extra[ei]) === -1) images.push(extra[ei]);
+    }
+  }
+  var price = priceText ? Number(String(priceText).replace(/[^0-9.]/g,'')) : null;
+  var data = { url: location.href, source_site: host, title: title || '', price: price || null, images: images, description: desc || '' };
+  var json = JSON.stringify(data);
+  function showBox(msg){
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;top:10px;right:10px;z-index:999999;background:#0E4B4F;color:#fff;padding:14px 18px;border-radius:8px;font-size:13px;max-width:320px;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:sans-serif;white-space:pre-wrap;';
+    box.textContent = msg;
+    document.body.appendChild(box);
+    setTimeout(function(){ box.remove(); }, 5000);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(function(){
+      showBox('已複製商品資料，回到 CK 後台貼上即可\\n標題: ' + (title || '(抓不到，請確認頁面已完整載入)') + '\\n價格: ' + (price || '(抓不到)') + '\\n照片: ' + images.length + ' 張');
+    }).catch(function(){
+      window.prompt('自動複製失敗，請手動複製以下內容：', json);
+    });
+  } else {
+    window.prompt('請手動複製以下內容：', json);
+  }
+})();`;
+
+document.getElementById("bookmarkletLink").href = "javascript:" + encodeURIComponent(BOOKMARKLET_SRC);
+
+// 手機沒有書籤列可以拖曳，改成複製到剪貼簿，讓賣家自己貼進手動加的書籤網址欄。
+document.getElementById("copyBookmarkletBtn").addEventListener("click", async () => {
+  const bookmarkletUrl = document.getElementById("bookmarkletLink").href;
+  const statusEl = document.getElementById("copyBookmarkletStatus");
+  try {
+    await navigator.clipboard.writeText(bookmarkletUrl);
+    statusEl.textContent = "已複製，去手機瀏覽器貼到書籤網址欄";
+  } catch (e) {
+    window.prompt("自動複製失敗，請手動複製以下內容：", bookmarkletUrl);
+  }
+});
+
+document.getElementById("clipImportBtn").addEventListener("click", async () => {
+  const input = document.getElementById("clipDataInput");
+  const statusEl = document.getElementById("clipImportStatus");
+  const raw = input.value.trim();
+  if (!raw) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "請先在商品頁按過書籤工具，把複製到的資料貼在上面";
+    return;
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "貼上的內容不是完整的資料，請確認複製時沒有漏字";
+    return;
+  }
+  const btn = document.getElementById("clipImportBtn");
+  btn.disabled = true;
+  statusEl.className = "importStatus";
+  statusEl.textContent = "匯入中，請稍候（含照片下載與 AI 潤飾）...";
+  try {
+    const result = await importFromDataFn(data);
+    const product = result.data;
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = `匯入成功！「${product.title_ja || product.title_en}」已直接上架，建議核對一下內容是否正確。`;
+    input.value = "";
+    document.querySelector('.tab[data-tab="products"]').click();
+    document.getElementById("filterStatus").value = "published";
+    render();
+    setTimeout(() => {
+      const el = document.getElementById("row_" + product.id);
+      if (el) { el.classList.add("open"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }, 300);
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "匯入失敗：" + (err.message || err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+/**
+ * 商品頁面解析器測試（不需網路、不需部署）：
+ *   cd functions && node extract.test.js
+ */
+
+const assert = require("assert");
+const { absoluteUrl, extractFromHtml } = require("./extract");
+
+let passed = 0;
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+    console.log(`  ✓ ${name}`);
+  } catch (err) {
+    console.error(`  ✗ ${name}\n    ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
+console.log("absoluteUrl");
+test("相對路徑轉絕對網址", () => {
+  assert.strictEqual(
+    absoluteUrl("/img/item.jpg", "https://www.takashimaya.co.jp/shop/item/123.html"),
+    "https://www.takashimaya.co.jp/img/item.jpg"
+  );
+});
+test("protocol-relative 網址補上 https", () => {
+  assert.strictEqual(
+    absoluteUrl("//cdn.example.jp/a.jpg", "https://shop.example.jp/item/1"),
+    "https://cdn.example.jp/a.jpg"
+  );
+});
+test("絕對網址保持不變", () => {
+  assert.strictEqual(
+    absoluteUrl("https://cdn.example.jp/a.jpg", "https://shop.example.jp/item/1"),
+    "https://cdn.example.jp/a.jpg"
+  );
+});
+test("data: URI 與空值一律略過", () => {
+  assert.strictEqual(absoluteUrl("data:image/png;base64,AAA", "https://a.jp/"), null);
+  assert.strictEqual(absoluteUrl("", "https://a.jp/"), null);
+  assert.strictEqual(absoluteUrl(null, "https://a.jp/"), null);
+});
+
+console.log("extractFromHtml — og:meta 型商品頁");
+test("抓到標題、描述、圖片、價格", () => {
+  const html = `<html><head>
+    <meta property="og:title" content="ルイ・ヴィトン モノグラム トートバッグ">
+    <meta property="og:description" content="新品未使用。サイズ 30x25x15cm。">
+    <meta property="og:image" content="/images/item_main.jpg">
+    <meta property="og:image" content="//cdn.example.jp/images/item_sub.jpg">
+    <meta property="product:price:amount" content="128000">
+    <meta property="product:price:currency" content="JPY">
+  </head><body></body></html>`;
+  const r = extractFromHtml(html, "https://www.takashimaya.co.jp/shop/item/999.html");
+  assert.strictEqual(r.title, "ルイ・ヴィトン モノグラム トートバッグ");
+  assert.match(r.description, /新品未使用/);
+  assert.deepStrictEqual(r.images, [
+    "https://www.takashimaya.co.jp/images/item_main.jpg",
+    "https://cdn.example.jp/images/item_sub.jpg",
+  ]);
+  assert.strictEqual(r.price, 128000);
+  assert.strictEqual(r.currency, "JPY");
+});
+
+console.log("extractFromHtml — JSON-LD 型商品頁");
+test("從 schema.org Product 取得資料", () => {
+  const html = `<html><head><title>店名</title>
+    <script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "セイコー プレザージュ 自動巻き",
+      description: "国内正規品。ケース径 40.5mm。",
+      image: ["https://cdn.example.jp/seiko1.jpg", "/seiko2.jpg"],
+      offers: { "@type": "Offer", price: "78000", priceCurrency: "JPY" },
+    })}</script>
+  </head><body></body></html>`;
+  const r = extractFromHtml(html, "https://shop.example.jp/item/seiko");
+  assert.strictEqual(r.title, "セイコー プレザージュ 自動巻き", "JSON-LD 商品名應優先於網頁 <title>");
+  assert.match(r.description, /国内正規品/);
+  assert.deepStrictEqual(r.images, [
+    "https://cdn.example.jp/seiko1.jpg",
+    "https://shop.example.jp/seiko2.jpg",
+  ]);
+  assert.strictEqual(r.price, 78000);
+});
+
+test("JSON-LD 放在 @graph 裡也讀得到", () => {
+  const html = `<html><head>
+    <script type="application/ld+json">${JSON.stringify({
+      "@graph": [
+        { "@type": "WebSite", name: "サイト" },
+        {
+          "@type": ["Product"],
+          name: "商品名",
+          image: "https://cdn.example.jp/g.jpg",
+          offers: { price: 4980, priceCurrency: "JPY" },
+        },
+      ],
+    })}</script>
+  </head><body></body></html>`;
+  const r = extractFromHtml(html, "https://shop.example.jp/i/1");
+  assert.strictEqual(r.title, "商品名");
+  assert.strictEqual(r.price, 4980);
+});
+
+console.log("extractFromHtml — 容錯");
+test("價格只出現在內文的 ¥12,800 也抓得到", () => {
+  const html = `<html><head><meta property="og:title" content="商品">
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg"></head>
+    <body><div class="price">¥12,800 (税込)</div></body></html>`;
+  const r = extractFromHtml(html, "https://shop.example.jp/i/1");
+  assert.strictEqual(r.price, 12800);
+});
+
+test("價格寫成「3,980円」也抓得到", () => {
+  const html = `<html><head><meta property="og:title" content="商品">
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg"></head>
+    <body><span>3,980円</span></body></html>`;
+  const r = extractFromHtml(html, "https://shop.example.jp/i/1");
+  assert.strictEqual(r.price, 3980);
+});
+
+test("壞掉的 JSON-LD 不會讓整個解析失敗", () => {
+  const html = `<html><head>
+    <meta property="og:title" content="商品">
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg">
+    <script type="application/ld+json">{ 這不是合法 JSON }</script>
+  </head><body></body></html>`;
+  const r = extractFromHtml(html, "https://shop.example.jp/i/1");
+  assert.strictEqual(r.title, "商品");
+  assert.strictEqual(r.images.length, 1);
+});
+
+test("沒有任何圖片時回傳空陣列（由呼叫端提示改用手動上傳）", () => {
+  const r = extractFromHtml("<html><head><title>x</title></head><body></body></html>", "https://a.jp/");
+  assert.deepStrictEqual(r.images, []);
+  assert.strictEqual(r.price, null);
+});
+
+console.log("extractFromHtml — specText（給 AI 抽規格用）");
+test("specText 包含顏色/尺寸等規格內文", () => {
+  const html = `<html><head><meta property="og:title" content="頭皮按摩器">
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg"></head>
+    <body>
+      <script>console.log("不應該出現在 specText 裡");</script>
+      <style>.x{color:red}</style>
+      <dl><dt>色</dt><dd>チャコールブラック／さくらピンク／ミストグレー</dd></dl>
+      <dl><dt>商品番号</dt><dd>0002415762-001-1-08</dd></dl>
+    </body></html>`;
+  const r = extractFromHtml(html, "https://www.takashimaya.co.jp/shopping/product.html?p_cd=1");
+  assert.match(r.specText, /チャコールブラック／さくらピンク／ミストグレー/);
+  assert.match(r.specText, /0002415762-001-1-08/);
+  assert.doesNotMatch(r.specText, /console\.log/);
+});
+
+test("重複的圖片網址會去重", () => {
+  const html = `<html><head>
+    <meta property="og:image" content="https://cdn.example.jp/a.jpg">
+    <meta name="twitter:image" content="https://cdn.example.jp/a.jpg">
+  </head><body></body></html>`;
+  const r = extractFromHtml(html, "https://a.jp/");
+  assert.deepStrictEqual(r.images, ["https://cdn.example.jp/a.jpg"]);
+});
+
+console.log("extractFromHtml — 內文延遲載入的商品照片（peachjohn.co.jp 實測情境）");
+test("JSON-LD 只給 1 張代表圖，內文用 data-src 延遲載入的同系列照片也要抓進來", () => {
+  // 實測 peachjohn.co.jp：JSON-LD 只有一張代表圖，頁面內文其實有 6 張，
+  // 全部用 <img src="lazyloading.png" data-src="真正圖檔"> 延遲載入寫法，
+  // 檔名規律是「商品編號_序號.jpg」。
+  const html = `<html><body>
+    <script type="application/ld+json">
+      {"@context":"http://schema.org/","@type":"Product","name":"プチローズレースブラ",
+       "image":"https://www.peachjohn.co.jp/img/goods/S/103177001_01.jpg",
+       "offers":{"@type":"Offer","price":1800,"priceCurrency":"JPY"}}
+    </script>
+    <img src="/img/usr/common/logo.png" alt="logo">
+    <img src="/img/usr/lazyloading.png" data-src="/img/usr/sb/ONS1000-C.jpg" alt="推薦的其他商品">
+    <img src="/img/usr/lazyloading.png" data-src="/img/usr/common/bnr_pj.jpg" alt="banner">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/L/103177001_01.jpg" alt="商品圖 1">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/1/103177001_02.jpg" alt="商品圖 2">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/2/103177001_03.jpg" alt="商品圖 3">
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.strictEqual(r.images.length, 4, "JSON-LD 的 1 張 + 內文同編號前綴的 3 張");
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/L/103177001_01.jpg"));
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/1/103177001_02.jpg"));
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/2/103177001_03.jpg"));
+  assert.ok(!r.images.some((u) => u.includes("ONS1000-C")), "編號前綴對不起來的推薦商品圖不該混進來");
+  assert.ok(!r.images.some((u) => u.includes("bnr_pj")), "banner 圖不該混進來");
+  assert.ok(!r.images.some((u) => u.includes("logo")), "logo 不該混進來");
+});
+
+test("沒有規律檔名可循時，不會誤抓內文其他圖片", () => {
+  const html = `<html><body>
+    <meta property="og:image" content="https://cdn.example.jp/main.jpg">
+    <img src="/img/logo.png" alt="logo">
+    <img src="/img/unrelated-photo.jpg" alt="不相干的圖">
+  </body></html>`;
+  const r = extractFromHtml(html, "https://cdn.example.jp/");
+  assert.deepStrictEqual(r.images, ["https://cdn.example.jp/main.jpg"]);
+});
+
+console.log("extractFromHtml — 色塊選色（顏色名稱只在 title 屬性裡，色塊本身沒有可見文字）");
+test("抓 class 含 color 且有 title 屬性的色塊，當作顏色選項（實測 peachjohn.co.jp 情境）", () => {
+  // 節錄自實際頁面：目前顏色（アイボリー）的色塊沒有連結，其他顏色
+  // （ピンク）的色塊整個包在 <a> 裡連去別的商品網址——不管有沒有包連結，
+  // 顏色名稱都在 title 屬性上，色塊本身在畫面上看到的只有一張小圖。
+  const html = `<html><body>
+    <div class="block-variation--item-list block-color--item-list">
+      <dl class="block-variation--item block-color--item active" title="アイボリー">
+        <dt><img data-src="/img/goods/S/103177001_01.jpg" alt="アイボリー"></dt>
+      </dl>
+      <dl class="block-variation--item block-color--item" title="ピンク">
+        <dt><a href="/shop/g/g10317700205/"><img data-src="/img/goods/S/103177002_01.jpg"></a></dt>
+      </dl>
+      <dl class="block-variation--item block-color--item" title="レッド">
+        <dt><a href="/shop/g/g10317700305/"><img data-src="/img/goods/S/103177003_01.jpg"></a></dt>
+      </dl>
+    </div>
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.deepStrictEqual(r.colors, ["アイボリー", "ピンク", "レッド"]);
+});
+
+test("沒有顏色色塊時回傳空陣列，不會亂猜", () => {
+  const html = `<html><body><p>沒有任何顏色選項</p></body></html>`;
+  const r = extractFromHtml(html, "https://a.jp/");
+  assert.deepStrictEqual(r.colors, []);
+});
+
+console.log("extractFromHtml — 尺寸選項（同一頁用 radio+label 原地切換，實測 peachjohn.co.jp 情境）");
+test("抓 radio[name=goods]+對應 label 的文字，當作尺寸選項，並濾掉庫存文字", () => {
+  // 節錄自實際頁面：每個尺寸是一個 <input type=\"radio\" name=\"goods\">，
+  // 對應的 <label for=\"同一個 id\"> 裡面有尺寸文字（如 B65）跟庫存文字
+  // （如「在庫あり」），庫存文字要濾掉，不然會混進尺寸名稱裡。
+  const html = `<html><body>
+    <div class="block-size-select-modal--input-area-inner">
+      <input type="radio" name="goods" value="10317700105" id="10317700105" data-js_variation_stock_qty="244" disabled>
+      <label for="10317700105"><span class="mont">B65</span><span class="block-size-select-modal--stock">在庫あり</span></label>
+      <input type="radio" name="goods" value="10317700106" id="10317700106" data-js_variation_stock_qty="240" disabled>
+      <label for="10317700106"><span class="mont">B70</span><span class="block-size-select-modal--stock">在庫あり</span></label>
+      <input type="radio" name="goods" value="10317700199" id="10317700199" data-js_variation_stock_qty="0" disabled>
+      <label for="10317700199"><span class="mont">G75</span><span class="block-size-select-modal--stock">売り切れ</span></label>
+    </div>
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.deepStrictEqual(r.sizes, ["B65", "B70", "G75"]);
+});
+
+test("沒有尺寸 radio 時回傳空陣列，不會亂猜", () => {
+  const html = `<html><body><p>沒有任何尺寸選項</p></body></html>`;
+  const r = extractFromHtml(html, "https://a.jp/");
+  assert.deepStrictEqual(r.sizes, []);
+});
+
+console.log(`\n${passed} 項測試通過${process.exitCode ? "，有測試失敗" : ""}`);
