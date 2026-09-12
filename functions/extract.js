@@ -48,6 +48,17 @@ function extractFromHtml(html, pageUrl) {
     if (c) images.push(c);
   });
 
+  // 有些網站的顏色選項是色塊/縮圖形式（不是下拉選單），色塊本身沒有可見文字，
+  // 顏色名稱只放在 title 屬性裡（實測 peachjohn.co.jp：
+  // <dl class="block-variation--item block-color--item" title="アイボリー">…</dl>，
+  // 其他顏色的 <dl> 甚至是連到別的商品網址，色塊本身完全沒有可見文字可以抓）。
+  // 抓 class 名稱含「color」且有 title 屬性的元素，把 title 收集起來當顏色選項。
+  let colors = [];
+  $('[class*="color"][title]').each((_, el) => {
+    const t = ($(el).attr("title") || "").trim();
+    if (t && t.length <= 20 && !colors.includes(t)) colors.push(t);
+  });
+
   let priceRaw =
     $('meta[property="product:price:amount"]').attr("content") ||
     $('meta[itemprop="price"]').attr("content") ||
@@ -156,6 +167,7 @@ function extractFromHtml(html, pageUrl) {
     price,
     currency,
     specText,
+    colors,
   };
 }
 

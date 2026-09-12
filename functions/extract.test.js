@@ -202,4 +202,32 @@ test("沒有規律檔名可循時，不會誤抓內文其他圖片", () => {
   assert.deepStrictEqual(r.images, ["https://cdn.example.jp/main.jpg"]);
 });
 
+console.log("extractFromHtml — 色塊選色（顏色名稱只在 title 屬性裡，色塊本身沒有可見文字）");
+test("抓 class 含 color 且有 title 屬性的色塊，當作顏色選項（實測 peachjohn.co.jp 情境）", () => {
+  // 節錄自實際頁面：目前顏色（アイボリー）的色塊沒有連結，其他顏色
+  // （ピンク）的色塊整個包在 <a> 裡連去別的商品網址——不管有沒有包連結，
+  // 顏色名稱都在 title 屬性上，色塊本身在畫面上看到的只有一張小圖。
+  const html = `<html><body>
+    <div class="block-variation--item-list block-color--item-list">
+      <dl class="block-variation--item block-color--item active" title="アイボリー">
+        <dt><img data-src="/img/goods/S/103177001_01.jpg" alt="アイボリー"></dt>
+      </dl>
+      <dl class="block-variation--item block-color--item" title="ピンク">
+        <dt><a href="/shop/g/g10317700205/"><img data-src="/img/goods/S/103177002_01.jpg"></a></dt>
+      </dl>
+      <dl class="block-variation--item block-color--item" title="レッド">
+        <dt><a href="/shop/g/g10317700305/"><img data-src="/img/goods/S/103177003_01.jpg"></a></dt>
+      </dl>
+    </div>
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.deepStrictEqual(r.colors, ["アイボリー", "ピンク", "レッド"]);
+});
+
+test("沒有顏色色塊時回傳空陣列，不會亂猜", () => {
+  const html = `<html><body><p>沒有任何顏色選項</p></body></html>`;
+  const r = extractFromHtml(html, "https://a.jp/");
+  assert.deepStrictEqual(r.colors, []);
+});
+
 console.log(`\n${passed} 項測試通過${process.exitCode ? "，有測試失敗" : ""}`);

@@ -390,10 +390,13 @@ exports.importProduct = onCall(
       description_zh: ai.description_zh || "",
       title_en: ai.title_en || ai.title_ja || extracted.title || "",
       description_en: ai.description_en || "",
-      // 顏色以專用解析器抓到的實際顏色為準（AI 是用猜的），沒有才用 AI 的
+      // 顏色優先順序：Uniqlo/GU 專用解析器 > 通用解析器從 DOM 抓到的色塊 title
+      // （實測 peachjohn.co.jp 這種色塊選色的網站）> AI 用猜的（都抓不到才退這步）
       colors: (apparel && apparel.colors.length)
         ? apparel.colors
-        : (Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : []),
+        : (extracted.colors && extracted.colors.length)
+          ? extracted.colors
+          : (Array.isArray(ai.colors) ? ai.colors.filter((c) => typeof c === "string" && c.trim()) : []),
       // 服飾用的尺寸清單（S/M/L…）；家電那種單一尺寸描述仍走 size 欄位
       sizes: (apparel && apparel.sizes) || [],
       variants: (apparel && apparel.variants) || [],
