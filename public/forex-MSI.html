@@ -1,41 +1,49 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>匯率報價小助手 Pro V3.1</title>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CK ForEX</title>
+    <link rel="icon" type="image/png" href="ck-forex-favicon.png">
+    <link rel="apple-touch-icon" href="ck-forex-icon-180.png">
+    <link rel="manifest" href="ck-forex-manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CK ForEX">
+    <meta name="theme-color" content="#2c3e50">
     <style>
-        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); padding: 10px; margin: 0; }
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; --font-size: 16px; }
+        * { font-family: "Meiryo", "メイリオ", sans-serif; }
+        body { background: var(--bg); padding: 10px; margin: 0; font-size: var(--font-size); }
         .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h2 { color: var(--primary); text-align: left; margin: 0; }
-        .sub-title { text-align: left; color: #888; font-size: 12px; margin-bottom: 15px; }
-        
+        h2 { color: var(--primary); text-align: left; margin: 0; font-size: var(--font-size); }
+        .sub-title { text-align: left; color: #888; font-size: var(--font-size); margin-bottom: 15px; }
+
         .hero-box { background: #fff9db; padding: 15px; border-radius: 10px; border: 2px solid #f1c40f; margin-bottom: 15px; }
-        .hero-box input { width: 100%; padding: 10px; font-size: 24px; font-weight: bold; color: #2c3e50; border: 1px solid #f1c40f; border-radius: 8px; text-align: left; box-sizing: border-box; }
+        .hero-box input { width: 100%; padding: 10px; font-size: var(--font-size); font-weight: bold; color: #2c3e50; border: 1px solid #f1c40f; border-radius: 8px; text-align: left; box-sizing: border-box; }
 
         .mc-box { background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fab1a0; }
-        .mc-amount-hint { font-size: 11px; color: #e74c3c; margin-top: 4px; font-weight: bold; }
-        .mc-mid-rate { text-align: left; font-size: 13px; color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; }
+        .mc-amount-hint { font-size: var(--font-size); color: #e74c3c; margin-top: 4px; font-weight: bold; }
+        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; white-space: nowrap; }
 
         .wise-box { background: #eef5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #74b9ff; }
-        
+
         .flex-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .flex-row div { flex: 1; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: var(--font-size); color: #555; white-space: nowrap; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: var(--font-size); box-sizing: border-box; }
 
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
-        .btn { flex: 2; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-reset { flex: 1; padding: 15px; background: var(--reset-color); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        
+        .btn { flex: 2; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
+        .btn-reset { flex: 1; padding: 15px; background: var(--reset-color); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
+
         .result { margin-top: 20px; display: none; }
         .profit-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .profit-table th { background: var(--accent); color: white; padding: 10px; font-size: 14px; }
-        .profit-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 15px; }
+        .profit-table th { background: var(--accent); color: white; padding: 10px; font-size: var(--font-size); }
+        .profit-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: var(--font-size); }
         .profit-table tr:nth-child(even) { background: #f9fdfb; }
         .tag-profit { color: var(--accent); font-weight: bold; }
         .tag-price { color: var(--primary); font-weight: bold; }
@@ -49,7 +57,7 @@
     
     <div class="hero-box">
         <label style="color: #e67e22; text-align: left;">🌟 顧客要兌換的金額 (JPY 金額)</label>
-        <input type="number" id="amount" placeholder="輸入金額（日幣）" step="10000" oninput="syncAmount()">
+        <input type="number" id="amount" placeholder="譬如：300000" step="10000" oninput="syncAmount()">
     </div>
 
     <div class="mc-box">
@@ -80,7 +88,7 @@
             </div>
             <div>
                 <label>Wise 顯示的 MYR</label>
-                <input type="number" id="wiseMYR" placeholder="輸入馬幣" oninput="calcAll()">
+                <input type="number" id="wiseMYR" placeholder="譬如：10621" oninput="calcAll()">
             </div>
         </div>
     </div>
@@ -120,7 +128,8 @@ function calcAll() {
 
     if (mcSell > 0 && mcBuy > 0) {
         const midRate = (mcSell + mcBuy) / 2;
-        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5);
+        const midAmount = amount * midRate;
+        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + midAmount.toLocaleString(undefined, {maximumFractionDigits: 0});
     } else {
         document.getElementById('mcMidRateDisplay').innerText = "0.00000";
     }

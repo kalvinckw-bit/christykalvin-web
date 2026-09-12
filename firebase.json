@@ -7,22 +7,23 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "headers": [{
-      "source": "**/*.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" }
-      ]
-    }]
-  },
-  "firestore": {
-    "database": "(default)",
-    "rules": "firestore.rules"
-  },
-  "functions": [{
-    "source": "functions",
-    "codebase": "default",
-    "runtime": "nodejs20"
-  }]
+    "headers": [
+      {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Pragma", "value": "no-cache" },
+          { "key": "Expires", "value": "0" }
+        ]
+      },
+      {
+        "source": "**/*.json",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Pragma", "value": "no-cache" },
+          { "key": "Expires", "value": "0" }
+        ]
+      }
+    ]
+  }
 }
