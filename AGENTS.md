@@ -12,8 +12,9 @@
 >    - **全集團所有專案在 Google Drive 均有對應實體鏡像目錄（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`）。此同步並非自動，沒有任何 webhook 或排程機制，完全由 AI 每次收工時自主執行！**
 >    - **任何 AI 執行 `end` 時，必須：**
 >      1. **找出本次 Session 改動過的所有檔案（例如使用 `git diff --name-only <上次同步commit>..HEAD` 或實體狀態比對）。**
->      2. **把每一個改動過的檔案同步更新/上傳至 Google Drive 該專案之根目錄鏡像對應路徑（`G:\マイドライブ\Projects\ChristyKalvinWeb\...`，若在無本地磁碟掛載之環境如 Web Claude，則調用 Google Drive API 上傳）。**
->      3. **在收工交接報告（SESSION HANDOFF）中，明確列出「這次同步了哪些檔案、對應到 Drive 哪個路徑或檔案 ID」，嚴禁只寫「已同步」三個字，嚴禁省略！**
+>      2. **把每一個改動過的檔案同步更新/上傳至 Google Drive 該專案之根目錄鏡像對應路徑。**
+>         - ⚠️ **Web / 雲端沙盒環境安全防護**：在無本地掛載磁碟（無 `G:\` 實體路徑）之雲端/Web AI 環境（如 Web 或手機端 Claude）中，**嚴禁調用 Google Drive API 執行破壞性的「刪除檔案（Trash）再重新建立」**！Web 端 AI 收工時只需確保代碼正確 `git add`、`git commit` 並 `git push` 至 GitHub 遠端倉庫；本機桌端（Antigravity）會負責實體磁碟目錄的 1:1 秒級鏡像同步與還原。
+>      3. **在收工交接報告（SESSION HANDOFF）中，明確列出「這次同步了哪些檔案、對應到 Drive 哪個路徑或 GitHub Commit」**，嚴禁只寫「已同步」三個字，嚴禁省略！
 >      4. **嚴禁跳過這一步、嚴禁假設「應該還是最新的」——忘記檢查=雲端鏡像停擺！**
 
 
