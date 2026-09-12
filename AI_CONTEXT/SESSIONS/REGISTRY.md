@@ -130,9 +130,10 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
 - **Machine**: 雲端 Linux 容器（非本機）
 - **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
-- **State**: Standby / Synchronized
-- **Heartbeat**: 2026-09-09
-- **Current Objective**: Uniqlo/GU 服飾深度解析、加價利潤機制 (markup)、照片彈窗優化與 Functions 正式專案部署修復已完成。
+- **State**: Standby / Synchronized（GitHub 已同步；Google Drive 鏡像有 3 個檔案未同步，見該身分 session 檔）
+- **Heartbeat**: 2026-09-12
+- **Current Objective**: PWA 強制更新、主題標籤系統、P-Bandai 書籤工具修復、售價¥0真兇修復、
+  peachjohn.co.jp 通用解析（照片/顏色/尺寸）三連修已完成並驗證部署上線。
 - **Reserved Files**: None
 - **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
   被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`

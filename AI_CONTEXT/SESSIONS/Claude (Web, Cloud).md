@@ -199,3 +199,85 @@ functions 那邊只要報錯（先是「其他站台 functions 會被刪除」�
 1. 實測後台貼上 Uniqlo / GU 連結，確認規格、尺寸、照片及加價公式運作正常。
 2. 檢查 GitHub Actions CI 自動部署狀態。
 
+---
+
+## Session 2026-09-11 ~ 2026-09-12 — Claude (Web, Cloud)
+
+### Status: Completed & Deployed（全部經 deploy-shopping.yml 驗證上線）
+- **Branch**: `claude/ec-resale-platform-ku6xau`
+- **Latest Commit**: `f99de32`
+
+### Work Completed（做過的事情）
+1. **PWA 強制更新機制**：`shopping.html`/`shopping-admin.html` 加到手機主畫面後常顯示舊版
+   （iOS bfcache）。CI 部署時把 commit SHA 寫進 `public/build-version.json`，頁面載入/
+   回到前景時比對，兜不起來就自動整頁重整。commit `71fe1e3`、CI 改動見 `deploy-shopping.yml`
+   的「Stamp hosting version」步驟。
+2. **前台頭部排版修復**：齒輪圖示在窄螢幕擠到單獨一行 → 用 flex `order` 調整齒輪/語言切換/
+   搜尋框順序解決（`d0a82f4`）。
+3. **主題標籤系統（新功能）**：跟分類無關的另一套篩選（例如 moomin、Hello Kitty），
+   `settings/themes`（公開讀取、管理員寫入），後台用點選 chip 新增/管理，前台有對應篩選列，
+   AND 條件跟分類篩選並存。後來把商品編輯裡的「主題標籤」欄位也從逗號分隔文字框改成
+   跟分類一樣的點選 chip picker（避免打字打錯字對不上前台篩選）。（`52a7499` 起、`44322f1`）
+4. **分類下拉選單直接新增**：商品編輯的分類 select 加「➕ 新增分類...」選項，跳出中/英
+   雙欄位彈出視窗（不是 `window.prompt()`——賣家要求要跟既有分類管理 UI 一樣有兩個欄位），
+   寫入後只 patch 所有畫面上的下拉選單，不觸發整頁 render()（避免弄丟其他商品列未存檔內容）。
+   （`7e3772e`、`7be39a4`）
+5. **P-Bandai 瀏覽器書籤工具修復（多輪迭代）**：圖片尺寸門檻從 200px 降到 56px，加
+   srcset/data-src/data-original/data-zoom-image 偵測，加 `<a href>` 父層連結備援，
+   加「有 lazy-load 屬性就不看量到的尺寸」的例外規則。（`b2d4315` 起）
+6. **售價 ¥0 真兇修復**：`Number(null) === 0`（不是 NaN），書籤工具沒抓到價格時 `cost_jpy`
+   是 `null`，沒特別處理會被算成成本 ¥0、生出看起來正常但完全錯誤的售價 ¥0。`pricing.js`
+   改用 `== null` 明確判斷，補回歸測試。（`5487bb6`）
+7. **後台表單易用性一連串修復**：售價/原價都加即時利潤徽章（打字當下即時算賺多少%，
+   不用按儲存）；改「加價方式/數值」直接即時算出售價填進「售價」欄位（不用再按「依規則
+   重算售價」）；欄位標籤 `min-height` 固定避免同排輸入框高度對不齊；徽章與長標籤文字用
+   `flex-wrap` 避免擠壓。（`da840cf`、`b86c545`、`9380a1a`、`7db22fd`）
+8. **peachjohn.co.jp 通用解析三連修（伺服器端 `functions/extract.js`）**：
+   - 只抓到 1 張照片：JSON-LD 只給代表圖，其餘照片是內文 `<img src="lazyloading.png"
+     data-src="真正圖檔">` 延遲載入寫法。加「gallery-code-prefix」技巧：從已知圖片檔名
+     反推商品編號前綴，掃描全頁同前綴圖片。（`d0db641`）
+   - 其他顏色抓不到：顏色色塊本身沒有可見文字，名稱藏在 `title` 屬性（`[class*="color"]
+     [title]` 通用規則）。（`c4f3a0b`）明確跟賣家確認：只有目前這個顏色（預設抓到的
+     ivory）的照片，其他顏色是完全不同的商品網址，沒有另外發請求抓，這是已知範圍限制。
+   - 尺寸抓不到：跟顏色色塊同一套 `data-js_variation_*` 標記家族，但尺寸是同一頁用
+     `<input type="radio" name="goods">` + `<label for>` 讓 JS 原地切換（不像顏色要連去
+     別的網址），整份清單就在這一頁 HTML 裡。加 `input[type="radio"][name="goods"][id]`
+     + 對應 `label[for]` 文字（濾掉庫存文字）的通用規則，`index.js` 的 `sizes` 欄位優先序
+     比照 colors：Uniqlo/GU 專用解析器 > 通用解析器 > 空陣列。（`94c20ad`、`1ada878`、
+     `85b10ea`、`f99de32`）
+   - 每次都先用 `scripts/probe.js` + `.github/workflows/probe-url.yml` 查真實 HTML 結構，
+     驗證後才動 `extract.js`，不憑猜測改解析規則——本 session 延續既有規範。
+9. 全程用「抽取 `<script>` 內容 → `node --check`」語法驗證、`extract.test.js`/`pricing.test.js`
+   全數跑過，才 commit/push；`deploy-shopping.yml` 的 sha256 內容比對 + Cloud Functions
+   SHA 比對每次都確認過部署真的生效才回報賣家。
+
+### Files Modified（本 session 異動的檔案，含尚待 Drive 同步的差異範圍 base=`9380a1a`）
+- `.github/workflows/deploy-shopping.yml`
+- `firestore.rules`
+- `functions/extract.js`, `functions/extract.test.js`, `functions/index.js`
+- `functions/pricing.js`, `functions/pricing.test.js`
+- `public/shopping-admin.html`, `public/shopping.html`
+- `scripts/probe.js`
+
+### ⚠️ Google Drive 鏡像同步狀態（本次未完全同步，下一位 AI 或使用者請注意）
+- **已完成同步**（舊檔已丟進垃圾桶、新檔已上傳最新內容）：
+  `deploy-shopping.yml`、`firestore.rules`、`extract.js`、`extract.test.js`、
+  `pricing.js`、`pricing.test.js`、`probe.js`（共 7 個檔案）。
+- **未完成同步、且目前 Drive 上完全沒有這 3 個檔案**（使用者中途明確要求停止 Drive 同步，
+  當時舊版本已被丟進垃圾桶但新版本還沒上傳）：
+  - `functions/index.js`（`G:\マイドライブ\Projects\ChristyKalvinWeb\functions\index.js`）
+  - `public/shopping.html`（`G:\マイドライブ\Projects\ChristyKalvinWeb\public\shopping.html`）
+  - `public/shopping-admin.html`（`G:\マイドライブ\Projects\ChristyKalvinWeb\public\shopping-admin.html`）
+  - **下一位 AI 執行 `end` 時務必優先補完這 3 個檔案的 Drive 同步**（GitHub 上的程式碼本身
+    完全正常、已部署上線，只有 Google Drive 鏡像缺這 3 個檔案）。
+
+### Next Actions / Must-Do
+1. **補完 Google Drive 鏡像同步**：把上面列的 `index.js`、`shopping.html`、
+   `shopping-admin.html` 三個檔案的最新內容上傳到 Drive 對應路徑（trash 舊版已完成，
+   只差 create 新版）。
+2. 已揭露但賣家尚未確認是否要做的功能：peachjohn.co.jp 每個顏色其實是獨立商品網址，
+   目前只抓得到預設顏色（ivory）的照片；要抓其他顏色的照片需要另外對每個顏色的
+   商品網址發請求，屬於新功能，賣家還沒明確要求要做。
+3. 實測 peachjohn.co.jp 尺寸解析：重新匯入 https://www.peachjohn.co.jp/shop/g/g10317700105/
+   確認「尺寸選項」欄位有抓到 B65/B70/B75 等尺寸文字。
+
