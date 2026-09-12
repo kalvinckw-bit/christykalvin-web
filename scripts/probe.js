@@ -341,6 +341,14 @@ async function main() {
     console.log(truncate(body.slice(colorIdx, colorIdx + 1500), 1500));
   }
 
+  section("尺寸選擇區塊（找「サイズ選択」附近的 HTML，看跟顏色色塊是不是同一套結構）");
+  const sizeIdx = body.search(/サイズ選択|サイズ：/);
+  if (sizeIdx === -1) {
+    console.log("（沒找到「サイズ選択」這類文字）");
+  } else {
+    console.log(truncate(body.slice(sizeIdx, sizeIdx + 2200), 2200));
+  }
+
   // extract.js 目前只認 og:image / twitter:image / itemprop=image 這幾種 meta 來源，
   // 有些活動頁（例如 premico 這類預購 LP 頁）真正的商品圖是內文裡的 <img> 標籤，
   // 沒有走 meta，所以現有解析抓不到——先列出來看看有沒有漏掉的圖，再決定要不要
