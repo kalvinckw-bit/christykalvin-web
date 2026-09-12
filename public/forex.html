@@ -23,6 +23,9 @@
 
         .hero-box { background: #fff9db; padding: 15px; border-radius: 10px; border: 2px solid #f1c40f; margin-bottom: 15px; }
         .hero-box input { width: 100%; padding: 10px; font-size: var(--font-size); font-weight: bold; color: #2c3e50; border: 1px solid #f1c40f; border-radius: 8px; text-align: left; box-sizing: border-box; }
+        .quick-amount-group { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .quick-amount-btn { flex: 1; min-width: 0; padding: 8px 4px; font-size: var(--font-size); font-weight: bold; color: #e67e22; background: white; border: 1px solid #f1c40f; border-radius: 8px; cursor: pointer; }
+        .quick-amount-btn:active { background: #f1c40f; color: white; }
 
         .mc-box { background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fab1a0; }
         .mc-amount-hint { font-size: var(--font-size); color: #e74c3c; margin-top: 4px; font-weight: bold; }
@@ -58,6 +61,13 @@
     <div class="hero-box">
         <label style="color: #e67e22; text-align: left;">🌟 顧客要兌換的金額 (JPY 金額)</label>
         <input type="number" id="amount" placeholder="譬如：300000" step="10000" oninput="syncAmount()">
+        <div class="quick-amount-group">
+            <button type="button" class="quick-amount-btn" onclick="setAmount(100000)">10萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(200000)">20萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(300000)">30萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(400000)">40萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(500000)">50萬</button>
+        </div>
     </div>
 
     <div class="mc-box">
@@ -121,6 +131,11 @@ window.addEventListener('pageshow', function(event) {
         window.location.reload();
     }
 });
+
+function setAmount(value) {
+    document.getElementById('amount').value = value;
+    syncAmount();
+}
 
 function syncAmount() {
     const amount = document.getElementById('amount').value;
