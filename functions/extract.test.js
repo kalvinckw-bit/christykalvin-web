@@ -164,4 +164,42 @@ test("重複的圖片網址會去重", () => {
   assert.deepStrictEqual(r.images, ["https://cdn.example.jp/a.jpg"]);
 });
 
+console.log("extractFromHtml — 內文延遲載入的商品照片（peachjohn.co.jp 實測情境）");
+test("JSON-LD 只給 1 張代表圖，內文用 data-src 延遲載入的同系列照片也要抓進來", () => {
+  // 實測 peachjohn.co.jp：JSON-LD 只有一張代表圖，頁面內文其實有 6 張，
+  // 全部用 <img src="lazyloading.png" data-src="真正圖檔"> 延遲載入寫法，
+  // 檔名規律是「商品編號_序號.jpg」。
+  const html = `<html><body>
+    <script type="application/ld+json">
+      {"@context":"http://schema.org/","@type":"Product","name":"プチローズレースブラ",
+       "image":"https://www.peachjohn.co.jp/img/goods/S/103177001_01.jpg",
+       "offers":{"@type":"Offer","price":1800,"priceCurrency":"JPY"}}
+    </script>
+    <img src="/img/usr/common/logo.png" alt="logo">
+    <img src="/img/usr/lazyloading.png" data-src="/img/usr/sb/ONS1000-C.jpg" alt="推薦的其他商品">
+    <img src="/img/usr/lazyloading.png" data-src="/img/usr/common/bnr_pj.jpg" alt="banner">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/L/103177001_01.jpg" alt="商品圖 1">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/1/103177001_02.jpg" alt="商品圖 2">
+    <img src="/img/usr/lazyloading.png" data-src="/img/goods/2/103177001_03.jpg" alt="商品圖 3">
+  </body></html>`;
+  const r = extractFromHtml(html, "https://www.peachjohn.co.jp/shop/g/g10317700105/");
+  assert.strictEqual(r.images.length, 4, "JSON-LD 的 1 張 + 內文同編號前綴的 3 張");
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/L/103177001_01.jpg"));
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/1/103177001_02.jpg"));
+  assert.ok(r.images.includes("https://www.peachjohn.co.jp/img/goods/2/103177001_03.jpg"));
+  assert.ok(!r.images.some((u) => u.includes("ONS1000-C")), "編號前綴對不起來的推薦商品圖不該混進來");
+  assert.ok(!r.images.some((u) => u.includes("bnr_pj")), "banner 圖不該混進來");
+  assert.ok(!r.images.some((u) => u.includes("logo")), "logo 不該混進來");
+});
+
+test("沒有規律檔名可循時，不會誤抓內文其他圖片", () => {
+  const html = `<html><body>
+    <meta property="og:image" content="https://cdn.example.jp/main.jpg">
+    <img src="/img/logo.png" alt="logo">
+    <img src="/img/unrelated-photo.jpg" alt="不相干的圖">
+  </body></html>`;
+  const r = extractFromHtml(html, "https://cdn.example.jp/");
+  assert.deepStrictEqual(r.images, ["https://cdn.example.jp/main.jpg"]);
+});
+
 console.log(`\n${passed} 項測試通過${process.exitCode ? "，有測試失敗" : ""}`);

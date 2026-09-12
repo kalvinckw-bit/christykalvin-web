@@ -94,8 +94,54 @@ function extractFromHtml(html, pageUrl) {
     if (m) priceRaw = m[1].replace(/,/g, "");
   }
 
-  // 相對路徑轉絕對網址，去重後最多取 8 張
-  images = [...new Set(images.map((u) => absoluteUrl(u, pageUrl)).filter(Boolean))].slice(0, 8);
+  // 先把 meta/JSON-LD 抓到的網址轉成絕對網址、去重（還不截斷成 8 張，
+  // 因為等下要拿第一張圖的檔名當基準去找同系列的其他照片）。
+  images = [...new Set(images.map((u) => absoluteUrl(u, pageUrl)).filter(Boolean))];
+
+  // 有些網站 og:image / JSON-LD 只給一張代表圖，真正完整的商品照片是內文用
+  // data-src 這類屬性延遲載入的（實測 peachjohn.co.jp：JSON-LD 只有 1 張，
+  // 頁面內文其實有 6 張，全部用 <img src="lazyloading.png" data-src="真正圖檔">
+  // 這種寫法）。同一件商品的照片檔名通常是「商品編號_序號.副檔名」這種規律
+  // （例如 103177001_01.jpg ~ 103177001_06.jpg）。拿第一張已知圖片的檔名反推出
+  // 這個編號前綴，再去內文所有 <img> 的 src/data-src/srcset 找同前綴的圖——
+  // 不用知道這個網站怎麼命名 class，也不會誤收同一頁其他推薦商品、banner 的
+  // 圖片（檔名前綴對不起來，不會被找到）。
+  const galleryPrefix = (() => {
+    for (const u of images) {
+      const m = u.match(/([A-Za-z0-9]{5,})_\d{1,3}\.(?:jpe?g|png|webp)(?:$|\?)/i);
+      if (m) return m[1];
+    }
+    return null;
+  })();
+  if (galleryPrefix && images.length < 8) {
+    const seen = new Set(images);
+    const galleryRe = new RegExp(
+      `${galleryPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}_\\d{1,3}\\.(?:jpe?g|png|webp)`,
+      "i"
+    );
+    $("img").each((_, el) => {
+      if (images.length >= 8) return;
+      const candidates = [
+        $(el).attr("src"),
+        $(el).attr("data-src"),
+        $(el).attr("data-original"),
+        $(el).attr("data-lazy-src"),
+        $(el).attr("data-zoom-image"),
+      ].filter(Boolean);
+      const srcset = $(el).attr("srcset") || $(el).attr("data-srcset");
+      if (srcset) srcset.split(",").forEach((part) => candidates.push(part.trim().split(/\s+/)[0]));
+      for (const c of candidates) {
+        if (!c || !galleryRe.test(c)) continue;
+        const abs = absoluteUrl(c, pageUrl);
+        if (abs && !seen.has(abs)) {
+          seen.add(abs);
+          images.push(abs);
+        }
+      }
+    });
+  }
+
+  images = images.slice(0, 8);
 
   const priceNum = priceRaw ? Number(String(priceRaw).replace(/[^\d.]/g, "")) : NaN;
   const price = Number.isFinite(priceNum) && priceNum > 0 ? Math.round(priceNum) : null;
