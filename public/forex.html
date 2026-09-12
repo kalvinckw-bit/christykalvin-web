@@ -50,6 +50,8 @@
         .profit-table tr:nth-child(even) { background: #f9fdfb; }
         .tag-profit { color: var(--accent); font-weight: bold; }
         .tag-price { color: var(--primary); font-weight: bold; }
+        .td-share { text-align: center; width: 1%; white-space: nowrap; }
+        .btn-whatsapp { width: 40px; height: 40px; border-radius: 50%; background: #25D366; border: none; font-size: 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -205,20 +207,27 @@ function showResult() {
         }
     } else {
         // 沒填 Money Changer：只憑 Wise 成本，生成 0.5% ~ 3.0% 毛利率對照表
-        headRow.innerHTML = `<th>毛利率</th><th>建議賣價 / 匯率</th>`;
+        headRow.innerHTML = `<th>毛利率</th><th>建議賣價 / 匯率</th><th></th>`;
 
         const costWise = wiseMYR;
         for (let marginPct = 0.5; marginPct <= 3.0001; marginPct += 0.5) {
             const price = costWise / (1 - marginPct / 100);
             const rate = price / amount;
             const netProfit = price - costWise;
-            const priceStr = Math.round(price).toLocaleString();
+            const roundedPrice = Math.round(price);
+            const priceStr = roundedPrice.toLocaleString();
             const netProfitStr = netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）<br>淨賺：RM ${netProfitStr}</td></tr>`;
+            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）<br>淨賺：RM ${netProfitStr}</td><td class="td-share"><button type="button" class="btn-whatsapp" onclick="shareWhatsApp(${amount}, ${roundedPrice})">📲</button></td></tr>`;
         }
     }
 
     document.getElementById('result').style.display = 'block';
+}
+
+function shareWhatsApp(jpyAmount, myrPrice) {
+    const text = `JPY${jpyAmount.toLocaleString()} = RM${myrPrice.toLocaleString()}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
 }
 
 function resetAll() {
