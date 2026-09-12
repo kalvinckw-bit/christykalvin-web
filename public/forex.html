@@ -196,8 +196,10 @@ function showResult() {
         for (let marginPct = 0.5; marginPct <= 3.0001; marginPct += 0.5) {
             const price = costWise / (1 - marginPct / 100);
             const rate = price / amount;
-            const priceStr = price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）</td></tr>`;
+            const netProfit = price - costWise;
+            const priceStr = Math.round(price).toLocaleString();
+            const netProfitStr = netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">RM ${priceStr}（匯率: ${rate.toFixed(5)}）<br>淨賺：RM ${netProfitStr}</td></tr>`;
         }
     }
 
