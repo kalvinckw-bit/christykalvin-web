@@ -43,7 +43,16 @@ function extractFromHtml(html, pageUrl) {
     const c = $(el).attr("content") || $(el).attr("href");
     if (c) images.push(c);
   });
+  // itemprop="image" 不是只有主商品的圖片會用這個屬性——實測 intimissimi.com：
+  // 頁面下方「推薦商品」那排縮圖，每一格也各自標了 itemprop="image"（各縮圖自己
+  // 也是一份 Product 微資料，用來讓每個推薦商品都能出現在搜尋引擎的商品卡片），
+  // 混在一起抓的話會把完全不相干的商品照片也收進來（實測抓到的第 2、3 張其實是
+  // 別的商品）。這類「商品列表縮圖」幾乎都會在 class 裡帶上 tile 這個字（不是這個
+  // 網站專屬的命名習慣，是很多電商模板通用的叫法），主商品自己的大圖/輪播圖則不會，
+  // 用這個排除掉列表縮圖就能保留主商品自己的照片。
   $('[itemprop="image"]').each((_, el) => {
+    const cls = $(el).attr("class") || "";
+    if (/tile/i.test(cls)) return;
     const c = $(el).attr("content") || $(el).attr("src");
     if (c) images.push(c);
   });

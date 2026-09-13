@@ -155,6 +155,24 @@ test("specText 包含顏色/尺寸等規格內文", () => {
   assert.doesNotMatch(r.specText, /console\.log/);
 });
 
+console.log("extractFromHtml — itemprop=image 不該連推薦商品縮圖也一起收（intimissimi.com 實測情境）");
+test("排除 class 含 tile 的 itemprop=image 元素，只留主商品自己的照片", () => {
+  // 節錄自實際頁面結構：推薦商品那排縮圖每一格也帶 itemprop="image"（class 含
+  // "prodTile"），跟主商品自己的輪播圖（class "productImageCarouselItem"）混在
+  // 一起，抓的話會把別的商品照片也收進來。
+  const html = `<html><body>
+    <img class="cc-prodTile-imageContainer-image" itemprop="image" alt="null" src="https://cdn.example.jp/RPD001-M.jpg">
+    <img class="cc-prodTile-imageContainer-image" itemprop="image" alt="null" src="https://cdn.example.jp/RPD001-F.jpg">
+    <img class="productImageCarouselItem" itemprop="image" alt="レース ガーター" src="https://cdn.example.jp/GID97P2127-FI.jpg">
+    <img class="productImageCarouselItem" itemprop="image" alt="レース ガーター" src="https://cdn.example.jp/GID97P2127-M.jpg">
+  </body></html>`;
+  const r = extractFromHtml(html, "https://cdn.example.jp/");
+  assert.deepStrictEqual(r.images, [
+    "https://cdn.example.jp/GID97P2127-FI.jpg",
+    "https://cdn.example.jp/GID97P2127-M.jpg",
+  ]);
+});
+
 test("重複的圖片網址會去重", () => {
   const html = `<html><head>
     <meta property="og:image" content="https://cdn.example.jp/a.jpg">
