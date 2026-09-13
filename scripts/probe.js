@@ -360,6 +360,18 @@ async function main() {
   if (!imgs.length) console.log("（沒有找到）");
   imgs.slice(0, 30).forEach((t) => console.log(" ", truncate(t, 220)));
 
+  // intimissimi.com 這類網站，extract.js 抓到的照片裡混進了明顯是別的商品的圖
+  // （例如商品編號完全不同的 RPD.../LLD... 檔名）。extract.js 目前用
+  // $('[itemprop="image"]') 這條規則會抓「整頁」所有帶這個屬性的元素，不管是不是
+  // 在主商品區塊裡——如果頁面下方的「推薦商品/相關商品」那排 tile 也各自帶
+  // itemprop="image"（這是 SFCC/Demandware 這類電商樣板常見的 SEO 微資料寫法），
+  // 就會把不相干商品的照片也收進來。先列出頁面上所有 itemprop="image" 元素，
+  // 確認是不是這個原因，再決定怎麼收窄規則（例如限定在主商品詳情容器內才抓）。
+  section("itemprop=\"image\" 元素（懷疑推薦商品 tile 把圖片混進來）");
+  const itemImgs = body.match(/<[^>]+itemprop="image"[^>]*>/gi) || [];
+  console.log(`  共 ${itemImgs.length} 個`);
+  itemImgs.slice(0, 12).forEach((t) => console.log(" ", truncate(t, 320)));
+
   await probeFastRetailing(finalUrl);
 }
 
