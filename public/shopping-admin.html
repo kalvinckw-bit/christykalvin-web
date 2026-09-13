@@ -1497,7 +1497,11 @@ const BOOKMARKLET_SRC = `(function(){
   if (/amazon\\./.test(host)) {
     title = pickText(['#productTitle','meta[property="og:title"]']);
     priceText = pickText(['.a-price .a-offscreen','#priceblock_ourprice','#priceblock_dealprice','#corePrice_feature_div .a-offscreen','.a-price-whole']);
-    images = pickImages(['#imgTagWrapperId img','#landingImage','meta[property="og:image"]'], 8);
+    // #imgTagWrapperId / #landingImage / og:image 這三個其實都指向「目前顯示的
+    // 那一張大圖」，同一張圖而已——賣家實測回報「明明有好幾張照片，卻只抓到一張」，
+    // 就是因為完全沒有掃到左側那排縮圖列。Amazon 的縮圖列固定放在 #altImages
+    // 容器裡（每個縮圖一個 <img>，只是顯示尺寸小），把它加進來才能抓到全部照片。
+    images = pickImages(['#altImages img','#imgTagWrapperId img','#landingImage','meta[property="og:image"]'], 8);
     desc = pickText(['#feature-bullets','#productDescription','meta[name="description"]']);
   } else if (/yodobashi\\.com/.test(host)) {
     title = pickText(['h1','meta[property="og:title"]']);
