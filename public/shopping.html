@@ -243,8 +243,8 @@
 </header>
 
 <main>
-  <div class="chipRow" id="chipRow"></div>
   <div class="chipRow" id="themeChipRow" hidden></div>
+  <div class="chipRow" id="chipRow"></div>
   <div class="toolbar2">
     <span class="count" id="countLine"></span>
     <select id="sortSelect">
@@ -373,7 +373,6 @@ function productDesc(p){
 
 let allProducts = [];
 let activeCat = "全部";
-let activeTheme = "全部";
 let fxRate = null;    // 1 JPY = fxRate * localCurrency
 let fxCode = null;    // 例如 "MYR"
 let urlParamHandled = false;
@@ -459,20 +458,38 @@ onSnapshot(doc(db, "settings", "categories"), (snap) => {
   render();
 }, () => { /* 讀不到就沿用預設分類，不影響其他功能 */ });
 
-/* ---------------- 主題標籤 chips（跟分類無關，例如 moomin / Hello Kitty 這種系列） ---------------- */
+/**
+ * 主題標籤（跟分類無關，例如 moomin / Hello Kitty / Seiko 這種系列或聯名）：
+ * 不是獨立的篩選按鈕，是「點了就把標籤名稱加進搜尋框」的輔助小工具，
+ * 放在搜尋框正下方。點多個標籤會疊加成逗號分隔（例如「Seiko，One
+ * Piece，」），實際篩選完全交給搜尋框本身處理——輸入框裡有幾個逗號
+ * 分隔的詞，就是「符合任一個詞」（OR），不是要同時符合全部，
+ * 這樣「Seiko 聯名的 One Piece 周邊」這類跨標籤的合作商品才篩得出來，
+ * 而不是要求一件商品同時掛滿所有點過的標籤才會出現。
+ */
 const themeChipRow = document.getElementById("themeChipRow");
+function searchTokens(){
+  const raw = document.getElementById("searchBox").value;
+  return raw.split(/[，,]/).map(s => s.trim()).filter(Boolean);
+}
 function renderThemeChips(){
   themeChipRow.hidden = themesList.length === 0;
   if (themesList.length === 0) return;
-  const themes = ["全部", ...themesList];
-  themeChipRow.innerHTML = themes.map((t) => {
-    const label = t === "全部" ? (lang === "en" ? "All" : "全部") : t;
-    return `<button class="chip ${t===activeTheme?"active":""}" data-theme="${esc(t)}">${esc(label)}</button>`;
+  const active = searchTokens().map(t => t.toLowerCase());
+  themeChipRow.innerHTML = themesList.map((t) => {
+    const isActive = active.includes(t.toLowerCase());
+    return `<button class="chip ${isActive?"active":""}" data-theme="${esc(t)}">${esc(t)}</button>`;
   }).join("");
   themeChipRow.querySelectorAll(".chip").forEach(btn => {
     btn.addEventListener("click", () => {
-      activeTheme = btn.dataset.theme;
-      themeChipRow.querySelectorAll(".chip").forEach(b => b.classList.toggle("active", b === btn));
+      const box = document.getElementById("searchBox");
+      const tokens = searchTokens();
+      const theme = btn.dataset.theme;
+      if (!tokens.some(t => t.toLowerCase() === theme.toLowerCase())) {
+        tokens.push(theme);
+        box.value = tokens.join("，") + "，";
+      }
+      box.focus();
       render();
     });
   });
@@ -579,15 +596,19 @@ function saleBannerHTML(p){
 }
 
 function render(){
-  const search = document.getElementById("searchBox").value.trim().toLowerCase();
+  const tokens = searchTokens().map(t => t.toLowerCase());
   const sort = document.getElementById("sortSelect").value;
+  renderThemeChips();
 
   let list = allProducts.filter(p => {
     if (activeCat !== "全部" && (p.category || "其他") !== activeCat) return false;
-    if (activeTheme !== "全部" && !(Array.isArray(p.themes) && p.themes.includes(activeTheme))) return false;
-    if (search){
-      const hay = [p.title_zh, p.title_en, p.title_ja].filter(Boolean).join(" ").toLowerCase();
-      if (!hay.includes(search)) return false;
+    if (tokens.length){
+      const titleHay = [p.title_zh, p.title_en, p.title_ja].filter(Boolean).join(" ").toLowerCase();
+      const themeHay = (Array.isArray(p.themes) ? p.themes : []).map(t => t.toLowerCase());
+      // 逗號分隔的每個詞是「或」的關係：符合任一個詞（不管是命中標題文字，
+      // 還是命中主題標籤）就算這件商品符合，不用同時符合全部詞才顯示。
+      const matchesAny = tokens.some(t => titleHay.includes(t) || themeHay.some(th => th.includes(t)));
+      if (!matchesAny) return false;
     }
     return true;
   });
