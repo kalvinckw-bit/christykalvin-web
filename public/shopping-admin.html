@@ -1190,6 +1190,12 @@ document.addEventListener("paste", async (e) => {
   e.preventDefault();
   const id = targetRow.id.replace(/^row_/, "");
   await uploadFilesToProduct(id, files);
+  // 貼上後直接收起這一列的編輯畫面：uploadFilesToProduct() 裡的 updateDoc()
+  // 會觸發 onSnapshot 重新整頁 render()，重新查一次目前畫面上同一個 id 的
+  // 列（而不是繼續用貼上當下抓到的 targetRow），避免拿到 render() 重建前的
+  // 舊節點、關不掉畫面上真正看到的那一列。
+  const freshRow = document.getElementById("row_" + id);
+  if (freshRow) freshRow.classList.remove("open");
 });
 
 async function addPhotos(id){
