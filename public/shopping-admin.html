@@ -1047,7 +1047,7 @@ function rowHTML(p){
     <div class="detail">
       <div class="photoRow">
         ${photosHTML}
-        <div class="addPh" title="新增照片">＋</div>
+        <div class="addPh" title="新增照片（也可以直接複製圖片後 Ctrl+V 貼上，支援一次貼多張）">＋</div>
       </div>
       <div class="fields">
         ${fieldsHTML}
@@ -1148,27 +1148,57 @@ function fileToBase64(file){
   });
 }
 
+/** 把一批檔案（不管是從檔案總管選的，還是剪貼簿貼上的）上傳到某個商品，共用同一套邏輯。 */
+async function uploadFilesToProduct(id, files){
+  const p = allProducts.find(x => x.id === id);
+  const urls = [...((p && p.photos) || [])];
+  for (const file of files) {
+    try {
+      const dataBase64 = await fileToBase64(file);
+      const res = await uploadPhotoFn({
+        productId: id, filename: file.name || "pasted.png", contentType: file.type, dataBase64
+      });
+      urls.push(res.data.url);
+      if (res.data.warning) alert(res.data.warning);
+    } catch (err) {
+      alert(`照片「${file.name || "剪貼簿圖片"}」上傳失敗：` + (err.message || err));
+    }
+  }
+  await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+}
+
+// 剪貼簿直接貼圖：複製一張（或用系統的多選複製，剪貼簿本來就能放多個檔案）圖片後，
+// 不用每次點「＋」開檔案總管選檔，直接在頁面上 Ctrl+V 就會上傳到目前在編輯的商品。
+// 「目前在編輯的商品」判斷：優先用滑鼠/鍵盤目前聚焦的欄位所在的那一列；如果剛好沒有
+// 聚焦在任何欄位上（例如貼上前只是滑鼠移過去，沒點過任何輸入框），退而用「目前只有
+// 一列是展開的」這個情況——這樣最常見的操作方式（展開一列、複製圖片、直接貼上）
+// 不用刻意先點一下才能貼。兩種情況都判斷不出來就不處理，避免貼到不該貼的商品。
+document.addEventListener("paste", async (e) => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const files = [];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].kind === "file" && items[i].type.indexOf("image/") === 0) {
+      const f = items[i].getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  if (!files.length) return;
+  const activeRow = document.activeElement && document.activeElement.closest(".row");
+  const openRows = document.querySelectorAll(".row.open");
+  const targetRow = activeRow || (openRows.length === 1 ? openRows[0] : null);
+  if (!targetRow) return;
+  e.preventDefault();
+  const id = targetRow.id.replace(/^row_/, "");
+  await uploadFilesToProduct(id, files);
+});
+
 async function addPhotos(id){
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
   input.multiple = true;
   input.onchange = async () => {
-    const p = allProducts.find(x => x.id === id);
-    const urls = [...((p && p.photos) || [])];
-    for (const file of input.files) {
-      try {
-        const dataBase64 = await fileToBase64(file);
-        const res = await uploadPhotoFn({
-          productId: id, filename: file.name, contentType: file.type, dataBase64
-        });
-        urls.push(res.data.url);
-        if (res.data.warning) alert(res.data.warning);
-      } catch (err) {
-        alert(`照片「${file.name}」上傳失敗：` + (err.message || err));
-      }
-    }
-    await updateDoc(doc(db, "products", id), { photos: urls, updated_at: Date.now() });
+    await uploadFilesToProduct(id, Array.from(input.files));
   };
   input.click();
 }
