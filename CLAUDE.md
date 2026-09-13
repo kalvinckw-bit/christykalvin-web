@@ -16,6 +16,11 @@
 >         - ⚠️ **Web / 雲端沙盒環境安全防護**：在無本地掛載磁碟（無 `G:\` 實體路徑）之雲端/Web AI 環境（如 Web 或手機端 Claude）中，**嚴禁調用 Google Drive API 執行破壞性的「刪除檔案（Trash）再重新建立」**！Web 端 AI 收工時只需確保代碼正確 `git add`、`git commit` 並 `git push` 至 GitHub 遠端倉庫；本機桌端（Antigravity）會負責實體磁碟目錄的 1:1 秒級鏡像同步與還原。
 >      3. **在收工交接報告（SESSION HANDOFF）中，明確列出「這次同步了哪些檔案、對應到 Drive 哪個路徑或 GitHub Commit」**，嚴禁只寫「已同步」三個字，嚴禁省略！
 >      4. **嚴禁跳過這一步、嚴禁假設「應該還是最新的」——忘記檢查=雲端鏡像停擺！**
+>    - **5. 三雲同步衝突仲裁鐵律：最新覆蓋舊端（Tri-Drive Arbitrament: "Latest Wins & Auto-Align"）：**
+>      - **三大 Drive（OneDrive、Google Drive、GitHub 遠端）基本上保持 1:1 實體對齊。若發生不同步或版本衝突時：**
+>      - **唯一仲裁原則：以「時間戳記最新 / 最新 Commit」的一端為準，無條件覆蓋較舊的一端（選一個最新的，然後讓舊的同步）！**
+>      - **嚴禁舊版本覆蓋新版本！嚴禁舊代碼倒灌！**
+>      - **AI 必須自主比對時間戳記並直接完成同步，嚴禁詢問用戶！**
 
 > [!CAUTION]
 > ### ⚡ AI 嚴禁怠惰與推卸責任原則（Zero Lazy Delegation & Strict Self-Execution）
