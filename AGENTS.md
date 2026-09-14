@@ -1,8 +1,20 @@
 > [!CAUTION]
+> ### ⚡ 嚴禁狹隘單點修改原則（Anti-Silo & Cross-AI Realignment Mandate）
+> **任何 AI 新增或修訂任何規則時，嚴禁只改自己專屬的檔案（例如 Claude 嚴禁只改 `CLAUDE.md`）！**
+> **必須同時同步更新全套入口公文：`AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`DECISIONS.md` 與對應的 `START_SESSION.md` / `END_SESSION.md`！誰發明或修訂規則，誰就必須負全責同步傳達給全體 AI 入口！**
+
+> [!CAUTION]
 > ### ⚡ 鋼鐵憲法：開局必 Pull，收工必 Push（Mandatory Git Cloud Sync）
 > **1. 任何 AI 執行 `start` 時，第一動作必須自動執行 `git pull --rebase` 拉取 GitHub 雲端最新代碼！**
 > **2. 任何 AI 執行 `end` 時，必須自動執行 `git add`、`git commit` 並立即 `git push` 推上 GitHub 雲端！**
 > **3. 嚴禁任何 AI 宣稱『不需要 push 到 GitHub』或將 push/pull 留給使用者手動！自動同步雲端是 AI 的基本職責！**
+> **4. 全集團專案 Google Drive 鏡像同步鋼鐵憲法（Universal Google Drive Mirror Sync on End）：**
+>    - **全集團所有專案在 Google Drive 均有對應實體鏡像目錄（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`）。此同步並非自動，沒有任何 webhook 或排程機制，完全由 AI 每次收工時自主執行！**
+>    - **任何 AI 執行 `end` 時，必須：**
+>      1. **找出本次 Session 改動過的所有檔案（例如使用 `git diff --name-only <上次同步commit>..HEAD` 或實體狀態比對）。**
+>      2. **把每一個改動過的檔案同步更新/上傳至 Google Drive 該專案之根目錄鏡像對應路徑（`G:\マイドライブ\Projects\ChristyKalvinWeb\...`，若在無本地磁碟掛載之環境如 Web Claude，則調用 Google Drive API 上傳）。**
+>      3. **在收工交接報告（SESSION HANDOFF）中，明確列出「這次同步了哪些檔案、對應到 Drive 哪個路徑或檔案 ID」，嚴禁只寫「已同步」三個字，嚴禁省略！**
+>      4. **嚴禁跳過這一步、嚴禁假設「應該還是最新的」——忘記檢查=雲端鏡像停擺！**
 
 
 > [!IMPORTANT]

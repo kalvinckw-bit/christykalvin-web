@@ -1,4 +1,4 @@
-﻿# Constitutional Project Decisions Registry (DECISIONS.md)
+# Constitutional Project Decisions Registry (DECISIONS.md)
 
 This document records permanent architectural, design, and policy decisions approved by the user.
 **DECISIONS ARE PERMANENT AND CONSTITUTIONAL.** No AI may revert, modify, or re-debate approved decisions without explicit user instruction.
@@ -81,3 +81,62 @@ This document records permanent architectural, design, and policy decisions appr
      - OneDrive 負責跨裝置（Windows ⟷ Mac）檔案即時傳輸。
      - GitHub 負責版本歷史與多 AI 程式碼同步。
      - **任何 AI 結束工作時未執行 `git push`，即視為嚴重失職與交接漏洞！**
+
+---
+
+### Decision: ChristyKalvin Select 轉賣商城架構 (shopping.html EC Platform)
+- **Status**: APPROVED
+- **Date**: 2026-09-06
+- **Context**: Christy 需要一個類似 BASE/Mercari 風格的日本代購轉賣網站，網址為 `christykalvin.com/shopping.html`，並且要能「貼上原始商品連結，自動把照片/標題/描述匯入」，減少手動上架的重複工作。
+- **Rule**:
+  1. **後端獨立於 `christykalvin` 專案（2026-09-06 使用者決定，取代原本共用 `voiceout-asia` 的規劃）**：
+     商城的 Firestore（`(default)` 資料庫，collection: `products`）、Cloud Functions（asia-east1）、
+     Auth 皆位於 Firebase 專案 `christykalvin`（專案編號 488782388942），理由是此站只有 Christy 一位
+     管理員、沒有一般會員，不需要納入集團一號通（One Auth）。
+     靜態網頁（`public/`）仍由 `voiceout-asia` 專案的 `christykalvin-web` 站台服務 `christykalvin.com`，
+     形成「Hosting 在 A 專案、資料在 B 專案」的跨專案架構（前端 SDK 指向 `christykalvin` 的設定即可）。
+  2. **前台/後台分離**：`public/shopping.html` 為公開瀏覽/搜尋/詢問頁面（唯讀，只顯示 `status == "published"` 商品）；`public/shopping-admin.html` 為登入後台，負責商品 CRUD、照片上傳、上下架與售出狀態管理。
+  3. **購買流程 = WhatsApp 詢問下單**：不做金流/購物車，商品詳情頁的 CTA 一律導去 WhatsApp（沿用 `myproperty` 既有的平台 WhatsApp 號碼 `601128874818`），待需求明確後再評估是否升級成真正線上金流結帳。
+  4. **貼連結自動匯入 = Cloud Function + AI 輔助，人工複核後才發布**：`functions/importProduct`（Firebase Functions v2, callable, region `asia-east1`）伺服器端抓取來源網頁（主要目標為 Takashimaya Online，其餘網店以通用 og:meta / JSON-LD 解析器為主）、下載照片重新上傳到自己的 bucket（避免原網站下架後圖裂），若有設定 `ANTHROPIC_API_KEY` 則呼叫 Claude 把日文標題/描述翻譯潤飾成繁體中文。匯入結果一律先寫成 `status:"draft"`，需要後台人工核對才能改成 `published`，不做全自動免審發布。
+  5. **貨幣顯示**：前台以日圓 (JPY) 為主要顯示貨幣，另外依訪客 IP 地區（沿用 `ck-telemetry.js` 已使用的 `freeipapi.com`）換算對應在地貨幣顯示在括號內作參考，僅供估算，不做即時金流換匯結帳。
+  6. **照片儲存不使用 Firebase Storage**：`christykalvin` 專案未開通 Firebase Storage，且該開通動作只能在 Firebase Console 手動點選、CLI 無對應指令。因此改由 Cloud Function 以自身服務帳號建立並維護一個公開讀取的 Cloud Storage bucket `christykalvin-shop-photos`（`ensurePhotoBucket()`，首次使用時自動建立，冪等）。後台手動上傳照片改走 `uploadPhoto` callable（前端送 base64），刪除走 `deletePhoto`，前台以 `https://storage.googleapis.com/christykalvin-shop-photos/...` 直接顯示。前端不再引用 Firebase Storage SDK。
+
+---
+
+### Decision: Universal Dual-Cloud Mirror Parity for All Group Projects (全集團專案 OneDrive ⟷ Google Drive ⟷ GitHub 三位一體同步憲法)
+- **Status**: APPROVED & MANDATORY
+- **Date**: 2026-09-09
+- **Context**: 全集團旗下所有專案（不僅限於 ChristyKalvinWeb，而是涵蓋 `Projects` 底下所有子專案：`CK Holdings` 旗下所有子專案、`Facebook Auto Post`、`Laundry + Cafe`、`Python` 工具群、`00 Master AI Context Template` 等），在 Google Drive 均有對應之實體鏡像目錄（`G:\マイドライブ\Projects\<專案名稱>`）。為落實跨 AI、跨裝置、跨微軟/谷歌雲端生態的絕對對齊，全集團專案必須遵循三位一體同步規範。
+- **Constitutional Rules (憲法級硬性準則)**:
+  1. **全集團一體適用（Universal Group Scope）**：所有位於 `Projects` 目錄下之專案，一律強制適用本同步規範，絕無例外，嚴禁誤判為特定單一專案獨有！
+  2. **收工手動鏡像（Mandatory End Handoff Parity）**：Google Drive 鏡像無自動雲端排程或 Webhook 機制，任何 AI（Claude、Antigravity、ChatGPT、Codex 等）在執行 `end` 時，**必須主動找出本次 session 異動之檔案，並同步更新複製至 Google Drive 該專案根目錄鏡像對應路徑**（本專案鏡像為 `G:\マイドライブ\Projects\ChristyKalvinWeb\`，若在純雲端無本地磁碟掛載之環境如 Web Claude，則必須調用 Google Drive API 上傳）。
+  3. **交接報告具體透明（Transparent Audit Trail）**：收工報告中必須具體列出同步檔案名稱與目標路徑/ID，嚴禁僅以「已同步」含糊帶過，嚴禁省略。
+  4. **嚴禁跳過與假設**：嚴禁跳過此步驟、嚴禁假設「應該還是最新的」——忘記檢查即代表雲端鏡像停擺！
+  5. **嚴禁狹隘單點修改（Anti-Silo Mandate）**：規則修訂必須同時更新 `AGENTS.md`、`CLAUDE.md`、`CHATGPT.md`、`AI_CONTEXT/END_SESSION.md`、`AI_CONTEXT/DECISIONS.md`，誰改動誰負責對齊全體 AI。
+
+---
+
+### Incident: `christykalvin-web` Hosting site 被同 repo 另一分支部署重複覆蓋 (2026-09-10, 已徹底解決)
+- **Status**: RESOLVED
+- **Date**: 2026-09-10
+- **根本原因排查報告（Root Cause Analysis 由 Antigravity 透過 Firebase Hosting API 完整溯源）**：
+  1. **兇手並非集團外部專案，而是本 repo 內未同步的並行分支**：
+     透過 Firebase Hosting API (`GET /v1beta1/projects/voiceout-asia/sites/christykalvin-web/releases`) 取得完整發布日誌：
+     - `2026-09-10T14:25:33Z`：CI Run 34488903227 發布 25 個檔案（包含 `shopping.html`）。
+     - `2026-09-10T14:25:55Z`（僅 22 秒後）：覆蓋發布 18 個檔案（無 `shopping.html`，版本 `bee3565d64235225`）。
+     - `2026-09-10T14:29:19Z`：覆蓋發布 18 個檔案（版本 `9df64cedcda19908`）。
+     - `2026-09-10T14:37:22Z`：覆蓋發布 18 個檔案（版本 `dbef5fd9cc18cde5`）。
+  2. **根本原因：多分支並行開發但共用同一個 Hosting Target**：
+     - 同一儲存庫 `christykalvin-web` 內有兩個並行功能分支：
+       - `claude/ec-resale-platform-ku6xau`：包含商城（`shopping.html`、`shopping-admin.html` 共 25 個檔案），但尚未合併回 `main`。
+       - `claude/forex-html-code-update-7jpa93`：從 `main`（當時只有 16 個檔案，無商城頁）切出進行 `forex.html` 字體與版面修改。
+     - 兩個分支的 `firebase.json` 與 `.firebaserc` 都將 target 綁定為同一個線上站台 `christykalvin-web`。
+     - 當 `forex-html-code-update-7jpa93` 分支執行部署時，Firebase Hosting 會將線上站台全站替換為該分支的 18 個檔案，導致未包含在該分支的 `shopping.html` 直接被抹除變為 404！
+     - 當 `ec-resale-platform-ku6xau` 重新部署 25 個檔案後，不到半分鐘另一邊又執行了 forex 部署，再度將其覆蓋。
+- **實際修正內容（Remediation Applied）**：
+  1. **雙向合併分支檔案（Codebase Unification）**：
+     - 將 `claude/forex-html-code-update-7jpa93` 的最新字體與樣式修復合併至 `claude/ec-resale-platform-ku6xau`。
+     - 同步將商城檔案（`shopping.html`、`shopping-admin.html`、`manifest-shopping.json`、`functions/`、`scripts/` 等）合併至 `claude/forex-html-code-update-7jpa93`。
+     - 確保兩個分支的 `public/` 目錄均包含完整的 25 個全站靜態檔案，徹底終結「分支互踩抹除」現象。
+  2. **觸發正式部署與 CI 雙重驗證**：
+     - 推送合併後代碼，重新觸發 `deploy-shopping.yml`，並執行正式站驗證（sha256 比對與 functions 版本比對），確認 `shopping.html`、`shopping-admin.html` 與 `forex.html` 全數正常在線。

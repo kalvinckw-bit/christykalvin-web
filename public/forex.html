@@ -3,68 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>匯率報價小助手 Pro V3.1</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>CK ForEX</title>
+    <link rel="icon" type="image/png" href="ck-forex-favicon-v2.png">
+    <link rel="apple-touch-icon" href="ck-forex-icon-180-v2.png">
+    <link rel="manifest" href="ck-forex-manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CK ForEX">
+    <meta name="theme-color" content="#2c3e50">
     <style>
-        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); padding: 10px; margin: 0; }
+        :root { --primary: #2c3e50; --accent: #27ae60; --bg: #f4f7f6; --mc-color: #d63031; --wise-color: #2980b9; --reset-color: #e67e22; --font-size: 14px; }
+        * { font-family: "Meiryo", "メイリオ", sans-serif; font-weight: bold; }
+        body { background: var(--bg); padding: 10px; margin: 0; font-size: var(--font-size); }
         .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h2 { color: var(--primary); text-align: left; margin: 0; }
-        .sub-title { text-align: left; color: #888; font-size: 12px; margin-bottom: 15px; }
-        
+        h2 { color: var(--primary); text-align: left; margin: 0 0 15px 0; font-size: var(--font-size); }
+
         .hero-box { background: #fff9db; padding: 15px; border-radius: 10px; border: 2px solid #f1c40f; margin-bottom: 15px; }
-        .hero-box input { width: 100%; padding: 10px; font-size: 24px; font-weight: bold; color: #2c3e50; border: 1px solid #f1c40f; border-radius: 8px; text-align: left; box-sizing: border-box; }
+        .hero-box input { width: 100%; padding: 10px; font-size: var(--font-size); font-weight: bold; color: #2c3e50; border: 1px solid #f1c40f; border-radius: 8px; text-align: left; box-sizing: border-box; }
+        .quick-amount-group { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .quick-amount-btn { flex: 1; min-width: 0; padding: 8px 4px; font-size: var(--font-size); font-weight: bold; color: #e67e22; background: white; border: 1px solid #f1c40f; border-radius: 8px; cursor: pointer; }
+        .quick-amount-btn:active { background: #f1c40f; color: white; }
 
         .mc-box { background: #fdf2f2; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fab1a0; }
-        .mc-amount-hint { font-size: 11px; color: #e74c3c; margin-top: 4px; font-weight: bold; }
-        .mc-mid-rate { text-align: left; font-size: 13px; color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; }
+        .mc-amount-hint { font-size: var(--font-size); color: #e74c3c; margin-top: 4px; font-weight: bold; }
+        .mc-mid-rate { text-align: left; font-size: var(--font-size); color: var(--mc-color); margin: 10px 0 0 0; border-top: 1px dashed #fab1a0; padding-top: 8px; }
+        .mc-mid-rate-value { display: block; font-weight: bold; margin-top: 2px; }
 
         .wise-box { background: #eef5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #74b9ff; }
-        
+
         .flex-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .flex-row div { flex: 1; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: var(--font-size); color: #555; white-space: nowrap; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: var(--font-size); box-sizing: border-box; }
 
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
-        .btn { flex: 2; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-reset { flex: 1; padding: 15px; background: var(--reset-color); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        
+        .btn { flex: 2; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
+        .btn-reset { flex: 1; padding: 15px; background: var(--reset-color); color: white; border: none; border-radius: 8px; font-size: var(--font-size); font-weight: bold; cursor: pointer; }
+
         .result { margin-top: 20px; display: none; }
         .profit-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .profit-table th { background: var(--accent); color: white; padding: 10px; font-size: 14px; }
-        .profit-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 15px; }
+        .profit-table th { background: var(--accent); color: white; padding: 10px; font-size: var(--font-size); }
+        .profit-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: var(--font-size); }
         .profit-table tr:nth-child(even) { background: #f9fdfb; }
         .tag-profit { color: var(--accent); font-weight: bold; }
         .tag-price { color: var(--primary); font-weight: bold; }
+        .td-share { text-align: center; width: 1%; white-space: nowrap; }
+        .btn-whatsapp { width: 40px; height: 40px; border-radius: 50%; background: #25D366; border: none; font-size: 18px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>💱 匯率報價小助手</h2>
-    <p class="sub-title">(精準跳級修正版)</p>
-    
+
     <div class="hero-box">
         <label style="color: #e67e22; text-align: left;">🌟 顧客要兌換的金額 (JPY 金額)</label>
-        <input type="number" id="amount" placeholder="輸入金額（日幣）" step="10000" oninput="syncAmount()">
+        <input type="number" id="amount" placeholder="譬如：300000" step="10000" oninput="syncAmount()">
+        <div class="quick-amount-group">
+            <button type="button" class="quick-amount-btn" onclick="setAmount(100000)">10萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(200000)">20萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(300000)">30萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(400000)">40萬</button>
+            <button type="button" class="quick-amount-btn" onclick="setAmount(500000)">50萬</button>
+        </div>
     </div>
 
     <div class="mc-box">
-        <label style="color: var(--mc-color);">🏦 Money Changer 的報價</label>
+        <label style="color: var(--mc-color);">🏦 報價</label>
         <div class="flex-row">
             <div>
                 <label>賣出價 (Sell)</label>
                 <input type="number" id="mcSell" placeholder="0.0256" step="0.0001" oninput="calcAll()">
-                <div id="mcSellAmt" class="mc-amount-hint">總額: RM 0</div>
+                <div id="mcSellAmt" class="mc-amount-hint">RM 0</div>
             </div>
             <div>
                 <label>買入價 (Buy)</label>
                 <input type="number" id="mcBuy" placeholder="0.0249" step="0.0001" oninput="calcAll()">
-                <div id="mcBuyAmt" class="mc-amount-hint">總額: RM 0</div>
+                <div id="mcBuyAmt" class="mc-amount-hint">RM 0</div>
             </div>
         </div>
         <div class="mc-mid-rate">
-            ⚖️ Money Changer 的中間匯率: <span id="mcMidRateDisplay" style="font-weight:bold;">0.00000</span>
+            ⚖️ 中間匯率: <span id="mcMidRateDisplay" style="font-weight:bold;">0.00000</span>
         </div>
     </div>
 
@@ -77,8 +98,11 @@
             </div>
             <div>
                 <label>Wise 顯示的 MYR</label>
-                <input type="number" id="wiseMYR" placeholder="輸入馬幣" oninput="calcAll()">
+                <input type="number" id="wiseMYR" placeholder="譬如：10621.31" oninput="calcAll()">
             </div>
+        </div>
+        <div class="mc-mid-rate" style="color: var(--wise-color); border-top-color: #74b9ff;">
+            💹 Wise 匯率: <span id="wiseRateDisplay" style="font-weight:bold;">0.00000</span>
         </div>
     </div>
 
@@ -90,7 +114,7 @@
     <div id="result" class="result">
         <table class="profit-table">
             <thead>
-                <tr>
+                <tr id="profitHeadRow">
                     <th>你想賺 (Profit)</th>
                     <th>你要賣 (Price)</th>
                 </tr>
@@ -101,6 +125,17 @@
 </div>
 
 <script>
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
+function setAmount(value) {
+    document.getElementById('amount').value = value;
+    syncAmount();
+}
+
 function syncAmount() {
     const amount = document.getElementById('amount').value;
     document.getElementById('wiseJPY').value = amount;
@@ -112,46 +147,59 @@ function calcAll() {
     const mcSell = parseFloat(document.getElementById('mcSell').value) || 0;
     const mcBuy = parseFloat(document.getElementById('mcBuy').value) || 0;
 
-    document.getElementById('mcSellAmt').innerText = "總額: RM " + (amount * mcSell).toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('mcBuyAmt').innerText = "總額: RM " + (amount * mcBuy).toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('mcSellAmt').innerHTML = "RM " + Math.round(amount * mcSell).toLocaleString();
+    document.getElementById('mcBuyAmt').innerHTML = "RM " + Math.round(amount * mcBuy).toLocaleString();
 
     if (mcSell > 0 && mcBuy > 0) {
         const midRate = (mcSell + mcBuy) / 2;
-        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5);
+        const midAmount = amount * midRate;
+        document.getElementById('mcMidRateDisplay').innerText = midRate.toFixed(5) + " = MYR " + Math.round(midAmount).toLocaleString();
     } else {
         document.getElementById('mcMidRateDisplay').innerText = "0.00000";
+    }
+
+    const wiseMYR = parseFloat(document.getElementById('wiseMYR').value) || 0;
+    if (amount > 0 && wiseMYR > 0) {
+        const wiseRate = wiseMYR / amount;
+        document.getElementById('wiseRateDisplay').innerText = wiseRate.toFixed(7);
+    } else {
+        document.getElementById('wiseRateDisplay').innerText = "0.00000";
     }
 }
 
 function showResult() {
     const amount = parseFloat(document.getElementById('amount').value);
-    const mcSell = parseFloat(document.getElementById('mcSell').value);
     const wiseMYR = parseFloat(document.getElementById('wiseMYR').value);
     const body = document.getElementById('profitBody');
+    const headRow = document.getElementById('profitHeadRow');
 
-    if (!amount || !mcSell || !wiseMYR) {
-        alert("請先輸入金額、Money Changer 賣價與 Wise 馬幣");
+    if (!amount || !wiseMYR) {
+        alert("請先輸入 JPY 金額與 Wise 顯示的 MYR");
         return;
     }
 
-    const costMC = amount * mcSell; 
-    const costWise = wiseMYR;        
-    const limitPrice = costMC - 2; // 硬性天花板
+    // Money Changer 賣出價只是參考顯示，不影響利潤表結果，一律用 Wise 成本生成 0.5% ~ 3.0% 毛利率對照表
+    body.innerHTML = "";
+    headRow.innerHTML = `<th>毛利率</th><th>建議賣價 / 匯率</th><th></th>`;
 
-    body.innerHTML = ""; 
-
-    // 修改邏輯：只做整數 +10 的跳級，只要下一個跳級會超過 limitPrice 就停止
-    for (let profit = 10; ; profit += 10) {
-        let targetPrice = costWise + profit;
-        
-        // 只要當前價格超過了天花板，就直接跳出，不再補 MAX 行
-        if (targetPrice > limitPrice) {
-            break;
-        }
-        
-        body.innerHTML += `<tr><td class="tag-profit">RM ${profit}</td><td class="tag-price">RM ${targetPrice.toFixed(0)}</td></tr>`;
+    const costWise = wiseMYR;
+    for (let marginPct = 0.5; marginPct <= 3.0001; marginPct += 0.5) {
+        const price = costWise / (1 - marginPct / 100);
+        const rate = price / amount;
+        const netProfit = price - costWise;
+        const roundedPrice = Math.round(price);
+        const priceStr = roundedPrice.toLocaleString();
+        const netProfitStr = netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        body.innerHTML += `<tr><td class="tag-profit">${marginPct.toFixed(1)}%</td><td class="tag-price">賣價：RM ${priceStr}<br>匯率：${rate.toFixed(5)}<br>淨賺：RM ${netProfitStr}</td><td class="td-share"><button type="button" class="btn-whatsapp" onclick="shareWhatsApp(${amount}, ${roundedPrice})">📲</button></td></tr>`;
     }
+
     document.getElementById('result').style.display = 'block';
+}
+
+function shareWhatsApp(jpyAmount, myrPrice) {
+    const text = `JPY${jpyAmount.toLocaleString()} = RM${myrPrice.toLocaleString()}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
 }
 
 function resetAll() {

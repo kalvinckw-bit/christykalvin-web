@@ -10,9 +10,9 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Host**: Desktop App
 - **Machine**: Windows Workstation
 - **Session File**: `AI_CONTEXT/SESSIONS/Antigravity (Desktop, Windows).md`
-- **State**: Standby / Synchronized
-- **Heartbeat**: {DATE}
-- **Current Objective**: Standby for Antigravity (Desktop, Windows) tasks.
+- **State**: Completed / Fully Synchronized
+- **Heartbeat**: 2026-09-10 23:56 JST
+- **Current Objective**: Investigated shopping.html 404 incident, identified parallel branch collision, unified codebase across forex & ec-resale branches, and verified production live on christykalvin.com.
 - **Reserved Files**: None
 
 ----------------------------------------
@@ -122,5 +122,20 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Heartbeat**: {DATE}
 - **Current Objective**: Standby for ChatGPT (VS Code, MacBook) tasks.
 - **Reserved Files**: None
+
+----------------------------------------
+
+### 11. Claude (Web, Cloud)
+- **AI**: Claude (Claude Code)
+- **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
+- **Machine**: 雲端 Linux 容器（非本機）
+- **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
+- **State**: Standby / Synchronized
+- **Heartbeat**: 2026-09-09
+- **Current Objective**: Uniqlo/GU 服飾深度解析、加價利潤機制 (markup)、照片彈窗優化與 Functions 正式專案部署修復已完成。
+- **Reserved Files**: None
+- **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
+  被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`
+  等高風險指令會被安全機制擋下。詳見該身分的 session 檔開頭。
 
 ----------------------------------------

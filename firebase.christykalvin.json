@@ -1,9 +1,10 @@
 {
   "hosting": {
-    "target": "christykalvin-web",
+    "site": "christykalvin",
     "public": "public",
     "ignore": [
       "firebase.json",
+      "firebase.christykalvin.json",
       "**/.*",
       "**/node_modules/**"
     ],
@@ -15,14 +16,5 @@
         { "key": "Expires", "value": "0" }
       ]
     }]
-  },
-  "firestore": {
-    "database": "(default)",
-    "rules": "firestore.rules"
-  },
-  "functions": [{
-    "source": "functions",
-    "codebase": "default",
-    "runtime": "nodejs20"
-  }]
+  }
 }
