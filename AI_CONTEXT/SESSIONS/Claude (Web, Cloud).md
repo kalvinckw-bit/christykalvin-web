@@ -272,12 +272,99 @@ functions 那邊只要報錯（先是「其他站台 functions 會被刪除」�
     完全正常、已部署上線，只有 Google Drive 鏡像缺這 3 個檔案）。
 
 ### Next Actions / Must-Do
-1. **補完 Google Drive 鏡像同步**：把上面列的 `index.js`、`shopping.html`、
-   `shopping-admin.html` 三個檔案的最新內容上傳到 Drive 對應路徑（trash 舊版已完成，
-   只差 create 新版）。
+1. ~~補完 Google Drive 鏡像同步~~——**已過時，不用再做**：2026-09-12 使用者已直接修訂
+   CLAUDE.md/AGENTS.md/CHATGPT.md，明文禁止 Web/雲端無本地磁碟環境呼叫 Drive API 執行
+   「刪除再重建」，改由本機桌端 Antigravity 負責 Google Drive 實體鏡像同步；Web session
+   收工只需確保 git push 完成即可（詳見 DECISIONS.md「Universal Dual-Cloud Mirror Parity」
+   2026-09-12 修訂）。上面列的 3 個檔案是否已由 Antigravity 補齊，下一位 AI 不用管，
+   那是本機桌端的責任範圍。
 2. 已揭露但賣家尚未確認是否要做的功能：peachjohn.co.jp 每個顏色其實是獨立商品網址，
    目前只抓得到預設顏色（ivory）的照片；要抓其他顏色的照片需要另外對每個顏色的
    商品網址發請求，屬於新功能，賣家還沒明確要求要做。
 3. 實測 peachjohn.co.jp 尺寸解析：重新匯入 https://www.peachjohn.co.jp/shop/g/g10317700105/
    確認「尺寸選項」欄位有抓到 B65/B70/B75 等尺寸文字。
+
+---
+
+## Session 2026-09-13 ~ 2026-09-14 — Claude (Web, Cloud)
+
+### Status: Completed & Deployed（全部經 deploy-shopping.yml 驗證上線）
+- **Branch**: `claude/ec-resale-platform-ku6xau`
+- **Latest Commit**: `83ee172`
+
+### Work Completed（做過的事情）
+1. **intimissimi.com 照片混進別的商品**：通用解析器 `$('[itemprop="image"]')`
+   沒有限定範圍，把頁面下方「推薦商品」tile（class 帶 `tile` 字樣）上的
+   `itemprop="image"` 也一起收了進來。加排除規則濾掉 class 含 `tile` 的元素。
+   （`80ab245` 查證、`7459efa` 修復，20 項 `extract.test.js` 全過）
+2. **CI 部署一度失敗，根因排查**：`Deploy Firestore rules` 報錯「No targets in
+   firebase.json match」。查出是前一天另一個 session 的 commit `1c170a0`
+   在幫 hosting.headers 加規則時，不小心把 `firebase.json` 最外層的
+   `"firestore"`/`"functions"` 兩個區塊整個刪掉了。補回去修復（`d25b944`），
+   不是這次改動造成的，但既然是自己推的 commit 觸發失敗，主動查出根因並修好。
+3. **Amazon 書籤工具只抓到 1 張照片**：原本的 `#imgTagWrapperId img`/
+   `#landingImage`/`og:image` 三個規則其實都指向同一張「目前顯示中」的大圖，
+   完全沒掃到左側縮圖列（Amazon 固定放在 `#altImages` 容器）。加上
+   `#altImages img` 選擇器（`e5a23e0`）。Amazon 伺服器端擋掉非瀏覽器請求，
+   這條規則沒辦法用 probe.js 驗證，是照 Amazon 多年沒變的標準結構補的。
+4. **商品照片支援 Ctrl+V 直接貼上**（`1902dfc`）：把「＋」按鈕的上傳邏輯抽成
+   共用的 `uploadFilesToProduct()`，另外加全域 `paste` 事件監聽，貼上時判斷
+   目標商品（優先看目前聚焦欄位所在列，沒有就看「目前只有一列展開」），
+   原本點「＋」開檔案總管的方式維持不變。後續賣家反映貼上後希望自動收起
+   編輯畫面，加上收合邏輯（`fe48b5f`，用 id 重新查詢當前 DOM 節點，避免
+   `onSnapshot` 觸發 `render()` 整頁重建後拿到舊節點）。
+5. **品牌顯示名稱改名**：「Christy Kalvin Select」→「CK Japan Select」，
+   前後台所有看得到的品牌文字（title、header、meta description、footer、
+   後台登入畫面）統一改名（`d82cc1e`）。
+6. **主題標籤系統大改版**（`4b75227`）：原本是獨立的篩選按鈕列（單選、
+   toggle active），賣家要求改成「點了就把標籤名稱塞進搜尋框」（逗號分隔，
+   可疊加多個），比對邏輯確認過是「或」（賣家原話：篩不到的話「合作商品」
+   這種同時掛兩個標籤的商品才有意義，但最後 AskUserQuestion 確認選的是
+   OR，並提供 iei.jp/51638/ 當參考範例）——商品符合任一逗號分隔詞（比對
+   標題文字或主題標籤皆可）就顯示。chip 列從分類列下面移到搜尋框正下方。
+   用純 JS 模擬過篩選邏輯（多詞 OR、單詞、空字串）驗證正確。
+7. **商品卡片顯示調整**（`83ee172`）：卡片上原本顯示「新舊狀況」（例如
+   「全新」）的位置改顯示主題標籤（`#Moomin #OnePiece` 這種），因為賣家
+   反映所有商品都是全新代購、這個標籤沒意義。只改前台卡片這個顯示位置，
+   商品詳情彈窗的新舊狀況標籤、後台編輯欄位都維持不動（賣家有提到「這個
+   設定也可以不要」，但牽涉後台欄位/AI匯入邏輯要不要整個移除，範圍較大，
+   還沒得到明確指示前先不動）。
+
+### ⚠️ 這次 session 中途發生的插曲（給下一位 AI 的背景資訊）
+- 使用者本人直接修訂了 CLAUDE.md/AGENTS.md/CHATGPT.md（commit `8d20d69`），
+  禁止 Web/雲端 AI 呼叫 Google Drive API 做「刪除再重建」——起因是上一個
+  session 示範 Drive 同步時，先把舊檔丟進垃圾桶、要上傳新版時被使用者
+  中途喊停，Drive 上短暫缺了 3 個檔案。已同步這條規則到 END_SESSION.md
+  與 DECISIONS.md（Anti-Silo 要求）。**這個 session 之後（含這次）完全
+  沒有再呼叫任何 Google Drive API，只做 git push。**
+- 使用者也直接廣播過集團三大戰略網域收斂的架構決策（commit 已記錄在
+  DECISIONS.md），本 repo（christykalvin.com）相關的部分已核對現況、
+  記錄成待確認事項，沒有自己動手刪檔案（見上一個 session 區塊）。
+- 另一個 session（Antigravity，本機桌端）在這個 session 進行中同時也在
+  改這個 repo：加了 CK ForEX 相關檔案、改了 firebase.json（間接造成上面
+  第 2 點的 CI 失敗）、新增了「Tri-Drive sync arbitrament」與「AI Proactive
+  Autonomous Execution」等治理規則、把前台商品價格改成一律顯示「價格
+  洽詢」。這些都不是這個 session 做的，只是 `git pull --rebase` 時拉進來，
+  如實記錄避免下一位 AI 搞混是誰改的。
+
+### Files Modified
+- `firebase.json`（修復被誤刪的區塊）
+- `functions/extract.js`, `functions/extract.test.js`
+- `public/shopping.html`, `public/shopping-admin.html`
+- `scripts/probe.js`
+- `AI_CONTEXT/{CURRENT_STATUS.md, DECISIONS.md, END_SESSION.md, SESSIONS/REGISTRY.md,
+  SESSIONS/Claude (Web, Cloud).md}`
+
+### Google Drive Sync Status
+本次沒有呼叫任何 Google Drive API（依新規則，Web session 不做這件事）。
+所有改動已 git push 到 GitHub commit `83ee172`，本機桌端 Antigravity 之後
+會負責把這些檔案同步到 Google Drive 實體鏡像。
+
+### Next Actions / Must-Do
+1. 賣家問過「後台『新舊狀況』設定也可以不要」——還沒有明確指示要不要把
+   後台編輯欄位、AI 匯入邏輯（`functions/index.js` 的 `condition` 欄位）
+   整個移除，下次賣家確認後再處理。
+2. 實測 peachjohn.co.jp 尺寸解析（沿用自上個 session，還沒實測確認）。
+3. 已揭露但賣家尚未確認是否要做：peachjohn.co.jp 每個顏色是獨立商品
+   網址，目前只抓得到預設顏色（ivory）的照片（沿用自上個 session）。
 

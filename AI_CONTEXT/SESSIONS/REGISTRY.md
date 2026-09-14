@@ -130,10 +130,11 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
 - **Machine**: 雲端 Linux 容器（非本機）
 - **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
-- **State**: Standby / Synchronized（GitHub 已同步；Google Drive 鏡像有 3 個檔案未同步，見該身分 session 檔）
-- **Heartbeat**: 2026-09-12
-- **Current Objective**: PWA 強制更新、主題標籤系統、P-Bandai 書籤工具修復、售價¥0真兇修復、
-  peachjohn.co.jp 通用解析（照片/顏色/尺寸）三連修已完成並驗證部署上線。
+- **State**: Standby / Synchronized（GitHub 已同步；Google Drive 鏡像交由本機 Antigravity 負責，Web session 不再呼叫 Drive API）
+- **Heartbeat**: 2026-09-14
+- **Current Objective**: intimissimi.com/Amazon 書籤工具照片修復、商品照片 Ctrl+V 貼上、
+  品牌改名 CK Japan Select、主題標籤改成搜尋輔助工具（OR 比對合作商品）、商品卡片改顯示
+  主題標籤已完成並驗證部署上線。
 - **Reserved Files**: None
 - **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
   被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`

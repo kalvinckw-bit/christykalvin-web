@@ -1,6 +1,6 @@
 # Live Project Status (Single Source of Truth)
 
-最後更新：2026-09-12（Claude Web Cloud session）
+最後更新：2026-09-14（Claude Web Cloud session）
 
 ## 1. Current Phase
 - **Active Milestone**：ChristyKalvin Select 轉賣商城 — 正式上線後的功能調整與部署自動化
@@ -23,6 +23,11 @@
 | PWA 強制更新（build-version.json + commit SHA 比對） | Deployed | Yes | 解決加到手機主畫面後顯示舊版畫面的問題 |
 | peachjohn.co.jp 通用解析（照片/顏色/尺寸三項） | Deployed | Yes | `functions/extract.js` 通用規則，19 項 `extract.test.js` 全過，賣家重新匯入截圖確認顏色抓到 |
 | 售價 ¥0 真兇修復（`Number(null)===0`） | Deployed | Yes | `pricing.js` 改用 `== null` 明確判斷，17 項 `pricing.test.js` 全過 |
+| 品牌改名「CK Japan Select」 | Deployed | Yes | 前後台所有可見品牌文字統一改名，2026-09-14 驗證上線 |
+| 主題標籤改版（點擊塞入搜尋框，OR 比對合作商品） | Deployed | Yes | 不再是獨立篩選列，chip 移到搜尋框下方，2026-09-14 驗證上線 |
+| 商品照片 Ctrl+V 直接貼上 + 貼上後自動收合編輯列 | Deployed | Yes | 後台 `shopping-admin.html`，2026-09-14 驗證上線 |
+| Amazon 書籤工具縮圖列修復（`#altImages`） | Deployed | 無法用 probe.js 驗證（Amazon 擋伺服器請求） | 依 Amazon 多年沒變的標準結構補上，賣家需重新拖曳書籤才會生效 |
+| intimissimi.com 通用解析誤收推薦商品圖修復 | Deployed | Yes | 排除 class 含 tile 的 itemprop=image 元素，20 項 extract.test.js 全過 |
 
 ## 3. 重要架構事實（不要再重新推論）
 - **Hosting**：正式站 `christykalvin.com` = `voiceout-asia` 專案裡的 **`christykalvin-web`** site。已用 CI 抓取驗證過（`christykalvin-web.web.app` 回傳同一份檔案）。
