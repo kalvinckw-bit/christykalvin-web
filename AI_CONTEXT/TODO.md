@@ -11,11 +11,14 @@
 ## P2: Backlog & Enhancements
 - [ ] Performance optimizations and styling polish.
 
-## Monku (吐槽/辯論) Feature — voiceout.asia/monku.html
+## Monku (吐槽/辯論) Feature — public/monku.html
 - [x] 2026-09-14: Brainstormed scope, legal framing (UGC vs platform liability, opinion vs accusation), and content rules (extreme content removal, camera-only capture, no gallery upload) — brief only, no code yet.
-- [ ] **BLOCKED**: Read `G:\マイドライブ\Projects\00 Master AI Context Template` — not accessible from remote/cloud sessions (local Windows path). Needs a local session or user-provided content.
-- [ ] Write feature spec doc for `public/monku.html` before coding (topic types, moderation rules, camera-capture enforcement).
-- [ ] Build MVP: 商品 topic type first (lower legal risk), 正反留言, hashtags, camera-only media capture.
+- [x] 2026-09-14: Built MVP `public/monku.html` — 商品/人物/公司/其他 topic categories, JAN/統編 optional code field, 正反(同意/反對) two-column comments, hashtags with autocomplete/dedupe, anonymous Firebase Auth posting, camera-only photo capture (`capture="environment"`, no gallery input), client-side extreme-word filter + report/auto-hide-at-3-flags moderation, search + category filter. Uses Firestore `monku_topics` collection on the `(default)` database (per COMPANY_PROFILE.md — Voice Out's DB). Sentiment analysis / reputation scoring / push notifications / multi-language intentionally deferred.
+- [ ] **BLOCKED (deploy)**: This repo's `firebase.json` hosting target is `christykalvin-web`, one of THREE separate Firebase Hosting sites under project `voiceout-asia` (see line below: `sougu-online`, `christykalvin-web`, `voiceout-asia` are distinct sites). This strongly suggests `christykalvin-web` is bound to the `christykalvin.com` custom domain, NOT `voiceout.asia` — meaning deploying *this* repo may never make `monku.html` appear at `voiceout.asia/monku.html`. **Needs verification**: check the Firebase Console → Hosting → which custom domain is bound to which site target, and confirm whether `monku.html` belongs in this repo at all or in whatever repo deploys the `voiceout-asia` hosting site.
+- [ ] **BLOCKED (deploy)**: No Firebase CLI / credentials available in the remote cloud sandbox, and no `.github/workflows` CI/CD pipeline exists in this repo — deployment (`firebase deploy --only hosting:<site>`) must be run manually from a local machine that has the Firebase CLI logged in.
+- [ ] **BLOCKED (data)**: `Firestore Security Rules` for the `monku_topics` collection (and its `comments` subcollection) are not managed in this repo (no `firestore.rules` file found) — need to be added/deployed via Firebase Console or CLI so anonymous-auth users can create topics/comments and the public can read `status=="visible"` docs.
+- [ ] Once live: verify anonymous auth is enabled in Firebase Console (Authentication → Sign-in method → Anonymous).
+- [ ] `G:\マイドライブ\Projects\00 Master AI Context Template` still unread — not accessible from remote/cloud sessions (local Windows path). Needs a local session or user-provided content.
 - [ ] Defer to later phase: AI sentiment analysis, reputation scoring, auto stance summaries, push notifications, multi-language.
 
 ## CK Holdings 集團雲端基礎設施與網域生命週期維護 (Domain & Cloud Lifecycle TODO)

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>文句 monku｜吐槽與辯論廣場</title>
+<meta name="description" content="針對商品、人物、公司發表你的真實吐槽，讓大家一起站隊討論。">
+<style>
+  :root{
+    --bg:#f6f5f2; --card:#ffffff; --ink:#1c1b19; --sub:#6b6a66; --line:#e7e5e0;
+    --agree:#1f8a5f; --agree-bg:#e8f6ee; --disagree:#c1443c; --disagree-bg:#fbeae8;
+    --accent:#2a5bd7; --accent-ink:#ffffff; --warn:#b8860b; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Helvetica,Arial,sans-serif;padding-bottom:80px;}
+  header.top{position:sticky;top:0;background:var(--bg);z-index:20;padding:14px 16px 10px;border-bottom:1px solid var(--line);}
+  header.top h1{font-size:20px;margin:0 0 2px;}
+  header.top p.tag{margin:0;font-size:12px;color:var(--sub);}
+  .searchbar{display:flex;gap:8px;margin-top:10px;}
+  .searchbar input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:15px;background:#fff;}
+  .searchbar button{padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;white-space:nowrap;}
+  .cats{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:2px;}
+  .cats button{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--sub);}
+  .cats button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  main{max-width:640px;margin:0 auto;padding:14px 16px;}
+  .topic-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
+  .topic-card .meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .badge{padding:2px 8px;border-radius:999px;background:#eee;font-size:11px;color:var(--ink);}
+  .topic-card h3{margin:0 0 6px;font-size:17px;line-height:1.4;}
+  .topic-card .body-preview{font-size:14px;color:#3a3936;line-height:1.5;margin:0 0 8px;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .tags span{font-size:12px;color:var(--accent);background:#eef2fc;padding:2px 8px;border-radius:999px;}
+  .stance-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--line);margin-bottom:6px;}
+  .stance-bar .a{background:var(--agree);} .stance-bar .d{background:var(--disagree);}
+  .stance-count{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);}
+  .stance-count .a-lab{color:var(--agree);} .stance-count .d-lab{color:var(--disagree);}
+  .fab{position:fixed;right:18px;bottom:22px;background:var(--accent);color:#fff;border:none;
+    width:56px;height:56px;border-radius:50%;font-size:28px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:30;}
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:40;}
+  .sheet-overlay[data-open="true"]{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--card);
+    border-radius:16px 16px 0 0;max-height:92vh;overflow-y:auto;padding:16px 16px 24px;z-index:41;}
+  .sheet-full{position:fixed;inset:0;background:var(--bg);z-index:41;overflow-y:auto;max-width:640px;margin:0 auto;}
+  .sheet h2{margin:0 0 12px;font-size:18px;}
+  label.field{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px;}
+  input[type=text],textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff;font-family:inherit;}
+  textarea{min-height:90px;resize:vertical;}
+  .btn{padding:11px 16px;border-radius:10px;border:none;font-size:15px;font-weight:600;}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;margin-top:16px;}
+  .btn-ghost{background:none;color:var(--sub);border:1px solid var(--line);}
+  .row-btns{display:flex;gap:8px;margin-top:6px;}
+  .row-btns .btn{flex:1;}
+  .close-x{position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;color:var(--sub);}
+  .camera-box{margin-top:8px;}
+  .camera-box input[type=file]{display:none;}
+  .camera-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;
+    border:1px dashed var(--accent);color:var(--accent);background:#eef2fc;font-size:13px;}
+  .thumb-preview{margin-top:8px;max-width:160px;border-radius:10px;display:block;}
+  .rules-note{font-size:12px;color:var(--warn);background:#fff8e8;border:1px solid #f0e0b0;
+    border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5;}
+  .topic-detail-head{padding:16px;border-bottom:1px solid var(--line);position:relative;}
+  .topic-detail-head h2{margin:6px 0 8px;font-size:19px;line-height:1.4;}
+  .topic-detail-head .body-full{font-size:15px;line-height:1.6;color:#3a3936;white-space:pre-wrap;}
+  .topic-detail-photo{width:100%;border-radius:12px;margin:10px 0;display:block;}
+  .stance-tabs{display:flex;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5;}
+  .stance-tabs button{flex:1;padding:12px;border:none;background:none;font-size:14px;font-weight:600;color:var(--sub);border-bottom:2px solid transparent;}
+  .stance-tabs button.active.a{color:var(--agree);border-color:var(--agree);}
+  .stance-tabs button.active.d{color:var(--disagree);border-color:var(--disagree);}
+  .comment-list{padding:10px 16px 100px;}
+  .comment{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;}
+  .comment .who{font-size:12px;color:var(--sub);display:flex;justify-content:space-between;margin-bottom:6px;}
+  .comment .txt{font-size:14px;line-height:1.55;white-space:pre-wrap;}
+  .comment img{max-width:100%;border-radius:8px;margin-top:8px;display:block;}
+  .comment .flag-btn{background:none;border:none;color:#bbb;font-size:12px;margin-top:6px;}
+  .comment.hidden-by-flag{opacity:.5;}
+  .comment.hidden-by-flag .txt{filter:blur(2px);}
+  .composer{position:fixed;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--card);
+    border-top:1px solid var(--line);padding:10px 12px 14px;z-index:35;}
+  .composer .stance-pick{display:flex;gap:8px;margin-bottom:8px;}
+  .composer .stance-pick button{flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--sub);}
+  .composer .stance-pick button.a.active{background:var(--agree-bg);border-color:var(--agree);color:var(--agree);}
+  .composer .stance-pick button.d.active{background:var(--disagree-bg);border-color:var(--disagree);color:var(--disagree);}
+  .composer-row{display:flex;gap:8px;align-items:flex-end;}
+  .composer-row textarea{min-height:40px;max-height:100px;}
+  .composer-row button.send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;white-space:nowrap;}
+  .empty{text-align:center;color:var(--sub);font-size:14px;padding:40px 20px;}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c1b19;color:#fff;
+    padding:9px 16px;border-radius:999px;font-size:13px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast[data-show="true"]{opacity:1;}
+  footer.legal{max-width:640px;margin:20px auto 0;padding:0 16px;font-size:11px;color:var(--sub);line-height:1.6;text-align:center;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>文句 monku</h1>
+  <p class="tag">針對商品／人物／公司，說出你的真實吐槽。個人意見自由發表，惡意攻擊或未經查證指控一律刪除。</p>
+  <div class="searchbar">
+    <input id="searchInput" type="text" placeholder="搜尋話題、標籤…">
+    <button id="searchBtn">搜尋</button>
+  </div>
+  <div class="cats" id="catBar">
+    <button data-cat="all" class="active">全部</button>
+    <button data-cat="商品">商品</button>
+    <button data-cat="人物">人物</button>
+    <button data-cat="公司">公司</button>
+    <button data-cat="其他">其他</button>
+  </div>
+</header>
+
+<main id="topicList">
+  <div class="empty">載入中…</div>
+</main>
+
+<button class="fab" id="openNewTopic" title="開新話題">＋</button>
+
+<!-- 開新話題 -->
+<div class="sheet-overlay" id="newTopicOverlay">
+  <div class="sheet" style="position:relative;">
+    <button class="close-x" id="closeNewTopic">×</button>
+    <h2>開新話題</h2>
+
+    <label class="field">分類</label>
+    <select id="ntCategory">
+      <option value="商品">商品</option>
+      <option value="人物">人物</option>
+      <option value="公司">公司</option>
+      <option value="其他">其他</option>
+    </select>
+
+    <label class="field">話題標題</label>
+    <input id="ntTitle" type="text" maxlength="60" placeholder="例：トイレに流せるウェットティッシュ">
+
+    <label class="field" id="ntCodeLabel">商品 JAN 碼 / 公司統編（選填，幫助辨識，避免撞名）</label>
+    <input id="ntCode" type="text" maxlength="40" placeholder="沒有的話可以留空">
+
+    <label class="field">你的吐槽內容</label>
+    <textarea id="ntBody" maxlength="1500" placeholder="說說你的真實體驗，例如：太大片、浪費，希望小一點枚數多一點…"></textarea>
+
+    <label class="field">標籤（用逗號分開，不用打 #）</label>
+    <input id="ntTags" type="text" placeholder="例：濕紙巾, 日本代購" list="tagSuggestions">
+    <datalist id="tagSuggestions"></datalist>
+
+    <div class="camera-box">
+      <label class="camera-btn" for="ntPhotoInput">📷 拍照上傳（只能即拍，不能選相簿舊照片）</label>
+      <input id="ntPhotoInput" type="file" accept="image/*" capture="environment">
+      <img id="ntPhotoPreview" class="thumb-preview" style="display:none;">
+    </div>
+
+    <div class="rules-note">
+      ⚠️ 為避免盜圖侵權，本站僅接受「當下拍攝」的照片／影片，請勿上傳網路截圖或他人圖片。內容如涉及人身攻擊、未經查證的違法指控（例如「詐騙」「造假」）或極端仇恨言論，將會被刪除。
+    </div>
+
+    <button class="btn btn-primary" id="ntSubmit">發布話題</button>
+  </div>
+</div>
+
+<!-- 話題詳情 -->
+<div class="sheet-full" id="detailView" style="display:none;">
+  <div class="topic-detail-head">
+    <button class="close-x" id="closeDetail" style="position:absolute;top:14px;right:14px;">×</button>
+    <span class="badge" id="dCat"></span>
+    <h2 id="dTitle"></h2>
+    <img id="dPhoto" class="topic-detail-photo" style="display:none;">
+    <div class="body-full" id="dBody"></div>
+    <div class="tags" id="dTags" style="margin-top:10px;"></div>
+  </div>
+  <div class="stance-tabs">
+    <button class="active a" data-stance="agree" id="tabAgree">同意 <span id="cntAgree">0</span></button>
+    <button class="d" data-stance="disagree" id="tabDisagree">反對 <span id="cntDisagree">0</span></button>
+  </div>
+  <div class="comment-list" id="commentList"></div>
+
+  <div class="composer">
+    <div class="stance-pick">
+      <button class="a" id="pickAgree">👍 同意這個看法</button>
+      <button class="d" id="pickDisagree">👎 反對這個看法</button>
+    </div>
+    <div class="composer-row">
+      <textarea id="commentText" maxlength="800" placeholder="寫下你的想法…"></textarea>
+      <button class="send" id="sendComment">送出</button>
+    </div>
+    <div class="camera-box">
+      <label class="camera-btn" for="cPhotoInput">📷 附加拍照</label>
+      <input id="cPhotoInput" type="file" accept="image/*" capture="environment">
+      <img id="cPhotoPreview" class="thumb-preview" style="display:none;max-width:100px;">
+    </div>
+  </div>
+</div>
+
+<footer class="legal">
+  文句 monku 上的所有留言與立場，均為使用者個人意見，不代表 voiceout.asia 或 CK Holdings 立場。<br>
+  如發現不實指控或侵權內容，請使用留言旁的「檢舉」功能，我們會盡快處理。
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, getDocs, getDoc, doc, updateDoc,
+  query, where, orderBy, limit, serverTimestamp, increment, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+/* PUBLIC web config — safe to expose client-side; real access control lives in
+   Firestore Security Rules (need to be configured in the Firebase console for
+   the `monku_topics` collection: allow signed-in — incl. anonymous — users to
+   create, allow public read of status=="visible" docs, restrict update to
+   count fields only). See AI_CONTEXT/TODO.md for the outstanding rules task. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+
+const app = initializeApp(FIREBASE_CONFIG);
+const db = getFirestore(app); // (default) database — Voice Out 業務專用，見 COMPANY_PROFILE.md
+const auth = getAuth(app);
+
+let currentUser = null;
+signInAnonymously(auth).catch(err => console.warn("monku: 匿名登入失敗", err));
+onAuthStateChanged(auth, u => { currentUser = u; });
+
+/* ---------- 極端內容簡易過濾（前端第一道關卡，正式把關仍需人工/後台審核） ---------- */
+const BLOCKED_WORDS = ["去死","殺你","白痴","智障","畜生","詐騙集團","賤人"];
+function containsExtreme(text){
+  return BLOCKED_WORDS.some(w => text.includes(w));
+}
+
+/* ---------- 小工具 ---------- */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.dataset.show = "true";
+  setTimeout(() => t.dataset.show = "false", 2000);
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function compressImage(file, maxW = 900, quality = 0.6){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 話題列表 ---------- */
+let allTopics = [];
+let activeCat = "all";
+let searchTerm = "";
+
+async function loadTopics(){
+  try{
+    const q = query(collection(db, "monku_topics"), where("status", "==", "visible"), orderBy("created_at", "desc"), limit(100));
+    const snap = await getDocs(q);
+    allTopics = [];
+    snap.forEach(d => allTopics.push({ id: d.id, ...d.data() }));
+  }catch(err){
+    console.warn("monku: 讀取話題失敗（可能是 Firestore 規則或索引尚未設定）", err);
+    allTopics = [];
+  }
+  renderTopicList();
+  refreshTagSuggestions();
+}
+
+function refreshTagSuggestions(){
+  const set = new Set();
+  allTopics.forEach(t => (t.hashtags || []).forEach(tag => set.add(tag)));
+  $("#tagSuggestions").innerHTML = Array.from(set).map(t => `<option value="${esc(t)}">`).join("");
+}
+
+function renderTopicList(){
+  const list = $("#topicList");
+  let items = allTopics;
+  if(activeCat !== "all") items = items.filter(t => t.category === activeCat);
+  if(searchTerm){
+    const s = searchTerm.toLowerCase();
+    items = items.filter(t =>
+      (t.title || "").toLowerCase().includes(s) ||
+      (t.hashtags || []).some(tag => tag.toLowerCase().includes(s))
+    );
+  }
+  if(!items.length){
+    list.innerHTML = `<div class="empty">目前還沒有話題，按右下角「＋」開第一個話題吧。</div>`;
+    return;
+  }
+  list.innerHTML = items.map(t => {
+    const a = t.agree_count || 0, d = t.disagree_count || 0, total = a + d || 1;
+    return `
+    <div class="topic-card" data-id="${t.id}">
+      <div class="meta"><span class="badge">${esc(t.category)}</span>
+        ${t.code ? `<span>${esc(t.code)}</span>` : ""}</div>
+      <h3>${esc(t.title)}</h3>
+      <p class="body-preview">${esc(t.body)}</p>
+      <div class="tags">${(t.hashtags||[]).map(tag => `<span>#${esc(tag)}</span>`).join("")}</div>
+      <div class="stance-bar"><div class="a" style="width:${(a/total)*100}%"></div><div class="d" style="width:${(d/total)*100}%"></div></div>
+      <div class="stance-count"><span class="a-lab">同意 ${a}</span><span class="d-lab">反對 ${d}</span></div>
+    </div>`;
+  }).join("");
+  $$(".topic-card").forEach(card => card.addEventListener("click", () => openDetail(card.dataset.id)));
+}
+
+$$("#catBar button").forEach(btn => btn.addEventListener("click", () => {
+  $$("#catBar button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeCat = btn.dataset.cat;
+  renderTopicList();
+}));
+$("#searchBtn").addEventListener("click", () => { searchTerm = $("#searchInput").value.trim(); renderTopicList(); });
+$("#searchInput").addEventListener("keydown", e => { if(e.key === "Enter"){ searchTerm = e.target.value.trim(); renderTopicList(); }});
+
+/* ---------- 開新話題 ---------- */
+$("#openNewTopic").addEventListener("click", () => $("#newTopicOverlay").dataset.open = "true");
+$("#closeNewTopic").addEventListener("click", () => $("#newTopicOverlay").dataset.open = "false");
+
+$("#ntCategory").addEventListener("change", e => {
+  $("#ntCodeLabel").textContent = e.target.value === "商品"
+    ? "商品 JAN 碼（選填，幫助辨識同名新舊商品）"
+    : e.target.value === "公司"
+      ? "公司統一編號／登記碼（選填，避免撞名公司）"
+      : "識別碼（選填）";
+});
+
+let ntPhotoData = null;
+$("#ntPhotoInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  ntPhotoData = await compressImage(file);
+  $("#ntPhotoPreview").src = ntPhotoData;
+  $("#ntPhotoPreview").style.display = "block";
+});
+
+$("#ntSubmit").addEventListener("click", async () => {
+  const category = $("#ntCategory").value;
+  const title = $("#ntTitle").value.trim();
+  const code = $("#ntCode").value.trim();
+  const body = $("#ntBody").value.trim();
+  const hashtags = Array.from(new Set(
+    $("#ntTags").value.split(",").map(t => t.trim().replace(/^#/, "")).filter(Boolean)
+      .map(t => t.toLowerCase())
+  ));
+
+  if(!title || !body){ toast("請填寫標題和內容"); return; }
+  if(containsExtreme(title) || containsExtreme(body)){
+    toast("內容包含極端字眼，請以客觀方式描述你的體驗");
+    return;
+  }
+  if(!currentUser){ toast("登入中，請稍後再試一次"); return; }
+
+  try{
+    await addDoc(collection(db, "monku_topics"), {
+      category, title, code, body, hashtags,
+      photo: ntPhotoData || null,
+      author_uid: currentUser.uid,
+      created_at: serverTimestamp(),
+      agree_count: 0, disagree_count: 0, flag_count: 0,
+      status: "visible"
+    });
+    toast("話題已發布！");
+    $("#newTopicOverlay").dataset.open = "false";
+    $("#ntTitle").value = ""; $("#ntCode").value = ""; $("#ntBody").value = ""; $("#ntTags").value = "";
+    ntPhotoData = null; $("#ntPhotoPreview").style.display = "none";
+    loadTopics();
+  }catch(err){
+    console.error(err);
+    toast("發布失敗，請稍後再試");
+  }
+});
+
+/* ---------- 話題詳情 + 留言 ---------- */
+let currentTopicId = null;
+let currentStanceTab = "agree";
+let pickedStance = "agree";
+let cPhotoData = null;
+
+async function openDetail(id){
+  currentTopicId = id;
+  const t = allTopics.find(x => x.id === id);
+  if(!t) return;
+  $("#dCat").textContent = t.category;
+  $("#dTitle").textContent = t.title;
+  $("#dBody").textContent = t.body;
+  $("#dTags").innerHTML = (t.hashtags||[]).map(tag => `<span>#${esc(tag)}</span>`).join("");
+  if(t.photo){ $("#dPhoto").src = t.photo; $("#dPhoto").style.display = "block"; }
+  else { $("#dPhoto").style.display = "none"; }
+  $("#cntAgree").textContent = t.agree_count || 0;
+  $("#cntDisagree").textContent = t.disagree_count || 0;
+  currentStanceTab = "agree";
+  setStanceTab("agree");
+  $("#detailView").style.display = "block";
+  await loadComments();
+}
+$("#closeDetail").addEventListener("click", () => { $("#detailView").style.display = "none"; currentTopicId = null; });
+
+function setStanceTab(stance){
+  currentStanceTab = stance;
+  $("#tabAgree").classList.toggle("active", stance === "agree");
+  $("#tabDisagree").classList.toggle("active", stance === "disagree");
+  renderComments();
+}
+$("#tabAgree").addEventListener("click", () => setStanceTab("agree"));
+$("#tabDisagree").addEventListener("click", () => setStanceTab("disagree"));
+
+let currentComments = [];
+async function loadComments(){
+  try{
+    const q = query(collection(db, "monku_topics", currentTopicId, "comments"), orderBy("created_at", "desc"), limit(200));
+    const snap = await getDocs(q);
+    currentComments = [];
+    snap.forEach(d => currentComments.push({ id: d.id, ...d.data() }));
+  }catch(err){
+    console.warn("monku: 讀取留言失敗", err);
+    currentComments = [];
+  }
+  renderComments();
+}
+function renderComments(){
+  const list = currentComments.filter(c => c.stance === currentStanceTab);
+  const wrap = $("#commentList");
+  if(!list.length){
+    wrap.innerHTML = `<div class="empty">還沒有${currentStanceTab === "agree" ? "同意" : "反對"}的留言，當第一個吧。</div>`;
+    return;
+  }
+  wrap.innerHTML = list.map(c => {
+    const hidden = (c.flag_count || 0) >= 3;
+    return `
+    <div class="comment ${hidden ? "hidden-by-flag" : ""}" data-id="${c.id}">
+      <div class="who"><span>匿名網友</span><span>${c.created_at?.toDate ? c.created_at.toDate().toLocaleString("zh-TW") : ""}</span></div>
+      <div class="txt">${hidden ? "（多人檢舉，內容已隱藏待審核）" : esc(c.text)}</div>
+      ${(!hidden && c.photo) ? `<img src="${c.photo}">` : ""}
+      <button class="flag-btn" data-id="${c.id}">🚩 檢舉</button>
+    </div>`;
+  }).join("");
+  $$(".flag-btn").forEach(btn => btn.addEventListener("click", () => flagComment(btn.dataset.id)));
+}
+
+async function flagComment(commentId){
+  try{
+    const ref = doc(db, "monku_topics", currentTopicId, "comments", commentId);
+    await updateDoc(ref, { flag_count: increment(1) });
+    toast("已收到檢舉，謝謝你幫忙維護討論品質");
+    loadComments();
+  }catch(err){
+    console.error(err);
+    toast("檢舉失敗，請稍後再試");
+  }
+}
+
+$("#pickAgree").addEventListener("click", () => setPickedStance("agree"));
+$("#pickDisagree").addEventListener("click", () => setPickedStance("disagree"));
+function setPickedStance(s){
+  pickedStance = s;
+  $("#pickAgree").classList.toggle("active", s === "agree");
+  $("#pickDisagree").classList.toggle("active", s === "disagree");
+}
+setPickedStance("agree");
+
+$("#cPhotoInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  cPhotoData = await compressImage(file, 700, 0.55);
+  $("#cPhotoPreview").src = cPhotoData;
+  $("#cPhotoPreview").style.display = "block";
+});
+
+$("#sendComment").addEventListener("click", async () => {
+  const text = $("#commentText").value.trim();
+  if(!text){ toast("請輸入留言內容"); return; }
+  if(containsExtreme(text)){ toast("內容包含極端字眼，請客觀描述你的想法"); return; }
+  if(!currentUser || !currentTopicId){ toast("請稍後再試"); return; }
+
+  try{
+    await addDoc(collection(db, "monku_topics", currentTopicId, "comments"), {
+      stance: pickedStance, text, photo: cPhotoData || null,
+      author_uid: currentUser.uid, created_at: serverTimestamp(), flag_count: 0
+    });
+    const topicRef = doc(db, "monku_topics", currentTopicId);
+    await updateDoc(topicRef, pickedStance === "agree"
+      ? { agree_count: increment(1) } : { disagree_count: increment(1) });
+
+    $("#commentText").value = ""; cPhotoData = null; $("#cPhotoPreview").style.display = "none";
+    toast("留言已送出");
+    await loadComments();
+    await loadTopics();
+    const t = allTopics.find(x => x.id === currentTopicId);
+    if(t){ $("#cntAgree").textContent = t.agree_count || 0; $("#cntDisagree").textContent = t.disagree_count || 0; }
+  }catch(err){
+    console.error(err);
+    toast("留言失敗，請稍後再試");
+  }
+});
+
+loadTopics();
+</script>
+</body>
+</html>
