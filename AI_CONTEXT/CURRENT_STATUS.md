@@ -14,7 +14,9 @@
 | 商品頁解析器 `functions/extract.js` | Verified | Yes | `node extract.test.js` 13 項測試全數通過 |
 | AI 翻譯潤飾（Gemini） | Deployed | Yes | `gemini-3.6-flash`，key 放在 `functions/.env`（未進 git），deploy log 有 "Loaded environment variables from functions/.env" |
 | 前台 `shopping.html`（含中英切換、顏色選擇、留言詢問表單） | Deployed | Yes | hosting site `christykalvin-web`（`voiceout-asia` 專案） |
+| 前台 `shopping.html` 價格策略調整 | Deployed | Yes | 依經營者指示改為一律顯示「價格洽詢」（Price on request），避免日本廠商變動價格時產生價差風險 |
 | 後台 `shopping-admin.html`（商品管理／貼連結匯入／買家詢問） | Deployed | Yes | 同上 |
+
 | GitHub Actions 自動部署 | Deployed | Yes | `.github/workflows/deploy-shopping.yml`，push 到 branch 即自動部署並驗證正式站內容 |
 | 端對端實測（登入 → 匯入 → 上架 → 前台顯示） | Verified by user | Yes | 使用者已實際匯入商品成功（例：PRESS BUTTER SAND） |
 | 主題標籤系統（`settings/themes`，跟分類無關，例如 moomin/Hello Kitty） | Deployed | Yes | 前後台皆已用點選 chip 方式管理，2026-09-12 驗證上線 |

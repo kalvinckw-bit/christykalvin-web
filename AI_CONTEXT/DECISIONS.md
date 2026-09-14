@@ -177,3 +177,13 @@ This document records permanent architectural, design, and policy decisions appr
      - 確保兩個分支的 `public/` 目錄均包含完整的 25 個全站靜態檔案，徹底終結「分支互踩抹除」現象。
   2. **觸發正式部署與 CI 雙重驗證**：
      - 推送合併後代碼，重新觸發 `deploy-shopping.yml`，並執行正式站驗證（sha256 比對與 functions 版本比對），確認 `shopping.html`、`shopping-admin.html` 與 `forex.html` 全數正常在線。
+
+## 2026-09-14 前台價格策略調整：一律顯示「價格洽詢」，不標示固定金額
+
+- **Decision**: `public/shopping.html` 前台商品列表與詳情彈窗中的價格一律改為顯示「價格洽詢」（EN: `Price on request`），不再向客人顯示固定日幣數字金額；WhatsApp 詢價訊息亦同步對齊為「我想詢問這件商品的報價與代購詳情」。
+- **Rationale**: 由於日本廠商與代購來源之進貨價格、特價週期頻繁變動，且本店與廠商並未簽訂長期定價合約，若前台標示固定金額，一旦廠商漲價或特價截止，賣家將無法及時追價而承擔價差風險。因此依經營者指示，全面回歸「由客人主動詢價、賣家確認當下成本後再行個別報價」的一貫做法。
+- **Affected Files**:
+  - `public/shopping.html`（`priceHTML` 改為一律回傳 `S().priceInquire`；彈窗內 `price` 設為 `S().priceInquire`；隱藏按價格排序之下拉選單）。
+  - `日本代購 CK Japan Product/public（網頁前後台）/shopping.html`（鏡像副本同步）。
+- **Status**: IMPLEMENTED & COMMITTED
+- **Date**: 2026-09-14
