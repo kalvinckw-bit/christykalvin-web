@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 畫面中的卡片背景為固定淺色，因此鎖定 Light 主題，避免深色模式下淺底白字看不見 -->
+    <style name="Theme.SignalScout" parent="Theme.AppCompat.Light.DarkActionBar" />
+</resources>

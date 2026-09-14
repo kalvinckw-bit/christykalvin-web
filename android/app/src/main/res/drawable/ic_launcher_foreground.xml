@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 訊號格：由弱到強 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,66h8v12h-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M47,57h8v21h-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,48h8v30h-8z" />
+    <path
+        android:fillColor="#7FB0FF"
+        android:pathData="M73,39h8v39h-8z" />
+
+    <!-- 定位圖釘 -->
+    <path
+        android:fillColor="#FFD166"
+        android:pathData="M54,26m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+</vector>

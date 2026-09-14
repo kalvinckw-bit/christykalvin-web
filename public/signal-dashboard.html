@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訊號地圖 Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --ink:#1d2733; --muted:#6c7a89; --line:#e4e9ee;
+    --l0:#b0182c; --l1:#d62828; --l2:#f77f00; --l3:#2d6cdf; --l4:#2a9d8f;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    background:var(--bg);color:var(--ink);display:flex;flex-direction:column;
+  }
+  header{
+    background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  }
+  h1{font-size:17px;margin:0;font-weight:700}
+  .stats{display:flex;gap:16px;margin-left:auto;flex-wrap:wrap}
+  .stat{text-align:right}
+  .stat b{display:block;font-size:18px;line-height:1.2}
+  .stat span{font-size:11px;color:var(--muted)}
+  .filters{
+    background:var(--panel);border-bottom:1px solid var(--line);
+    padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  }
+  .filters label{font-size:12px;color:var(--muted);margin-right:2px}
+  select,button{
+    font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);cursor:pointer;
+  }
+  main{flex:1;display:flex;min-height:0}
+  #map{flex:1;min-height:0}
+  aside{
+    width:330px;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;flex-shrink:0;
+  }
+  .row{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+  .row:hover{background:#f8fafc}
+  .row .when{font-size:11px;color:var(--muted)}
+  .row .sims{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+  .chip{
+    font-size:12px;padding:3px 8px;border-radius:999px;color:#fff;font-weight:600;white-space:nowrap;
+  }
+  .chip small{font-weight:400;opacity:.85}
+  .row .note{font-size:12px;color:var(--muted);margin-top:6px}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}
+  .legend{
+    background:#fff;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.9;
+    box-shadow:0 1px 6px rgba(0,0,0,.15);
+  }
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px}
+  .pop{font-size:13px;line-height:1.6;min-width:190px}
+  .pop h4{margin:0 0 6px;font-size:13px}
+  .pop table{border-collapse:collapse;width:100%;margin-top:4px}
+  .pop td{padding:2px 4px;border-top:1px solid var(--line)}
+  .pop .meta{color:var(--muted);font-size:11px;margin-top:6px}
+  @media(max-width:760px){
+    main{flex-direction:column}
+    #map{height:52vh;flex:none}
+    aside{width:100%;border-left:0;border-top:1px solid var(--line);flex:1}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>訊號地圖 Dashboard</h1>
+  <div class="stats">
+    <div class="stat"><b id="statTotal">–</b><span>總記錄</span></div>
+    <div class="stat"><b id="statWeak" style="color:var(--l1)">–</b><span>弱訊號點</span></div>
+    <div class="stat"><b id="statDevices">–</b><span>裝置</span></div>
+  </div>
+</header>
+
+<div class="filters">
+  <label>顯示</label>
+  <select id="fLevel">
+    <option value="all">全部記錄</option>
+    <option value="weak">只看弱訊號（≤1 格）</option>
+    <option value="dead">只看完全無訊號（0 格）</option>
+  </select>
+  <label>依據</label>
+  <select id="fSim">
+    <option value="weakest">兩卡取最弱</option>
+    <option value="main">只看主卡</option>
+    <option value="sub">只看副卡</option>
+  </select>
+  <select id="fCarrier"><option value="all">全部電信商</option></select>
+  <button id="btnFit">縮放至全部標記</button>
+  <span id="status" style="font-size:12px;color:var(--muted)"></span>
+</div>
+
+<main>
+  <div id="map"></div>
+  <aside id="list"><div class="empty">載入中…</div></aside>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, limit }
+  from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// 公開 web config，設計上即可公開；實際保護來自 Firestore 安全規則。
+const firebaseConfig = {
+  apiKey: "AIzaSyD4ZyFyEvnTIE2sBwi83Pre_6kdrdTB6Rw",
+  authDomain: "voiceout.asia",
+  projectId: "voiceout-asia",
+  storageBucket: "voiceout-asia.firebasestorage.app",
+  messagingSenderId: "103693807034",
+  appId: "1:103693807034:web:89d1b868d541957323c183"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "christykalvin-db");
+const auth = getAuth(app);
+
+const LEVEL_COLORS = ["#b0182c","#d62828","#f77f00","#2d6cdf","#2a9d8f"];
+const LEVEL_NAMES  = ["無訊號","極弱","弱","良好","很強"];
+
+const map = L.map("map", { zoomControl: true }).setView([3.139, 101.687], 11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: "&copy; OpenStreetMap"
+}).addTo(map);
+
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div", "legend");
+  d.innerHTML = "<b>訊號強度</b><br>" + LEVEL_NAMES
+    .map((n, i) => `<i style="background:${LEVEL_COLORS[i]}"></i>${n}（${i} 格）`)
+    .join("<br>");
+  return d;
+};
+legend.addTo(map);
+
+const markerLayer = L.layerGroup().addTo(map);
+const listEl = document.getElementById("list");
+const statusEl = document.getElementById("status");
+
+let reports = [];
+const markersById = new Map();
+
+function levelOf(r) {
+  const mode = document.getElementById("fSim").value;
+  if (mode === "main") return r.main ? r.main.level : null;
+  if (mode === "sub") return r.sub ? r.sub.level : null;
+  return r.weakestLevel;
+}
+
+function carriers() {
+  const set = new Set();
+  reports.forEach(r => [r.main, r.sub].forEach(s => { if (s && s.carrierName) set.add(s.carrierName); }));
+  return [...set].sort();
+}
+
+function visible() {
+  const lv = document.getElementById("fLevel").value;
+  const carrier = document.getElementById("fCarrier").value;
+  return reports.filter(r => {
+    const level = levelOf(r);
+    if (level === null || level === undefined) return false;
+    if (lv === "weak" && level > 1) return false;
+    if (lv === "dead" && level !== 0) return false;
+    if (carrier !== "all") {
+      const match = [r.main, r.sub].some(s => s && s.carrierName === carrier);
+      if (!match) return false;
+    }
+    return true;
+  });
+}
+
+function simChip(sim) {
+  if (!sim) return "";
+  const c = LEVEL_COLORS[Math.max(0, Math.min(4, sim.level))];
+  const dbm = sim.dbm === null || sim.dbm === undefined ? "" : ` <small>${sim.dbm} dBm</small>`;
+  return `<span class="chip" style="background:${c}">${sim.slotLabel} ${sim.level}/4${dbm}</span>`;
+}
+
+function popupHtml(r) {
+  const rows = [r.main, r.sub].filter(Boolean).map(s => `
+    <tr>
+      <td><b>${s.slotLabel}</b></td>
+      <td>${s.carrierName || "—"}</td>
+      <td style="color:${LEVEL_COLORS[Math.max(0, Math.min(4, s.level))]};font-weight:700">
+        ${LEVEL_NAMES[Math.max(0, Math.min(4, s.level))]} ${s.level}/4
+      </td>
+      <td>${s.dbm ?? "—"}${s.dbm != null ? " dBm" : ""}</td>
+      <td>${s.networkType || "—"}</td>
+    </tr>`).join("");
+
+  return `<div class="pop">
+    <h4>${r.capturedAt ? r.capturedAt.toLocaleString("zh-TW") : "時間未知"}</h4>
+    <table>${rows}</table>
+    ${r.note ? `<div class="meta">備註：${escapeHtml(r.note)}</div>` : ""}
+    <div class="meta">
+      座標 ${r.lat.toFixed(6)}, ${r.lng.toFixed(6)}（±${Math.round(r.accuracy)} 公尺）<br>
+      ${escapeHtml(r.deviceModel || "")}
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function render() {
+  const rows = visible();
+  markerLayer.clearLayers();
+  markersById.clear();
+
+  rows.forEach(r => {
+    const level = Math.max(0, Math.min(4, levelOf(r)));
+    const marker = L.circleMarker([r.lat, r.lng], {
+      radius: level <= 1 ? 9 : 7,
+      color: "#fff",
+      weight: 2,
+      fillColor: LEVEL_COLORS[level],
+      fillOpacity: 0.92
+    }).bindPopup(popupHtml(r));
+    marker.addTo(markerLayer);
+    markersById.set(r.id, marker);
+  });
+
+  listEl.innerHTML = rows.length ? "" : `<div class="empty">
+    目前沒有符合條件的記錄。<br><br>
+    用 Android App「訊號偵測」在現場按一下「記錄此處訊號」，<br>資料就會即時出現在這張地圖上。
+  </div>`;
+
+  rows.slice(0, 300).forEach(r => {
+    const div = document.createElement("div");
+    div.className = "row";
+    div.innerHTML = `
+      <div class="when">${r.capturedAt ? r.capturedAt.toLocaleString("zh-TW") : "—"}</div>
+      <div class="sims">${simChip(r.main)}${simChip(r.sub)}</div>
+      ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ""}`;
+    div.onclick = () => {
+      map.setView([r.lat, r.lng], Math.max(map.getZoom(), 17));
+      markersById.get(r.id)?.openPopup();
+    };
+    listEl.appendChild(div);
+  });
+
+  document.getElementById("statTotal").textContent = reports.length;
+  document.getElementById("statWeak").textContent =
+    reports.filter(r => (r.weakestLevel ?? 4) <= 1).length;
+  document.getElementById("statDevices").textContent =
+    new Set(reports.map(r => r.deviceId)).size;
+}
+
+function fitAll() {
+  const rows = visible();
+  if (!rows.length) return;
+  map.fitBounds(L.latLngBounds(rows.map(r => [r.lat, r.lng])), { padding: [40, 40], maxZoom: 17 });
+}
+
+function refreshCarrierOptions() {
+  const sel = document.getElementById("fCarrier");
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">全部電信商</option>' +
+    carriers().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+["fLevel", "fSim", "fCarrier"].forEach(id =>
+  document.getElementById(id).addEventListener("change", render));
+document.getElementById("btnFit").addEventListener("click", fitAll);
+
+function normalize(doc) {
+  const d = doc.data();
+  const point = d.location?.geoPoint;
+  if (!point) return null;
+  return {
+    id: doc.id,
+    lat: point.latitude,
+    lng: point.longitude,
+    accuracy: d.location?.accuracyMeters ?? 0,
+    capturedAt: d.capturedAt?.toDate?.() ?? null,
+    weakestLevel: d.weakestLevel,
+    main: d.main ?? null,
+    sub: d.sub ?? null,
+    note: d.note || "",
+    deviceId: d.deviceId || "",
+    deviceModel: d.deviceModel || ""
+  };
+}
+
+let firstLoad = true;
+
+signInAnonymously(auth)
+  .then(() => {
+    const q = query(collection(db, "signal_reports"), orderBy("capturedAt", "desc"), limit(1000));
+    onSnapshot(q,
+      snap => {
+        reports = snap.docs.map(normalize).filter(Boolean);
+        refreshCarrierOptions();
+        render();
+        statusEl.textContent = `即時連線中 · ${reports.length} 筆`;
+        if (firstLoad && reports.length) { fitAll(); firstLoad = false; }
+      },
+      err => {
+        statusEl.textContent = "讀取失敗：" + err.code;
+        listEl.innerHTML = `<div class="empty">讀取資料失敗（${escapeHtml(err.code)}）。<br>
+          請確認 Firestore 安全規則允許已登入使用者讀取 <code>signal_reports</code>。</div>`;
+      });
+  })
+  .catch(err => {
+    statusEl.textContent = "登入失敗：" + err.code;
+    listEl.innerHTML = `<div class="empty">匿名登入失敗（${escapeHtml(err.code)}）。<br>
+      請到 Firebase Console → Authentication 啟用「匿名」登入。</div>`;
+  });
+</script>
+</body>
+</html>

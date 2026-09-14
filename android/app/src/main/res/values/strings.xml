@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">訊號偵測</string>
+    <string name="gps_waiting">GPS 定位中…</string>
+    <string name="current_signal">目前雙卡訊號</string>
+    <string name="note_hint">地點備註（選填，例如：三樓電梯口）</string>
+    <string name="capture">記錄此處訊號</string>
+    <string name="auto_capture">自動記錄（每 30 秒一次，需保持本畫面開啟）</string>
+    <string name="queue_empty">待上傳 0 筆</string>
+    <string name="sync_now">立即補傳</string>
+    <string name="history">最近記錄</string>
+    <string name="need_permission">需要「電話」與「精確位置」權限才能讀取雙卡訊號與定位</string>
+    <string name="no_sim">讀不到 SIM 卡訊號（請確認已授予權限，且有插卡）</string>
+</resources>
