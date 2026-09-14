@@ -77,6 +77,18 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 
 ----------------------------------------
 
+### 6b. Claude (Web, Remote)
+- **AI**: Claude
+- **Host**: Claude Code Remote (Web / Cloud sandbox session)
+- **Machine**: Ephemeral Linux container (no local filesystem access)
+- **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Remote).md`
+- **State**: Safe to Resume
+- **Heartbeat**: 2026-09-14
+- **Current Objective**: Brief-only planning done for `public/monku.html` (voiceout.asia UGC critique/debate feature); build not started. Blocked on local `G:\` path access for Master AI Context sync — needs local session or pasted content.
+- **Reserved Files**: `public/monku.html` (planned, not yet created)
+
+----------------------------------------
+
 ### 7. ChatGPT (Desktop, Windows)
 - **AI**: ChatGPT
 - **Host**: Desktop App

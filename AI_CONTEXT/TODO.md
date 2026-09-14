@@ -11,6 +11,13 @@
 ## P2: Backlog & Enhancements
 - [ ] Performance optimizations and styling polish.
 
+## Monku (吐槽/辯論) Feature — voiceout.asia/monku.html
+- [x] 2026-09-14: Brainstormed scope, legal framing (UGC vs platform liability, opinion vs accusation), and content rules (extreme content removal, camera-only capture, no gallery upload) — brief only, no code yet.
+- [ ] **BLOCKED**: Read `G:\マイドライブ\Projects\00 Master AI Context Template` — not accessible from remote/cloud sessions (local Windows path). Needs a local session or user-provided content.
+- [ ] Write feature spec doc for `public/monku.html` before coding (topic types, moderation rules, camera-capture enforcement).
+- [ ] Build MVP: 商品 topic type first (lower legal risk), 正反留言, hashtags, camera-only media capture.
+- [ ] Defer to later phase: AI sentiment analysis, reputation scoring, auto stance summaries, push notifications, multi-language.
+
 ## CK Holdings 集團雲端基礎設施與網域生命週期維護 (Domain & Cloud Lifecycle TODO)
 - [x] 2026-08-29: 完成 CK Holdings Master Firebase 專案一號通 (One-Auth) 授權網域配置 (`voiceout.asia`, `sougu.online`, `christykalvin.com`)。
 - [x] 2026-08-29: 透過 CLI 建立專屬獨立 Firestore 資料庫實例：`sougu-db`、`christykalvin-db`、`creditcard`、`dead-man-switch`。
