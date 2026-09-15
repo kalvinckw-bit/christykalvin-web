@@ -1,0 +1,25 @@
+name: Diagnose Products Query
+
+# 手動觸發：用跟前台訪客一模一樣的 Firestore query 直接連正式站資料庫，
+# 確認「商品全部不見了」是資料問題還是規則權限問題。
+# 開發用的雲端 sandbox 連不到 firestore，只能靠這個有完整網路的 CI runner 查。
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - ".github/workflows/diagnose-products.yml"
+      - "scripts/diagnose-products.mjs"
+
+jobs:
+  diagnose:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install firebase client SDK
+        run: npm install firebase@10.13.0 --no-save
+      - name: Query products collection
+        run: node scripts/diagnose-products.mjs
