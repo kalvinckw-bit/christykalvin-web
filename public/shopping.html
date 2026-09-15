@@ -247,7 +247,8 @@
   <div class="chipRow" id="chipRow"></div>
   <div class="toolbar2">
     <span class="count" id="countLine"></span>
-    <select id="sortSelect">
+    <!-- 前台不顯示價格，依價格排序沒有意義，整個排序選單先藏起來（只剩「最新上架」一種排序時，下拉選單本身也沒有意義） -->
+    <select id="sortSelect" style="display:none;">
       <option value="new" id="optNew">最新上架</option>
       <option value="priceAsc" id="optPriceAsc">價格由低到高</option>
       <option value="priceDesc" id="optPriceDesc">價格由高到低</option>
@@ -569,21 +570,10 @@ function priceInfo(p){
   };
 }
 
+// 賣家要求前台完全不顯示價格（不放金額，也不放「價格洽詢」這類提示文字），
+// 客人要問價一律透過下面的 WhatsApp／留言詢問按鈕，價格位置直接留空。
 function priceHTML(p, big){
-  const pi = priceInfo(p);
-  if (!pi.current) return `<div class="price">${esc(S().priceInquire)}</div>`;
-  const fx = fxLine(pi.current);
-  const cls = big ? "price" : "price";
-  const original = pi.onSale
-    ? `<span class="wasPrice">¥${pi.original.toLocaleString()}</span>`
-    : "";
-  const save = pi.onSale
-    ? `<span class="saveTag">${esc(S().saveAmount(pi.saveAmount))}</span>`
-    : "";
-  return `<div class="${cls}${pi.onSale ? " onSale" : ""}">
-    ${original}¥${pi.current.toLocaleString()}${save}
-    ${fx ? `<span class="fx">${esc(fx)}</span>` : ""}
-  </div>`;
+  return "";
 }
 
 
@@ -687,9 +677,6 @@ function openModal(id){
   ).join("");
 
   const title = productTitle(p);
-  const pi = priceInfo(p);
-  // 詢問訊息裡帶的價格：特價中就帶特價，過期就帶原價，跟畫面顯示一致
-  const price = pi.current ? `¥${pi.current.toLocaleString()}` : S().priceInquire;
   const desc = productDesc(p);
 
   const link = productLink(p.id);
@@ -760,7 +747,7 @@ function openModal(id){
     const titleEn = p.title_en || p.title_ja || STR.en.noTitle;
     const colorLine = selectedColor ? `\n${S().colorLabel}: ${selectedColor}` : "";
     const sizeLine = selectedSize ? `\n${S().sizeLabel}: ${selectedSize}` : "";
-    return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}${sizeLine}\n${price}\n${link}`;
+    return `${STR.zh.inquiryGreeting}\n${titleZh}\n${STR.en.inquiryGreeting}\n${titleEn}${colorLine}${sizeLine}\n${link}`;
   }
 
   document.getElementById("waBtn").addEventListener("click", () => {
