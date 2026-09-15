@@ -247,7 +247,7 @@
   <div class="chipRow" id="chipRow"></div>
   <div class="toolbar2">
     <span class="count" id="countLine"></span>
-    <select id="sortSelect" style="display:none;">
+    <select id="sortSelect">
       <option value="new" id="optNew">最新上架</option>
       <option value="priceAsc" id="optPriceAsc">價格由低到高</option>
       <option value="priceDesc" id="optPriceDesc">價格由高到低</option>
@@ -570,8 +570,20 @@ function priceInfo(p){
 }
 
 function priceHTML(p, big){
-  const cls = big ? "price bigPrice" : "price";
-  return `<div class="${cls} priceInquire">${esc(S().priceInquire)}</div>`;
+  const pi = priceInfo(p);
+  if (!pi.current) return `<div class="price">${esc(S().priceInquire)}</div>`;
+  const fx = fxLine(pi.current);
+  const cls = big ? "price" : "price";
+  const original = pi.onSale
+    ? `<span class="wasPrice">¥${pi.original.toLocaleString()}</span>`
+    : "";
+  const save = pi.onSale
+    ? `<span class="saveTag">${esc(S().saveAmount(pi.saveAmount))}</span>`
+    : "";
+  return `<div class="${cls}${pi.onSale ? " onSale" : ""}">
+    ${original}¥${pi.current.toLocaleString()}${save}
+    ${fx ? `<span class="fx">${esc(fx)}</span>` : ""}
+  </div>`;
 }
 
 
@@ -676,8 +688,8 @@ function openModal(id){
 
   const title = productTitle(p);
   const pi = priceInfo(p);
-  // 前台一律顯示價格洽詢，等客人詢問
-  const price = S().priceInquire;
+  // 詢問訊息裡帶的價格：特價中就帶特價，過期就帶原價，跟畫面顯示一致
+  const price = pi.current ? `¥${pi.current.toLocaleString()}` : S().priceInquire;
   const desc = productDesc(p);
 
   const link = productLink(p.id);
