@@ -54,7 +54,20 @@
   a{color:inherit;}
   img{max-width:100%;display:block;}
 
-  /* 背景富士山楓葉照片：半透明裝飾層，固定滿版鋪在最底層，不擋點擊 */
+  /* 日式傳統「青海波」波紋底紋：純 CSS 疊加同心圓弧畫出來的扇形波浪，
+     全站最底層的極淡底紋，用品牌墨綠色，加強和風質感又不搶眼 */
+  #bgPattern{
+    position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-color:var(--bg);
+    background-size:60px 60px;
+    background-image:
+      radial-gradient(circle at 0 0, transparent 24%, rgba(14,75,79,.07) 25%, rgba(14,75,79,.07) 28%, transparent 29%, transparent 36%, rgba(14,75,79,.07) 37%, rgba(14,75,79,.07) 40%, transparent 41%, transparent 100%),
+      radial-gradient(circle at 60px 0, transparent 24%, rgba(14,75,79,.07) 25%, rgba(14,75,79,.07) 28%, transparent 29%, transparent 36%, rgba(14,75,79,.07) 37%, rgba(14,75,79,.07) 40%, transparent 41%, transparent 100%),
+      radial-gradient(circle at 30px 30px, transparent 24%, rgba(14,75,79,.07) 25%, rgba(14,75,79,.07) 28%, transparent 29%, transparent 36%, rgba(14,75,79,.07) 37%, rgba(14,75,79,.07) 40%, transparent 41%, transparent 100%),
+      radial-gradient(circle at 0 60px, transparent 24%, rgba(14,75,79,.07) 25%, rgba(14,75,79,.07) 28%, transparent 29%, transparent 36%, rgba(14,75,79,.07) 37%, rgba(14,75,79,.07) 40%, transparent 41%, transparent 100%),
+      radial-gradient(circle at 60px 60px, transparent 24%, rgba(14,75,79,.07) 25%, rgba(14,75,79,.07) 28%, transparent 29%, transparent 36%, rgba(14,75,79,.07) 37%, rgba(14,75,79,.07) 40%, transparent 41%, transparent 100%);
+  }
+  /* 背景富士山楓葉照片：半透明裝飾層，疊在青海波底紋上方，固定滿版鋪底，不擋點擊 */
   #bgPhoto{
     position:fixed;inset:0;z-index:-1;pointer-events:none;
     background-image:url('/images/bg-fuji-momiji.jpg');
@@ -252,6 +265,7 @@
 </head>
 <body>
 
+<div id="bgPattern" aria-hidden="true"></div>
 <div id="bgPhoto" aria-hidden="true"></div>
 <div id="leavesBg" aria-hidden="true"></div>
 <script>
