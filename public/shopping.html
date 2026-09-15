@@ -123,6 +123,20 @@
 
   main{max-width:1180px;margin:0 auto;padding:18px 20px 80px;}
 
+  /* 商品卡片是實心白底，把整頁固定背景那張富士山楓葉照片幾乎全部蓋住，
+     賣家反應根本看不到。額外加一塊清楚展示照片的橫幅，放在搜尋列下面、
+     商品格子上面，保證看得到，不用只靠卡片縫隙那一點點透出來的背景。 */
+  .heroBanner{
+    height:130px;border-radius:14px;margin-bottom:16px;
+    background-image:url('/images/bg-fuji-momiji.jpg');background-size:cover;background-position:center 55%;
+    border:1px solid var(--line);position:relative;overflow:hidden;
+  }
+  .heroBanner::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(255,255,255,0) 55%, rgba(250,248,243,.85) 100%);
+  }
+  @media (min-width:720px){ .heroBanner{height:200px;} }
+
   .chipRow{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px;-webkit-overflow-scrolling:touch;}
   .chipRow[hidden]{display:none;} /* .chipRow 的 display:flex 是 author 樣式，優先度比瀏覽器對 hidden 屬性的預設值高，
     不額外補這條規則的話，themeChipRow.hidden=true 不會真的把整排藏起來 */
@@ -318,6 +332,7 @@
 </header>
 
 <main>
+  <div class="heroBanner" aria-hidden="true"></div>
   <div class="chipRow" id="themeChipRow" hidden></div>
   <div class="chipRow" id="chipRow"></div>
   <div class="toolbar2">
