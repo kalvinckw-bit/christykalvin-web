@@ -54,6 +54,27 @@
   a{color:inherit;}
   img{max-width:100%;display:block;}
 
+  /* 背景飄落楓葉：半透明裝飾層，固定在畫面後方，不擋點擊、不影響版面 */
+  #leavesBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+  #leavesBg .leaf{
+    position:absolute;top:-10vh;font-size:22px;opacity:0.35;
+    animation-name:leafFall,leafSway;animation-timing-function:linear,ease-in-out;
+    animation-iteration-count:infinite,infinite;animation-direction:normal,alternate;
+    will-change:transform;user-select:none;
+  }
+  @keyframes leafFall{
+    from{transform:translateY(-10vh) rotate(0deg);}
+    to{transform:translateY(110vh) rotate(360deg);}
+  }
+  @keyframes leafSway{
+    from{margin-left:-28px;}
+    to{margin-left:28px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    #leavesBg{display:none;}
+  }
+  header.topbar,main,footer,.modalMask{position:relative;z-index:1;}
+
   header.topbar{
     position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);
     padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
@@ -223,6 +244,32 @@
 </style>
 </head>
 <body>
+
+<div id="leavesBg" aria-hidden="true"></div>
+<script>
+(function(){
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var host = document.getElementById("leavesBg");
+  var count = window.innerWidth < 640 ? 10 : 16;
+  var glyphs = ["🍁","🍂"];
+  for (var i = 0; i < count; i++) {
+    var leaf = document.createElement("span");
+    leaf.className = "leaf";
+    leaf.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+    var left = Math.random() * 100;
+    var fallDuration = 9 + Math.random() * 8;
+    var swayDuration = 2.5 + Math.random() * 2;
+    var delay = Math.random() * -20;
+    var size = 16 + Math.random() * 14;
+    leaf.style.left = left + "vw";
+    leaf.style.fontSize = size + "px";
+    leaf.style.opacity = (0.25 + Math.random() * 0.25).toFixed(2);
+    leaf.style.animationDuration = fallDuration + "s, " + swayDuration + "s";
+    leaf.style.animationDelay = delay + "s, " + (Math.random() * -swayDuration) + "s";
+    host.appendChild(leaf);
+  }
+})();
+</script>
 
 <header class="topbar">
   <div class="brand">
