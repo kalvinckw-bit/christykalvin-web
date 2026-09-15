@@ -151,6 +151,15 @@
   .themeChip{padding:5px 12px;border-radius:16px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--text);}
   .themeChip.active{background:var(--petrol);color:#fff;border-color:var(--petrol);}
   .themeAddBtn{padding:5px 10px;border-radius:16px;border:1px dashed var(--line);background:#fff;font-size:12.5px;cursor:pointer;color:var(--muted);}
+
+  .statTile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;min-width:140px;}
+  .statTile .num{font-size:26px;font-weight:800;color:var(--petrol);}
+  .statTile .label{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .statRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .statRow:last-child{border-bottom:none;}
+  .statRow .rank{width:22px;color:var(--muted);font-weight:700;}
+  .statRow .name{flex:1;}
+  .statRow .n{color:var(--petrol);font-weight:700;}
 </style>
 </head>
 <body>
@@ -178,6 +187,7 @@
       <button class="tab" data-tab="import">貼連結自動匯入 <span class="badge-count" id="draftCount" style="display:none">0</span></button>
       <button class="tab" data-tab="inquiries">買家詢問 <span class="badge-count" id="inquiryCount" style="display:none">0</span></button>
       <button class="tab" data-tab="pricing">加價設定</button>
+      <button class="tab" data-tab="stats">瀏覽統計</button>
     </div>
 
     <div class="panel active" id="panel-products">
@@ -310,6 +320,22 @@
       <div class="grid" id="inquiryGrid"></div>
       <div id="inquiryEmpty" style="display:none;">目前沒有買家詢問</div>
     </div>
+
+    <div class="panel" id="panel-stats">
+      <div class="importBox" style="max-width:760px;margin-bottom:16px;">
+        <p>
+          <b>瀏覽統計：</b>統計最近寫入的訪客瀏覽記錄（整頁瀏覽 + 商品詳情瀏覽），
+          讓您看流量跟哪些商品最多人點開。訪客不用登入就會被記錄，資料只有登入的您能看到。
+        </p>
+        <button id="loadStatsBtn">重新整理統計</button>
+        <span class="importStatus" id="statsStatus"></span>
+      </div>
+      <div id="statsSummary" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;"></div>
+      <div class="importBox" style="max-width:760px;">
+        <p><b>熱門商品 Top 10（依詳情瀏覽次數）</b></p>
+        <div id="statsTopProducts"></div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -319,7 +345,7 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, query, orderBy, limit
+  getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc, getDoc, getDocs, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
   getFunctions, httpsCallable
@@ -398,6 +424,80 @@ document.querySelectorAll(".tab").forEach(tabBtn => {
 function esc(s){
   return (s ?? "").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+
+/* ---------------- 瀏覽統計 ---------------- */
+/* 直接在瀏覽器端讀最近一批 pageviews 紀錄做統計，不用另外架 Cloud Function。
+   用 limit 頂住讀取量，避免流量大了以後單頁統計把整個 collection 讀光。 */
+const STATS_SAMPLE_SIZE = 5000;
+let statsLoaded = false;
+
+async function loadStats(){
+  const statusEl = document.getElementById("statsStatus");
+  const btn = document.getElementById("loadStatsBtn");
+  btn.disabled = true;
+  statusEl.className = "importStatus";
+  statusEl.textContent = "讀取中...";
+  try {
+    const q = query(collection(db, "pageviews"), orderBy("timestamp", "desc"), limit(STATS_SAMPLE_SIZE));
+    const snap = await getDocs(q);
+    const rows = snap.docs.map(d => d.data());
+
+    const sessions = new Set();
+    const deviceCount = { mobile: 0, desktop: 0, tablet: 0 };
+    const productCount = {};
+    let pageViews = 0, productViews = 0;
+
+    rows.forEach(r => {
+      if (r.session_id) sessions.add(r.session_id);
+      if (r.device_type && deviceCount[r.device_type] != null) deviceCount[r.device_type]++;
+      if (r.type === "page") pageViews++;
+      if (r.type === "product" && r.product_id) {
+        productViews++;
+        if (!productCount[r.product_id]) productCount[r.product_id] = { count: 0, title: r.product_title || r.product_id };
+        productCount[r.product_id].count++;
+        productCount[r.product_id].title = r.product_title || productCount[r.product_id].title;
+      }
+    });
+
+    const summaryEl = document.getElementById("statsSummary");
+    const tile = (num, label) => `<div class="statTile"><div class="num">${num}</div><div class="label">${esc(label)}</div></div>`;
+    summaryEl.innerHTML =
+      tile(rows.length, rows.length >= STATS_SAMPLE_SIZE ? `最近 ${STATS_SAMPLE_SIZE} 筆紀錄` : "紀錄總數") +
+      tile(pageViews, "整頁瀏覽次數") +
+      tile(productViews, "商品詳情瀏覽次數") +
+      tile(sessions.size, "不重複訪客（同瀏覽器估算）") +
+      tile(`${deviceCount.mobile} / ${deviceCount.desktop} / ${deviceCount.tablet}`, "手機／桌機／平板");
+
+    const topProducts = Object.entries(productCount)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10);
+
+    const topEl = document.getElementById("statsTopProducts");
+    if (!topProducts.length) {
+      topEl.innerHTML = `<p style="color:var(--muted);font-size:13px;">目前還沒有商品瀏覽紀錄</p>`;
+    } else {
+      topEl.innerHTML = topProducts.map(([pid, info], i) => {
+        const live = allProducts.find(p => p.id === pid);
+        const name = live ? (live.title_zh || live.title_en || live.title_ja || info.title) : info.title;
+        return `<div class="statRow"><span class="rank">${i + 1}</span><span class="name">${esc(name)}</span><span class="n">${info.count} 次</span></div>`;
+      }).join("");
+    }
+
+    statusEl.className = "importStatus ok";
+    statusEl.textContent = "已更新 ✓";
+    statsLoaded = true;
+  } catch (err) {
+    statusEl.className = "importStatus err";
+    statusEl.textContent = "讀取失敗：" + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("loadStatsBtn").addEventListener("click", loadStats);
+document.querySelector('.tab[data-tab="stats"]').addEventListener("click", () => {
+  if (!statsLoaded) loadStats();
+});
 
 /* ---------------- 商品列表 ---------------- */
 function startListening(){

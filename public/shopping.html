@@ -345,6 +345,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import {
   getFirestore, collection, query, where, onSnapshot, addDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { logPageView } from "/pageview-tracker.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBbTKwYIs3pdPKffbk4-GiQzK7P8lQpUBQ",
@@ -357,6 +358,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// 記錄這次整頁瀏覽（不等待完成，不擋畫面渲染；失敗也不影響正常使用）
+logPageView(db, addDoc, collection, { type: "page" });
 
 const PLATFORM_CONTACT_WA = "818036098818"; // +81-80-3609-8818 的 wa.me 格式：去掉開頭0，補上國碼
 
@@ -749,6 +753,9 @@ function openModal(id){
   const desc = productDesc(p);
 
   const link = productLink(p.id);
+
+  // 記錄這次商品詳情瀏覽（不等待完成，不擋開窗）
+  logPageView(db, addDoc, collection, { type: "product", product_id: p.id, product_title: title });
 
   // 服飾的尺寸選擇：哪個尺寸缺貨要看 variants（同一個尺寸不同顏色庫存不一樣）
   const variants = Array.isArray(p.variants) ? p.variants : [];

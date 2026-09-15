@@ -50,5 +50,19 @@ service cloud.firestore {
         && request.resource.data.created_at is number;
       allow read, update, delete: if request.auth != null;
     }
+
+    // 前台訪客瀏覽記錄（整頁瀏覽 / 商品詳情瀏覽）：給賣家在後台看流量與熱門商品用。
+    // 訪客不用登入就能新增紀錄，但不能讀取/修改/刪除既有紀錄
+    // （避免陌生人讀到其他訪客的瀏覽足跡）；後台登入帳號才能讀取做統計。
+    match /pageviews/{viewId} {
+      allow create: if request.resource.data.keys().hasAll(['type','timestamp','collected_at','site','url'])
+        && (request.resource.data.type == 'page' || request.resource.data.type == 'product')
+        && request.resource.data.timestamp is number
+        && request.resource.data.site is string
+        && request.resource.data.site.size() < 200
+        && request.resource.data.url is string
+        && request.resource.data.url.size() < 2000;
+      allow read, update, delete: if request.auth != null;
+    }
   }
 }
