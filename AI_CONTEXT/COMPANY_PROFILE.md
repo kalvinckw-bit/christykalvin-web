@@ -1,4 +1,4 @@
-﻿# Corporate Profile & Brand Manifesto: Christy Kalvin (CK) & CK Holdings
+# Corporate Profile & Brand Manifesto: Christy Kalvin (CK) & CK Holdings
 
 ## 1. Brand Origin & Narrative (品牌起源與故事)
 > **"Built on Trust. Driven by Vision."** (始於信任，成於遠見)
@@ -6,6 +6,7 @@
 **CK** 代表創辦人 **Christy & Kalvin**。
 這是一段從生活伴侶、家庭信任，延伸至跨領域商業版圖的創業者故事。正如國際經典品牌（Calvin Klein、Louis Vuitton、Michael Kors）以創辦人之名象徵永恆承諾一樣，**Christy Kalvin** 代表著對品質、創新、誠信與家族資產傳承的最高標準。
 
+- **集團頂層控股官網**: `ck-holdings.my` / `ck-holdings.com.my`
 - **官方全球品牌門戶**: `christykalvin.com` (ChristyKalvinWeb)
 
 ---
@@ -14,15 +15,20 @@
 
 ```text
                🏛️ 【CK Holdings (頂層控股母公司 / 雲端母專案)】
-               （持有 christykalvin.com 品牌 IP、核心股權、家族信託與重大資產）
+               （頂層控股官網: ck-holdings.my / 輔助: ck-holdings.com.my）
                （Firebase Master Project: CK Holdings / Project ID: voiceout-asia）
                                       |
          +----------------------------+----------------------------+
-         |                            |                            |
-  📣 【Voice Out】             🛍️ 【Sougu】                 ✨ 【ChristyKalvin】
-  (已正式營運 / SaaS 業務)    (Crosspath 偶遇社群/電商)    (全球品牌官方門戶)
-  - 域名: voiceout.asia        - 域名: sougu.online         - 域名: christykalvin.com
-  - DB: (default)              - DB: sougu-db               - DB: christykalvin-db
+         |              |             |              |             |
+  📣【Voice Out】 ✨【ChristyKalvin】 🛍️【Sougu】  🏠【Cari Rumah】 💻【Meta Office】
+  (即時空間雷達)   (全球精品/生活圈) (空間社交媒合) (大馬視覺化房產) (2D虛擬辦公)
+  voiceout.asia  christykalvin.com  sougu.online   petarumah.my    (實體/遠距協作)
+
+  [內部保留項目/暫不公開 (On Hold)]:
+  ☕ Smart Laundromat + Cafe (新山無人洗衣+咖啡實體複合店，暫不公開)
+
+  [創辦人 Kalvin 個人獨立工具 (Private / 嚴禁列入集團公開官網)]:
+  📢 Facebook Auto Post (個人社群發文) | 🪙 Luno Trading Bot (個人量化交易)
 ```
 
 ### 🏆 雲端技術與身分統一原則 (SSoT Cloud & Auth Principles)：

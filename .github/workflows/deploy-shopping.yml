@@ -1,0 +1,143 @@
+name: Deploy Shopping Mall to Firebase
+
+on:
+  push:
+    branches:
+      - claude/ec-resale-platform-ku6xau
+      - main
+    paths:
+      - "public/**"
+      - "functions/**"
+      - "firebase.json"
+      - "firestore.rules"
+      - ".github/workflows/deploy-shopping.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      # 把這次的 commit SHA 寫進 shopping.html / shopping-admin.html 裡（取代 __BUILD_SHA__
+      # 佔位字串），也同步寫一份 public/build-version.json。這兩頁被賣家加到手機主畫面後是
+      # 「獨立 App」模式，沒有網址列、沒有下拉重新整理，iOS 很容易直接顯示上次的舊畫面快照，
+      # 頁面裡的版本檢查腳本會拿這個 SHA 去跟 build-version.json 對，兜不起來就自動重整——
+      # 一定要在 Deploy Hosting 之前跑，不然部署上去的還是沒替換過的佔位字串。
+      - name: Stamp hosting version
+        run: |
+          printf '{"sha":"%s","deployedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > public/build-version.json
+          sed -i "s/__BUILD_SHA__/$GITHUB_SHA/g" public/shopping.html public/shopping-admin.html
+          cat public/build-version.json
+
+      # Hosting 一定要獨立部署，而且排在最前面。
+      # 之前把 hosting 跟 functions 包在同一個 deploy 指令，functions 那邊一報錯
+      # （例如 artifact cleanup policy）整包就中斷，hosting 檔案雖然上傳了卻沒有
+      # 完成 release，導致線上永遠是舊版。分開部署可以徹底避免這件事。
+      - name: Deploy Hosting
+        run: |
+          npx firebase-tools deploy \
+            --project voiceout-asia \
+            --only hosting:christykalvin-web \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --non-interactive \
+            --force
+
+      # Firestore 安全規則在 christykalvin 專案（跟 hosting 的 voiceout-asia 不同專案）。
+      # 這步不能漏：新增 settings / product_costs 這類集合時，規則沒上去
+      # 後台就會因為預設拒絕而完全讀不到資料，功能等於沒做。
+      - name: Deploy Firestore rules
+        run: |
+          npx firebase-tools deploy \
+            --project christykalvin \
+            --only firestore:rules \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --non-interactive \
+            --force
+
+      # ⚠️ Functions 必須部署到 christykalvin，不是 voiceout-asia。
+      # 前後台網頁的 firebaseConfig 是 projectId:"christykalvin"，
+      # 所以 httpsCallable 打的是 christykalvin 的函式。
+      # 曾經誤設成 voiceout-asia，結果新版程式碼全部部署到沒人呼叫的專案，
+      # 線上一直跑舊版函式（Uniqlo 解析器、Gemini 重試都沒生效）卻毫無錯誤訊息。
+      #
+      # 另外保留 --only functions:<名稱> 的精準指定：不可用 --only functions，
+      # 否則會把該專案裡本 repo 沒有的其他 functions 判定成要刪除。
+
+      # 把這次的 commit SHA 寫進函式包裡，部署後才能驗證線上跑的是哪一版
+      - name: Stamp function version
+        run: |
+          printf '{"sha":"%s","deployedAt":"%s"}\n' \
+            "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > functions/version.json
+          cat functions/version.json
+
+      - name: Deploy Functions
+        run: |
+          npx firebase-tools deploy \
+            --project christykalvin \
+            --only functions:importProduct,functions:importFromData,functions:uploadPhoto,functions:deletePhoto,functions:watchSourcePrices,functions:version \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
+            --non-interactive \
+            --force
+
+      # 部署後直接抓正式站回來檢查，確認使用者實際打開的網址拿到的是新版檔案。
+      # （開發用的 sandbox 連不到 christykalvin.com，只能在 CI 這邊驗證。）
+      #
+      # 比對方式是「本機檔案的 sha256」對「正式站回傳內容的 sha256」，
+      # 不是去找某個關鍵字——關鍵字會隨著改版失效（改過一次分類名稱就誤判過），
+      # 雜湊值比對則永遠不會過時，而且能精準抓到「部署宣稱成功但沒真的生效」。
+      # 同時抓「原網址」與「加 cache-buster 的網址」，用來分辨 CDN 快取與來源檔案。
+      - name: Verify what production actually serves
+        if: always()
+        run: |
+          fail=0
+          for page in shopping.html shopping-admin.html ; do
+            expected=$(sha256sum "public/$page" | cut -d' ' -f1)
+            echo "=============================================="
+            echo "檔案: $page"
+            echo "本機 sha256: $expected"
+            for host in "https://christykalvin.com" "https://christykalvin-web.web.app" ; do
+              for variant in "$host/$page" "$host/$page?cb=$(date +%s)$RANDOM" ; do
+                code=$(curl -s -o /tmp/page.html -w '%{http_code}' --max-time 20 "$variant" || echo "000")
+                actual=$(sha256sum /tmp/page.html | cut -d' ' -f1)
+                if [ "$code" = "200" ] && [ "$actual" = "$expected" ]; then
+                  echo "  ✅ $variant (HTTP $code) 內容與本機完全一致"
+                else
+                  echo "  ❌ $variant (HTTP $code) 內容不符，線上 sha256: $actual"
+                  curl -s -I --max-time 20 "$variant" 2>/dev/null \
+                    | grep -iE "^(last-modified|etag|x-served)" || true
+                  fail=1
+                fi
+              done
+            done
+          done
+          echo "=============================================="
+          echo "Cloud Functions 版本"
+          echo "本次 commit : $GITHUB_SHA"
+          fn_url="https://asia-east1-christykalvin.cloudfunctions.net/version"
+          live_sha=$(curl -s --max-time 25 "$fn_url" | node -e "
+            let d='';process.stdin.on('data',c=>d+=c);
+            process.stdin.on('end',()=>{try{console.log(JSON.parse(d).sha||'')}catch(e){console.log('')}})" )
+          echo "線上函式版本: ${live_sha:-（抓不到）}"
+          if [ "$live_sha" = "$GITHUB_SHA" ]; then
+            echo "  ✅ 線上函式確實是這次部署的程式碼"
+          else
+            echo "  ❌ 線上函式不是這次的版本——函式可能部署到錯誤的專案，或部署沒生效"
+            fail=1
+          fi
+
+          echo "=============================================="
+          if [ "$fail" = "1" ]; then
+            echo "正式站內容與這次要部署的版本不一致，部署沒有真正生效。"
+            exit 1
+          fi
+          echo "正式站已確認是新版。"

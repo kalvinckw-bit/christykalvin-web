@@ -10,9 +10,9 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Host**: Desktop App
 - **Machine**: Windows Workstation
 - **Session File**: `AI_CONTEXT/SESSIONS/Antigravity (Desktop, Windows).md`
-- **State**: Standby / Synchronized
-- **Heartbeat**: {DATE}
-- **Current Objective**: Standby for Antigravity (Desktop, Windows) tasks.
+- **State**: Completed / Fully Synchronized
+- **Heartbeat**: 2026-09-10 23:56 JST
+- **Current Objective**: Investigated shopping.html 404 incident, identified parallel branch collision, unified codebase across forex & ec-resale branches, and verified production live on christykalvin.com.
 - **Reserved Files**: None
 
 ----------------------------------------
@@ -122,5 +122,22 @@ Naming format standard: `[AI Name] ([Host: Desktop / VS Code], [Device: Windows 
 - **Heartbeat**: {DATE}
 - **Current Objective**: Standby for ChatGPT (VS Code, MacBook) tasks.
 - **Reserved Files**: None
+
+----------------------------------------
+
+### 11. Claude (Web, Cloud)
+- **AI**: Claude (Claude Code)
+- **Host**: Web / 雲端 session（claude.ai/code 遠端容器）
+- **Machine**: 雲端 Linux 容器（非本機）
+- **Session File**: `AI_CONTEXT/SESSIONS/Claude (Web, Cloud).md`
+- **State**: Standby / Synchronized（GitHub 已同步；Google Drive 鏡像交由本機 Antigravity 負責，Web session 不再呼叫 Drive API）
+- **Heartbeat**: 2026-09-14
+- **Current Objective**: intimissimi.com/Amazon 書籤工具照片修復、商品照片 Ctrl+V 貼上、
+  品牌改名 CK Japan Select、主題標籤改成搜尋輔助工具（OR 比對合作商品）、商品卡片改顯示
+  主題標籤已完成並驗證部署上線。
+- **Reserved Files**: None
+- **⚠️ 環境限制**: 讀不到本機 OneDrive；`*.web.app` / `cloudfunctions.net` / 一般外部網站
+  被網路白名單擋掉，無法自行開網頁或呼叫函式驗證；`firebase deploy --project voiceout-asia`
+  等高風險指令會被安全機制擋下。詳見該身分的 session 檔開頭。
 
 ----------------------------------------
