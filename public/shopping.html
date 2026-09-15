@@ -403,6 +403,7 @@ const STR = {
   zh: {
     searchPlaceholder: "搜尋商品名稱...", sortNew: "最新上架", sortPriceAsc: "價格由低到高", sortPriceDesc: "價格由高到低",
     countSuffix: (n) => `共 ${n} 件商品`, emptyText: "目前沒有符合條件的商品，換個分類看看吧",
+    loadingText: "商品載入中...",
     priceInquire: "價格洽詢", sold: "已售出",
     soldNotice: "此商品已售出，若想詢問類似商品歡迎透過 WhatsApp 聯絡",
     waBtn: "💬 透過 WhatsApp 詢問 / 下單", inquiryBtn: "📩 留言詢問 / 下單",
@@ -423,6 +424,7 @@ const STR = {
   en: {
     searchPlaceholder: "Search products...", sortNew: "Newest", sortPriceAsc: "Price: Low to High", sortPriceDesc: "Price: High to Low",
     countSuffix: (n) => `${n} item(s)`, emptyText: "No matching items, try another category",
+    loadingText: "Loading products...",
     priceInquire: "Price on request", sold: "Sold",
     soldNotice: "This item is sold. Feel free to ask about similar items via WhatsApp.",
     waBtn: "💬 Ask on WhatsApp", inquiryBtn: "📩 Send an Inquiry",
@@ -469,6 +471,7 @@ function productDesc(p){
 }
 
 let allProducts = [];
+let productsLoaded = false; // Firestore 商品資料是「還沒回來」還是「真的查無商品」，畫面要分清楚，不然使用者會誤以為商品全部消失了
 let activeCat = "全部";
 let fxRate = null;    // 1 JPY = fxRate * localCurrency
 let fxCode = null;    // 例如 "MYR"
@@ -479,9 +482,11 @@ let currentProductId = null;
 const q = query(collection(db, "products"), where("status", "==", "published"));
 onSnapshot(q, (snap) => {
   allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  productsLoaded = true;
   render();
   if (!urlParamHandled) { urlParamHandled = true; openFromUrlParam(); }
 }, (err) => {
+  productsLoaded = true;
   document.getElementById("grid").innerHTML = "";
   document.getElementById("empty").hidden = false;
   document.getElementById("empty").textContent = "讀取商品失敗：" + err.message;
@@ -708,9 +713,20 @@ function render(){
     return (b.created_at||0) - (a.created_at||0);
   });
 
-  document.getElementById("countLine").textContent = S().countSuffix(list.length);
   const grid = document.getElementById("grid");
   const empty = document.getElementById("empty");
+
+  // 商品資料還沒從 Firestore 回來之前（第一次進站的那一瞬間，或連線比較慢），
+  // 不要顯示「0 件商品／換個分類看看吧」，那樣客人會誤以為商品真的被清空了。
+  if (!productsLoaded){
+    document.getElementById("countLine").textContent = "";
+    grid.innerHTML = "";
+    empty.textContent = S().loadingText;
+    empty.hidden = false;
+    return;
+  }
+
+  document.getElementById("countLine").textContent = S().countSuffix(list.length);
 
   if (list.length === 0){
     grid.innerHTML = "";
