@@ -54,6 +54,13 @@
   a{color:inherit;}
   img{max-width:100%;display:block;}
 
+  /* 背景富士山楓葉照片：半透明裝飾層，固定滿版鋪在最底層，不擋點擊 */
+  #bgPhoto{
+    position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:url('/images/bg-fuji-momiji.jpg');
+    background-size:cover;background-position:center;
+    opacity:0.16;
+  }
   /* 背景飄落楓葉：半透明裝飾層，固定在畫面後方，不擋點擊、不影響版面 */
   #leavesBg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
   #leavesBg .leaf{
@@ -245,6 +252,7 @@
 </head>
 <body>
 
+<div id="bgPhoto" aria-hidden="true"></div>
 <div id="leavesBg" aria-hidden="true"></div>
 <script>
 (function(){
